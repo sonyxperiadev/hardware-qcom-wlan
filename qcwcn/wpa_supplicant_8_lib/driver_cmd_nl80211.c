@@ -17,7 +17,9 @@
 #include "android_drv.h"
 #endif
 
-#define MAX_WPSP2PIE_CMD_SIZE		512
+#define WPA_PS_ENABLED		0
+#define WPA_PS_DISABLED		1
+
 
 typedef struct android_wifi_priv_cmd {
 	char *buf;
@@ -107,7 +109,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 			else if (os_strcasecmp(cmd, "P2P_SET_NOA") == 0)
 				wpa_printf(MSG_DEBUG, "%s: P2P: %s ", __func__, buf);
 			else
-				wpa_printf(MSG_DEBUG, "%s %s len = %d, %d", __func__, buf, ret, strlen(buf));
+				wpa_printf(MSG_DEBUG, "%s %s len = %d, %d", __func__, buf, ret, buf_len);
 			wpa_driver_notify_country_change(drv->ctx, cmd);
 		}
 	}
@@ -144,12 +146,12 @@ int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
 				 const struct wpabuf *proberesp,
 				 const struct wpabuf *assocresp)
 {
-	char buf[MAX_WPSP2PIE_CMD_SIZE];
-	struct wpabuf *ap_wps_p2p_ie = NULL;
+	char *buf;
+	const struct wpabuf *ap_wps_p2p_ie = NULL;
 	char *_cmd = "SET_AP_WPS_P2P_IE";
 	char *pbuf;
 	int ret = 0;
-	int i;
+	int i, buf_len;
 	struct cmd_desc {
 		int cmd;
 		const struct wpabuf *src;
@@ -162,20 +164,29 @@ int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
 
 	wpa_printf(MSG_DEBUG, "%s: Entry", __func__);
 	for (i = 0; cmd_arr[i].cmd != -1; i++) {
-		os_memset(buf, 0, sizeof(buf));
-		pbuf = buf;
-		pbuf += sprintf(pbuf, "%s %d", _cmd, cmd_arr[i].cmd);
-		*pbuf++ = '\0';
 		ap_wps_p2p_ie = cmd_arr[i].src ?
-			wpabuf_dup(cmd_arr[i].src) : NULL;
+			cmd_arr[i].src : NULL;
 		if (ap_wps_p2p_ie) {
-			os_memcpy(pbuf, wpabuf_head(ap_wps_p2p_ie), wpabuf_len(ap_wps_p2p_ie));
-			ret = wpa_driver_nl80211_driver_cmd(priv, buf, buf,
-				strlen(_cmd) + 3 + wpabuf_len(ap_wps_p2p_ie));
-			wpabuf_free(ap_wps_p2p_ie);
-			if (ret < 0)
+			buf_len = strlen(_cmd) + 3 + wpabuf_len(ap_wps_p2p_ie);
+			buf = os_zalloc(buf_len);
+			if (NULL == buf) {
+				wpa_printf(MSG_DEBUG,"%s: Out of space for buf",
+									__func__);
+				ret = -1;
 				break;
+			}
+		} else {
+			continue;
 		}
+		pbuf = buf;
+		pbuf += snprintf(pbuf, buf_len - wpabuf_len(ap_wps_p2p_ie), "%s %d",
+								_cmd, cmd_arr[i].cmd);
+		*pbuf++ = '\0';
+		os_memcpy(pbuf, wpabuf_head(ap_wps_p2p_ie), wpabuf_len(ap_wps_p2p_ie));
+		ret = wpa_driver_nl80211_driver_cmd(priv, buf, buf, buf_len);
+		os_free(buf);
+		if (ret < 0)
+			break;
 	}
 
 	return ret;
