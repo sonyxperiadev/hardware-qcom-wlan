@@ -50,6 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define WLAN_INI_FILE_SOURCE "/system/etc/wifi/WCNSS_qcom_cfg.ini"
 #define WCNSS_HAS_CAL_DATA\
 		"/sys/module/wcnsscore/parameters/has_calibrated_data"
+#define WLAN_DRIVER_ATH_DEFAULT_VAL "0"
 
 
 int wcnss_write_cal_data(int fd_dev)
@@ -380,6 +381,12 @@ fail:
 }
 
 
+void setup_wlan_driver_ath_prop()
+{
+	property_set("wlan.driver.ath", WLAN_DRIVER_ATH_DEFAULT_VAL);
+}
+
+
 int main(int argc, char *argv[])
 {
 	int rc;
@@ -414,6 +421,8 @@ int main(int argc, char *argv[])
 			WCNSS_CAL_FILE);
 
 	close(fd_dev);
+
+	setup_wlan_driver_ath_prop();
 
 	return rc;
 }
