@@ -40,12 +40,25 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SUCCESS 0
 #define FAILED -1
-#define MAX_FILE_LENGTH 1024
+#define BYTE_0  0
+#define BYTE_1  8
+#define BYTE_2  16
+#define BYTE_3  24
+
+#define MAX_FILE_LENGTH    (1024)
+#define WCNSS_MAX_CMD_LEN  (128)
+
+/* control messages to wcnss driver */
+#define WCNSS_USR_CTRL_MSG_START    0x00000000
+#define WCNSS_USR_SERIAL_NUM        (WCNSS_USR_CTRL_MSG_START + 1)
+#define WCNSS_USR_HAS_CAL_DATA      (WCNSS_USR_CTRL_MSG_START + 2)
+
 
 #define WCNSS_CAL_CHUNK (3*1024)
 #define WCNSS_CAL_FILE  "/data/misc/wifi/WCNSS_qcom_wlan_cal.bin"
 #define WCNSS_FACT_FILE "/data/misc/wifi/WCN_FACTORY"
 #define WCNSS_DEVICE    "/dev/wcnss_wlan"
+#define WCNSS_CTRL      "/dev/wcnss_ctrl"
 #define WLAN_INI_FILE_DEST   "/data/misc/wifi/WCNSS_qcom_cfg.ini"
 #define WLAN_INI_FILE_SOURCE "/system/etc/wifi/WCNSS_qcom_cfg.ini"
 #define WCNSS_HAS_CAL_DATA\
@@ -302,82 +315,80 @@ out_nocopy:
 }
 
 
-void setup_wcnss_serialnum()
+void setup_wcnss_parameters(int *cal)
 {
-	char fpath[MAX_FILE_LENGTH];
+	char msg[WCNSS_MAX_CMD_LEN];
 	char serial[PROPERTY_VALUE_MAX];
-	char *pstr;
-	int fd, ret;
-
-	find_full_path("/sys/devices", "serial_number", fpath);
-
-	pstr = strstr(fpath, "wcnss");
-	if (pstr == NULL) {
-		ALOGE("Failed to find serial_number node");
-		return;
-	}
-	ALOGE("serial_number node %s", fpath);
-
-	ret = property_get("ro.serialno", serial, "");
-	if (!ret) {
-		ALOGE("Failed to find serial number property");
-		return;
-	}
-
-	fd = open(fpath, O_WRONLY);
-	if (fd < 0) {
-		ALOGE("Failed to open %s : %s", fpath, strerror(errno));
-		return;
-	}
-
-	if (write(fd, serial, ret) < 0) {
-		ALOGE("Failed to write to %s : %s", fpath, strerror(errno));
-		close(fd);
-		return;
-	}
-	close(fd);
-}
-
-
-int setup_wcnss_has_cal_data()
-{
-	int fd, rc;
+	int fd, rc, pos = 0;
 	struct stat st;
-	char trigger[] = "1";
+	unsigned int serial_num;
+
+	fd = open(WCNSS_CTRL, O_WRONLY);
+	if (fd < 0) {
+		ALOGE("Failed to open %s : %s", WCNSS_CTRL, strerror(errno));
+		return;
+	}
+
+	rc = property_get("ro.serialno", serial, "");
+	if (rc) {
+
+		sscanf(serial, "%08X", &serial_num);
+
+		msg[pos++] = WCNSS_USR_SERIAL_NUM >> BYTE_1;
+		msg[pos++] = WCNSS_USR_SERIAL_NUM >> BYTE_0;
+		msg[pos++] = serial_num >> BYTE_3;
+		msg[pos++] = serial_num >> BYTE_2;
+		msg[pos++] = serial_num >> BYTE_1;
+		msg[pos++] = serial_num >> BYTE_0;
+
+		if (write(fd, msg, pos) < 0) {
+			ALOGE("Failed to write to %s : %s", WCNSS_CTRL,
+					strerror(errno));
+			goto fail;
+		}
+	}
+
+	pos = 0;
+	msg[pos++] = WCNSS_USR_HAS_CAL_DATA >> BYTE_1;
+	msg[pos++] = WCNSS_USR_HAS_CAL_DATA >> BYTE_0;
 
 	rc = stat(WCNSS_FACT_FILE, &st);
 	if (rc == 0) {
 		ALOGE("Factory file found, deleting cal file");
 		unlink(WCNSS_CAL_FILE);
-		goto fail;
+		goto fail_resp;
 	}
 
 	rc = stat(WCNSS_CAL_FILE, &st);
 	if (rc != 0) {
 		ALOGE("CAL file not found");
+		goto fail_resp;
+	}
+
+	/* has cal data */
+	msg[pos++] = 1;
+
+	if (write(fd, msg, pos) < 0) {
+		ALOGE("Failed to write to %s : %s", WCNSS_CTRL,
+				strerror(errno));
 		goto fail;
 	}
 
-	fd = open(WCNSS_HAS_CAL_DATA, O_WRONLY);
-	if (fd < 0) {
-		ALOGE("Failed to open %s: %s",
-				WCNSS_HAS_CAL_DATA, strerror(errno));
-		goto fail;
-	}
-
-	if (write(fd, trigger, 1) < 0) {
-		ALOGE("Failed to write to %s: %s",
-				WCNSS_HAS_CAL_DATA, strerror(errno));
-		close(fd);
-		goto fail;
-	}
-	ALOGE("Correctly triggered cal file");
+	ALOGI("Correctly triggered cal file");
+	*cal = SUCCESS;
 	close(fd);
+	return;
 
-	return SUCCESS;
+fail_resp:
+	msg[pos++] = 0;
+	if (write(fd, msg, pos) < 0)
+		ALOGE("Failed to write to %s : %s", WCNSS_CTRL,
+				strerror(errno));
 
 fail:
-	return FAILED;
+	*cal = FAILED;
+	close(fd);
+	return;
 }
 
 
@@ -394,7 +405,7 @@ int main(int argc, char *argv[])
 
 	setup_wlan_config_file();
 
-	ret_cal = setup_wcnss_has_cal_data();
+	setup_wcnss_parameters(&ret_cal);
 
 	fd_dev = open(WCNSS_DEVICE, O_RDWR);
 	if (fd_dev < 0) {
@@ -410,8 +421,6 @@ int main(int argc, char *argv[])
 		else
 			ALOGE("Cal data is successfully written to WCNSS");
 	}
-
-	setup_wcnss_serialnum();
 
 	rc = wcnss_read_and_store_cal_data(fd_dev);
 	if (rc != SUCCESS)
