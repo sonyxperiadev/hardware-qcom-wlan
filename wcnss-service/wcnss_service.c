@@ -422,6 +422,8 @@ int main(int argc, char *argv[])
 			ALOGE("Cal data is successfully written to WCNSS");
 	}
 
+	setup_wlan_driver_ath_prop();
+
 	rc = wcnss_read_and_store_cal_data(fd_dev);
 	if (rc != SUCCESS)
 		ALOGE("Failed to read and save cal data %d", rc);
@@ -430,8 +432,6 @@ int main(int argc, char *argv[])
 			WCNSS_CAL_FILE);
 
 	close(fd_dev);
-
-	setup_wlan_driver_ath_prop();
 
 	return rc;
 }
