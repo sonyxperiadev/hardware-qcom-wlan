@@ -270,6 +270,8 @@ static int internal_pollin_handler(wifi_handle handle)
     hal_info *info = getHalInfo(handle);
     struct nl_cb *cb = nl_socket_get_cb(info->event_sock);
     int res = nl_recvmsgs(info->event_sock, cb);
+    if(res)
+        ALOGE("Error :%d while reading nl msg", res);
     nl_cb_put(cb);
     return res;
 }
@@ -278,6 +280,7 @@ static void internal_event_handler(wifi_handle handle, int events)
 {
     if (events & POLLERR) {
         ALOGE("Error reading from socket");
+        internal_pollin_handler(handle);
     } else if (events & POLLHUP) {
         ALOGE("Remote side hung up");
     } else if (events & POLLIN) {
