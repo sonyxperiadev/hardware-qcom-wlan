@@ -784,6 +784,7 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                         (struct nlattr *)mVendorData,
                         mDataLen, NULL);
 
+                ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_RADIO_RESULTS Received");
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS not found", __func__);
@@ -796,42 +797,45 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                 resultsBufSize += (nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_NUM_CHANNELS]) * sizeof(wifi_channel_stat)
                         + sizeof(wifi_radio_stat));
                 mResultsParams.radio_stat = (wifi_radio_stat *)malloc(resultsBufSize);
+                if (!mResultsParams.radio_stat)
+                {
+                    ALOGE("%s: radio_stat: malloc Failed", __func__);
+                    return WIFI_ERROR_OUT_OF_MEMORY;
+                }
                 memset(mResultsParams.radio_stat, 0, resultsBufSize);
                 ALOGI(" rxTime is %u\n ", mResultsParams.radio_stat->rx_time);
 
-                if(mResultsParams.radio_stat){
-                    wifi_channel_stat *pWifiChannelStats;
-                    u32 i =0;
-                    ret = get_wifi_radio_stats(mResultsParams.radio_stat, tb_vendor);
-                    if(ret != WIFI_SUCCESS)
-                    {
-                        return ret;
-                    }
-
-                    ALOGI(" radio is %u ", mResultsParams.radio_stat->radio);
-                    ALOGI(" onTime is %u ", mResultsParams.radio_stat->on_time);
-                    ALOGI(" txTime is %u ", mResultsParams.radio_stat->tx_time);
-                    ALOGI(" rxTime is %u ", mResultsParams.radio_stat->rx_time);
-                    ALOGI(" onTimeScan is %u ", mResultsParams.radio_stat->on_time_scan);
-                    ALOGI(" onTimeNbd is %u ", mResultsParams.radio_stat->on_time_nbd);
-                    ALOGI(" onTimeGscan is %u ", mResultsParams.radio_stat->on_time_gscan);
-                    ALOGI(" onTimeRoamScan is %u", mResultsParams.radio_stat->on_time_roam_scan);
-                    ALOGI(" onTimePnoScan is %u ", mResultsParams.radio_stat->on_time_pno_scan);
-                    ALOGI(" onTimeHs20 is %u ", mResultsParams.radio_stat->on_time_hs20);
-                    ALOGI(" numChannels is %u ", mResultsParams.radio_stat->num_channels);
-                    for ( i=0; i < mResultsParams.radio_stat->num_channels; i++)
-                    {
-                        pWifiChannelStats = (wifi_channel_stat *) ((u8 *)mResultsParams.radio_stat->channels + (i * sizeof(wifi_channel_stat)));
-
-                        ALOGI("  width is %u ", pWifiChannelStats->channel.width);
-                        ALOGI("  CenterFreq %u ", pWifiChannelStats->channel.center_freq);
-                        ALOGI("  CenterFreq0 %u ", pWifiChannelStats->channel.center_freq0);
-                        ALOGI("  CenterFreq1 %u ", pWifiChannelStats->channel.center_freq1);
-                        ALOGI("  onTime %u ", pWifiChannelStats->on_time);
-                        ALOGI("  ccaBusyTime %u ", pWifiChannelStats->cca_busy_time);
-                    }
-                    ALOGI(" rxTime is %u in %s:%d\n", mResultsParams.radio_stat->rx_time, __func__, __LINE__);
+                wifi_channel_stat *pWifiChannelStats;
+                u32 i =0;
+                ret = get_wifi_radio_stats(mResultsParams.radio_stat, tb_vendor);
+                if(ret != WIFI_SUCCESS)
+                {
+                    return ret;
                 }
+
+                ALOGI(" radio is %u ", mResultsParams.radio_stat->radio);
+                ALOGI(" onTime is %u ", mResultsParams.radio_stat->on_time);
+                ALOGI(" txTime is %u ", mResultsParams.radio_stat->tx_time);
+                ALOGI(" rxTime is %u ", mResultsParams.radio_stat->rx_time);
+                ALOGI(" onTimeScan is %u ", mResultsParams.radio_stat->on_time_scan);
+                ALOGI(" onTimeNbd is %u ", mResultsParams.radio_stat->on_time_nbd);
+                ALOGI(" onTimeGscan is %u ", mResultsParams.radio_stat->on_time_gscan);
+                ALOGI(" onTimeRoamScan is %u", mResultsParams.radio_stat->on_time_roam_scan);
+                ALOGI(" onTimePnoScan is %u ", mResultsParams.radio_stat->on_time_pno_scan);
+                ALOGI(" onTimeHs20 is %u ", mResultsParams.radio_stat->on_time_hs20);
+                ALOGI(" numChannels is %u ", mResultsParams.radio_stat->num_channels);
+                for ( i=0; i < mResultsParams.radio_stat->num_channels; i++)
+                {
+                    pWifiChannelStats = (wifi_channel_stat *) ((u8 *)mResultsParams.radio_stat->channels + (i * sizeof(wifi_channel_stat)));
+
+                    ALOGI("  width is %u ", pWifiChannelStats->channel.width);
+                    ALOGI("  CenterFreq %u ", pWifiChannelStats->channel.center_freq);
+                    ALOGI("  CenterFreq0 %u ", pWifiChannelStats->channel.center_freq0);
+                    ALOGI("  CenterFreq1 %u ", pWifiChannelStats->channel.center_freq1);
+                    ALOGI("  onTime %u ", pWifiChannelStats->on_time);
+                    ALOGI("  ccaBusyTime %u ", pWifiChannelStats->cca_busy_time);
+                }
+                ALOGI(" rxTime is %u in %s:%d\n", mResultsParams.radio_stat->rx_time, __func__, __LINE__);
             }
             break;
 
@@ -844,8 +848,14 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                         (struct nlattr *)mVendorData,
                         mDataLen, NULL);
 
+                ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_IFACE_RESULTS Received");
                 resultsBufSize = sizeof(wifi_iface_stat);   // Do we need no.of peers here??
                 mResultsParams.iface_stat = (wifi_iface_stat *) malloc (sizeof (wifi_iface_stat));
+                if (!mResultsParams.iface_stat)
+                {
+                    ALOGE("%s: iface_stat: malloc Failed", __func__);
+                    return WIFI_ERROR_OUT_OF_MEMORY;
+                }
                 ret = get_wifi_interface_info(&mResultsParams.iface_stat->info, tb_vendor);
                 if(ret != WIFI_SUCCESS)
                 {
@@ -872,6 +882,7 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                         (struct nlattr *)mVendorData,
                         mDataLen, NULL);
 
+                ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_PEERS_RESULTS Received");
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS not found", __func__);
@@ -911,29 +922,32 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                     resultsBufSize += (numPeers * sizeof(wifi_peer_info)
                             + num_rates * sizeof(wifi_rate_stat) + sizeof (wifi_iface_stat));
                     pIfaceStat = (wifi_iface_stat *) malloc (resultsBufSize);
+                    if (!pIfaceStat)
+                    {
+                        ALOGE("%s: pIfaceStat: malloc Failed", __func__);
+                        return WIFI_ERROR_OUT_OF_MEMORY;
+                    }
 
-                    if(pIfaceStat){
-                        memcpy ( pIfaceStat, mResultsParams.iface_stat , sizeof(wifi_iface_stat));
-                        wifi_peer_info *pPeerStats;
-                        pIfaceStat->num_peers = numPeers;
+                    memcpy ( pIfaceStat, mResultsParams.iface_stat , sizeof(wifi_iface_stat));
+                    wifi_peer_info *pPeerStats;
+                    pIfaceStat->num_peers = numPeers;
 
-                        if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO])
+                    if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO])
+                    {
+                        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO not found", __func__);
+                        return WIFI_ERROR_INVALID_ARGS;
+                    }
+                    for (peerInfo = (struct nlattr *) nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]), rem = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]);
+                            nla_ok(peerInfo, rem);
+                            peerInfo = nla_next(peerInfo, &(rem)))
+                    {
+                        struct nlattr *tb2[ QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX+ 1];
+                        pPeerStats = (wifi_peer_info *) ((u8 *)pIfaceStat->peer_info + (i++ * sizeof(wifi_peer_info)));
+                        nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX, (struct nlattr *) nla_data(peerInfo), nla_len(peerInfo), NULL);
+                        ret = get_wifi_peer_info(pPeerStats, tb2);
+                        if(ret != WIFI_SUCCESS)
                         {
-                            ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO not found", __func__);
-                            return WIFI_ERROR_INVALID_ARGS;
-                        }
-                        for (peerInfo = (struct nlattr *) nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]), rem = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]);
-                                nla_ok(peerInfo, rem);
-                                peerInfo = nla_next(peerInfo, &(rem)))
-                        {
-                            struct nlattr *tb2[ QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX+ 1];
-                            pPeerStats = (wifi_peer_info *) ((u8 *)pIfaceStat->peer_info + (i++ * sizeof(wifi_peer_info)));
-                            nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX, (struct nlattr *) nla_data(peerInfo), nla_len(peerInfo), NULL);
-                            ret = get_wifi_peer_info(pPeerStats, tb2);
-                            if(ret != WIFI_SUCCESS)
-                            {
-                                return ret;
-                            }
+                            return ret;
                         }
                     }
                     if(mResultsParams.iface_stat)
