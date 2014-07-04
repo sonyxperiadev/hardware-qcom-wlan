@@ -872,15 +872,12 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                         (struct nlattr *)mVendorData,
                         mDataLen, NULL);
 
-                ALOGI(" rxTime is %u in %s:%d\n", mResultsParams.radio_stat->rx_time, __func__, __LINE__);
-
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS not found", __func__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 ALOGI(" numPeers is %u in %s:%d\n", nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS]), __func__, __LINE__);
-                ALOGI(" rxTe is %u in %s:%d\n", mResultsParams.radio_stat->rx_time, __func__, __LINE__);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
                 {
