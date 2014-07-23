@@ -29,17 +29,27 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <dirent.h>
+#include <grp.h>
+#include <utime.h>
 #include <sys/stat.h>
+#include <sys/sendfile.h>
 #define LOG_TAG "wcnss_service"
 #include <cutils/log.h>
+#include <cutils/properties.h>
 
 #define SUCCESS 0
 #define FAILED -1
+#define MAX_FILE_LENGTH 1024
 
 #define WCNSS_CAL_CHUNK (3*1024)
 #define WCNSS_CAL_FILE  "/data/misc/wifi/WCNSS_qcom_wlan_cal.bin"
 #define WCNSS_FACT_FILE "/data/misc/wifi/WCN_FACTORY"
 #define WCNSS_DEVICE    "/dev/wcnss_wlan"
+#define WLAN_INI_FILE_DEST   "/data/misc/wifi/WCNSS_qcom_cfg.ini"
+#define WLAN_INI_FILE_SOURCE "/system/etc/wifi/WCNSS_qcom_cfg.ini"
+#define WCNSS_HAS_CAL_DATA\
+		"/sys/module/wcnsscore/parameters/has_calibrated_data"
 
 
 int wcnss_write_cal_data(int fd_dev)
@@ -119,6 +129,7 @@ exit:
 	return rc;
 }
 
+
 int wcnss_read_and_store_cal_data(int fd_dev)
 {
 	int rcount = 0;
@@ -180,11 +191,203 @@ exit:
 	return rc;
 }
 
+
+void find_full_path(char *cur_dir, char *file_to_find, char *full_path)
+{
+	DIR *dir;
+	struct stat st;
+	struct dirent *dr;
+	char cwd[1024];
+	int rc;
+
+	chdir(cur_dir);
+
+	dir = opendir(".");
+
+	while ((dr = readdir(dir))) {
+
+		rc = lstat(dr->d_name, &st);
+		if (rc < 0) {
+			ALOGE("lstat failed %s", strerror(errno));
+			return;
+		}
+		if (S_ISDIR(st.st_mode)) {
+			if ((strcmp(dr->d_name, ".")) &&
+					(strcmp(dr->d_name, ".."))) {
+				find_full_path(dr->d_name,
+						file_to_find, full_path);
+			}
+		} else if (!strcmp(file_to_find, dr->d_name)) {
+			getcwd(cwd, sizeof(cwd));
+			snprintf(full_path, MAX_FILE_LENGTH, "%s/%s",
+					cwd, file_to_find);
+		}
+	}
+	closedir(dir);
+
+	chdir("..");
+}
+
+
+void setup_wlan_config_file()
+{
+	int rfd;
+	int wfd;
+	struct stat st_dest, st_src;
+	int rc_dest;
+	int rc;
+	struct group *grp;
+	struct utimbuf new_time;
+
+	rc = stat(WLAN_INI_FILE_SOURCE, &st_src);
+	if (rc != 0) {
+		ALOGE("source file do not exist %s", WLAN_INI_FILE_SOURCE);
+		return;
+	}
+
+	rc_dest = stat(WLAN_INI_FILE_DEST, &st_dest);
+	if (rc_dest == 0 && st_dest.st_size &&
+			(st_dest.st_mtime > st_src.st_mtime)) {
+		ALOGE("wlan ini file exists %s and is newer than %s",
+				WLAN_INI_FILE_DEST, WLAN_INI_FILE_SOURCE);
+		goto out_nocopy;
+	}
+
+	rfd = open(WLAN_INI_FILE_SOURCE, O_RDONLY);
+	if (rfd < 0) {
+		ALOGE("Failed to open ini source file: %s", strerror(errno));
+		return;
+	}
+
+	wfd = open(WLAN_INI_FILE_DEST, O_WRONLY | O_CREAT | O_TRUNC, 0660);
+	if (wfd < 0) {
+		ALOGE("Failed to open ini dest file: %s", strerror(errno));
+		close(rfd);
+		return;
+	}
+
+	rc = sendfile(wfd, rfd, 0, st_src.st_size);
+	if (rc != st_src.st_size) {
+		ALOGE("Failed to copy ini file: %s", strerror(errno));
+		goto out;
+	}
+
+	new_time.actime = st_src.st_atime;
+	new_time.modtime = st_src.st_mtime;
+
+	rc = utime(WLAN_INI_FILE_DEST, &new_time);
+	if (rc != 0)
+		ALOGE("could not preserve the timestamp %s", strerror(errno));
+
+	grp = getgrnam("wifi");
+	if (grp != NULL) {
+		rc = chown(WLAN_INI_FILE_DEST, -1, grp->gr_gid);
+		if (rc != 0)
+			ALOGE("Failed change group of ini file %s", strerror(errno));
+	} else {
+			ALOGE("Failed to get group wifi %s", strerror(errno));
+	}
+
+	property_set("wlan.driver.config", WLAN_INI_FILE_DEST);
+
+out:
+	close(rfd);
+	close(wfd);
+	return;
+
+out_nocopy:
+	property_set("wlan.driver.config", WLAN_INI_FILE_DEST);
+	return;
+}
+
+
+void setup_wcnss_serialnum()
+{
+	char fpath[MAX_FILE_LENGTH];
+	char serial[PROPERTY_VALUE_MAX];
+	char *pstr;
+	int fd, ret;
+
+	find_full_path("/sys/devices", "serial_number", fpath);
+
+	pstr = strstr(fpath, "wcnss");
+	if (pstr == NULL) {
+		ALOGE("Failed to find serial_number node");
+		return;
+	}
+	ALOGE("serial_number node %s", fpath);
+
+	ret = property_get("ro.serialno", serial, "");
+	if (!ret) {
+		ALOGE("Failed to find serial number property");
+		return;
+	}
+
+	fd = open(fpath, O_WRONLY);
+	if (fd < 0) {
+		ALOGE("Failed to open %s : %s", fpath, strerror(errno));
+		return;
+	}
+
+	if (write(fd, serial, ret) < 0) {
+		ALOGE("Failed to write to %s : %s", fpath, strerror(errno));
+		close(fd);
+		return;
+	}
+	close(fd);
+}
+
+
+int setup_wcnss_has_cal_data()
+{
+	int fd, rc;
+	struct stat st;
+	char trigger[] = "1";
+
+	rc = stat(WCNSS_FACT_FILE, &st);
+	if (rc == 0) {
+		ALOGE("Factory file found, deleting cal file");
+		unlink(WCNSS_CAL_FILE);
+		goto fail;
+	}
+
+	rc = stat(WCNSS_CAL_FILE, &st);
+	if (rc != 0) {
+		ALOGE("CAL file not found");
+		goto fail;
+	}
+
+	fd = open(WCNSS_HAS_CAL_DATA, O_WRONLY);
+	if (fd < 0) {
+		ALOGE("Failed to open %s: %s",
+				WCNSS_HAS_CAL_DATA, strerror(errno));
+		goto fail;
+	}
+
+	if (write(fd, trigger, 1) < 0) {
+		ALOGE("Failed to write to %s: %s",
+				WCNSS_HAS_CAL_DATA, strerror(errno));
+		close(fd);
+		goto fail;
+	}
+	ALOGE("Correctly triggered cal file");
+	close(fd);
+
+	return SUCCESS;
+
+fail:
+	return FAILED;
+}
+
+
 int main(int argc, char *argv[])
 {
 	int rc;
-	int fd_dev;
-	struct stat st;
+	int fd_dev, ret_cal;
+
+	setup_wlan_config_file();
+
+	ret_cal = setup_wcnss_has_cal_data();
 
 	fd_dev = open(WCNSS_DEVICE, O_RDWR);
 	if (fd_dev < 0) {
@@ -193,17 +396,15 @@ int main(int argc, char *argv[])
 		return fd_dev;
 	}
 
-	rc = stat(WCNSS_FACT_FILE, &st);
-	if (rc == 0) {
-		ALOGE("Factory file found, deleting cal file");
-		unlink(WCNSS_CAL_FILE);
-	} else {
+	if (ret_cal != FAILED) {
 		rc = wcnss_write_cal_data(fd_dev);
 		if (rc != SUCCESS)
 			ALOGE("No cal data is written to WCNSS %d", rc);
 		else
 			ALOGE("Cal data is successfully written to WCNSS");
 	}
+
+	setup_wcnss_serialnum();
 
 	rc = wcnss_read_and_store_cal_data(fd_dev);
 	if (rc != SUCCESS)
