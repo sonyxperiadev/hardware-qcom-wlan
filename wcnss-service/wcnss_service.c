@@ -38,6 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define WCNSS_CAL_CHUNK (3*1024)
 #define WCNSS_CAL_FILE  "/data/misc/wifi/WCNSS_qcom_wlan_cal.bin"
+#define WCNSS_FACT_FILE "/data/misc/wifi/WCN_FACTORY"
 #define WCNSS_DEVICE    "/dev/wcnss_wlan"
 
 
@@ -183,6 +184,7 @@ int main(int argc, char *argv[])
 {
 	int rc;
 	int fd_dev;
+	struct stat st;
 
 	fd_dev = open(WCNSS_DEVICE, O_RDWR);
 	if (fd_dev < 0) {
@@ -191,12 +193,17 @@ int main(int argc, char *argv[])
 		return fd_dev;
 	}
 
-	rc = wcnss_write_cal_data(fd_dev);
-
-	if (rc != SUCCESS)
-		ALOGE("No cal data is written to WCNSS %d", rc);
-	else
-		ALOGE("Cal data is successfully written to WCNSS");
+	rc = stat(WCNSS_FACT_FILE, &st);
+	if (rc == 0) {
+		ALOGE("Factory file found, deleting cal file");
+		unlink(WCNSS_CAL_FILE);
+	} else {
+		rc = wcnss_write_cal_data(fd_dev);
+		if (rc != SUCCESS)
+			ALOGE("No cal data is written to WCNSS %d", rc);
+		else
+			ALOGE("Cal data is successfully written to WCNSS");
+	}
 
 	rc = wcnss_read_and_store_cal_data(fd_dev);
 	if (rc != SUCCESS)
