@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#define LOG_TAG  "WifiHAL"
+
+#include <utils/Log.h>
 #include "gscan_event_handler.h"
 #include "vendor_definitions.h"
 
