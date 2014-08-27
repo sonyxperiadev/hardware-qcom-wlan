@@ -492,6 +492,14 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
     ret = gScanCommand->requestEvent();
     if (ret != 0) {
         ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        if (ret == ETIMEDOUT)
+        {
+            /* Delete different GSCAN event handlers for the specified Request ID. */
+            if (GScanStartCmdEventHandler) {
+                delete GScanStartCmdEventHandler;
+                GScanStartCmdEventHandler = NULL;
+            }
+        }
         goto cleanup;
     }
 
@@ -758,6 +766,13 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
     ret = gScanCommand->requestEvent();
     if (ret != 0) {
         ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        if (ret == ETIMEDOUT)
+        {
+            if (GScanSetBssidHotlistCmdEventHandler) {
+                delete GScanSetBssidHotlistCmdEventHandler;
+                GScanSetBssidHotlistCmdEventHandler = NULL;
+            }
+        }
         goto cleanup;
     }
 
@@ -766,7 +781,6 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
     {
         goto cleanup;
     }
-
     if (GScanSetBssidHotlistCmdEventHandler) {
         delete GScanSetBssidHotlistCmdEventHandler;
         GScanSetBssidHotlistCmdEventHandler = NULL;
@@ -1038,6 +1052,13 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
     ret = gScanCommand->requestEvent();
     if (ret != 0) {
         ALOGE("%s: requestEvent Error:%d",__func__, ret);
+        if (ret == ETIMEDOUT)
+        {
+            if (GScanSetSignificantChangeCmdEventHandler) {
+                delete GScanSetSignificantChangeCmdEventHandler;
+                GScanSetSignificantChangeCmdEventHandler = NULL;
+            }
+        }
         goto cleanup;
     }
 
@@ -1046,7 +1067,6 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
     {
         goto cleanup;
     }
-
     if (GScanSetSignificantChangeCmdEventHandler) {
         delete GScanSetSignificantChangeCmdEventHandler;
         GScanSetSignificantChangeCmdEventHandler = NULL;
