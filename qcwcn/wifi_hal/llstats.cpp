@@ -139,7 +139,7 @@ static int finish_handler_LLStats(struct nl_msg *msg, void *arg)
   return NL_SKIP;
 }
 
-static void get_wifi_interface_info(wifi_interface_link_layer_info *stats, struct nlattr **tb_vendor)
+static int get_wifi_interface_info(wifi_interface_link_layer_info *stats, struct nlattr **tb_vendor)
 {
     u32 len = 0;
     u8 *data;
@@ -231,9 +231,10 @@ static void get_wifi_interface_info(wifi_interface_link_layer_info *stats, struc
             stats->ap_country_str[1], stats->ap_country_str[2]);
     ALOGI("STATS IFACE:Country String for this Association %c%c%c", stats->country_str[0],
             stats->country_str[1], stats->country_str[2]);
+    return WIFI_SUCCESS;
 }
 
-static void get_wifi_wmm_ac_stat(wifi_wmm_ac_stat *stats, struct nlattr **tb_vendor)
+static int get_wifi_wmm_ac_stat(wifi_wmm_ac_stat *stats, struct nlattr **tb_vendor)
 {
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_WMM_AC_AC])
@@ -362,9 +363,10 @@ static void get_wifi_wmm_ac_stat(wifi_wmm_ac_stat *stats, struct nlattr **tb_ven
             stats->contention_time_avg);
     ALOGI("STATS IFACE: contentionNumSamples  %u ",
             stats->contention_num_samples);
+    return WIFI_SUCCESS;
 }
 
-static void get_wifi_rate_stat(wifi_rate_stat *stats, struct nlattr **tb_vendor)
+static int get_wifi_rate_stat(wifi_rate_stat *stats, struct nlattr **tb_vendor)
 {
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RATE_PREAMBLE])
@@ -456,15 +458,16 @@ static void get_wifi_rate_stat(wifi_rate_stat *stats, struct nlattr **tb_vendor)
     ALOGI("STATS PEER_ALL : retries %u", stats->retries);
     ALOGI("STATS PEER_ALL : retriesShort %u", stats->retries_short);
     ALOGI("STATS PEER_ALL : retriesLong %u", stats->retries_long);
+    return WIFI_SUCCESS;
 }
 
-static void get_wifi_peer_info(wifi_peer_info *stats, struct nlattr **tb_vendor)
+static int get_wifi_peer_info(wifi_peer_info *stats, struct nlattr **tb_vendor)
 {
     u32 i = 0, len = 0;
     int rem;
     wifi_rate_stat * pRateStats;
     struct nlattr *rateInfo;
-
+    int ret = WIFI_SUCCESS;
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_TYPE])
     {
@@ -519,15 +522,21 @@ static void get_wifi_peer_info(wifi_peer_info *stats, struct nlattr **tb_vendor)
         pRateStats = (wifi_rate_stat *) ((u8 *)stats->rate_stats + (i++ * sizeof(wifi_rate_stat)));
 
         nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX, (struct nlattr *) nla_data(rateInfo), nla_len(rateInfo), NULL);
-        get_wifi_rate_stat(pRateStats, tb2);
+        ret = get_wifi_rate_stat(pRateStats, tb2);
+        if(ret != WIFI_SUCCESS)
+        {
+            return ret;
+        }
     }
+    return WIFI_SUCCESS;
 }
 
-static void get_wifi_iface_stats(wifi_iface_stat *stats, struct nlattr **tb_vendor)
+static int get_wifi_iface_stats(wifi_iface_stat *stats, struct nlattr **tb_vendor)
 {
     struct nlattr *wmmInfo;
     wifi_wmm_ac_stat *pWmmStats;
     int i=0, rem;
+    int ret = WIFI_SUCCESS;
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_BEACON_RX])
     {
@@ -597,16 +606,22 @@ static void get_wifi_iface_stats(wifi_iface_stat *stats, struct nlattr **tb_vend
         struct nlattr *tb2[ QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX+ 1];
         pWmmStats = (wifi_wmm_ac_stat *) ((u8 *)stats->ac + (i * sizeof(wifi_wmm_ac_stat)));
         nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX, (struct nlattr *) nla_data(wmmInfo), nla_len(wmmInfo), NULL);
-        get_wifi_wmm_ac_stat(pWmmStats, tb2);
+        ret = get_wifi_wmm_ac_stat(pWmmStats, tb2);
+        if(ret != WIFI_SUCCESS)
+        {
+            return ret;
+        }
     }
+    return WIFI_SUCCESS;
 }
 
-static void get_wifi_radio_stats(wifi_radio_stat *stats, struct nlattr **tb_vendor)
+static int get_wifi_radio_stats(wifi_radio_stat *stats, struct nlattr **tb_vendor)
 {
     u32 i = 0;
     struct nlattr *chInfo;
     wifi_channel_stat *pChStats;
     int rem;
+    int ret = WIFI_SUCCESS;
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_RADIO_ID])
     {
@@ -742,6 +757,7 @@ static void get_wifi_radio_stats(wifi_radio_stat *stats, struct nlattr **tb_vend
         }
         pChStats->cca_busy_time          = nla_get_u32(tb2[QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_CCA_BUSY_TIME]);
     }
+    return WIFI_SUCCESS;
 }
 
 // This function will be the main handler for incoming event LLStats_SUBCMD
@@ -751,6 +767,7 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
     ALOGI("Got a LLStats message from Driver");
     unsigned i=0;
     u32 status;
+    int ret = WIFI_SUCCESS;
     WifiVendorCommand::handleEvent(event);
 
     // Parse the vendordata and get the attribute
@@ -785,7 +802,11 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                 if(mResultsParams.radio_stat){
                     wifi_channel_stat *pWifiChannelStats;
                     u32 i =0;
-                    get_wifi_radio_stats(mResultsParams.radio_stat, tb_vendor);
+                    ret = get_wifi_radio_stats(mResultsParams.radio_stat, tb_vendor);
+                    if(ret != WIFI_SUCCESS)
+                    {
+                        return ret;
+                    }
 
                     ALOGI(" radio is %u ", mResultsParams.radio_stat->radio);
                     ALOGI(" onTime is %u ", mResultsParams.radio_stat->on_time);
@@ -825,8 +846,16 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
 
                 resultsBufSize = sizeof(wifi_iface_stat);   // Do we need no.of peers here??
                 mResultsParams.iface_stat = (wifi_iface_stat *) malloc (sizeof (wifi_iface_stat));
-                get_wifi_interface_info(&mResultsParams.iface_stat->info, tb_vendor);
-                get_wifi_iface_stats(mResultsParams.iface_stat, tb_vendor);
+                ret = get_wifi_interface_info(&mResultsParams.iface_stat->info, tb_vendor);
+                if(ret != WIFI_SUCCESS)
+                {
+                   return ret;
+                }
+                ret = get_wifi_iface_stats(mResultsParams.iface_stat, tb_vendor);
+                if(ret != WIFI_SUCCESS)
+                {
+                   return ret;
+                }
             }
             break;
 
@@ -903,7 +932,11 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                             struct nlattr *tb2[ QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX+ 1];
                             pPeerStats = (wifi_peer_info *) ((u8 *)pIfaceStat->peer_info + (i++ * sizeof(wifi_peer_info)));
                             nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX, (struct nlattr *) nla_data(peerInfo), nla_len(peerInfo), NULL);
-                            get_wifi_peer_info(pPeerStats, tb2);
+                            ret = get_wifi_peer_info(pPeerStats, tb2);
+                            if(ret != WIFI_SUCCESS)
+                            {
+                                return ret;
+                            }
                         }
                     }
                     if(mResultsParams.iface_stat)
