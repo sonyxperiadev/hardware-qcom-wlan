@@ -850,7 +850,7 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
 
                 ALOGI("QCA_NL80211_VENDOR_SUBCMD_LL_STATS_IFACE_RESULTS Received");
                 resultsBufSize = sizeof(wifi_iface_stat);   // Do we need no.of peers here??
-                mResultsParams.iface_stat = (wifi_iface_stat *) malloc (sizeof (wifi_iface_stat));
+                mResultsParams.iface_stat = (wifi_iface_stat *) malloc (resultsBufSize);
                 if (!mResultsParams.iface_stat)
                 {
                     ALOGE("%s: iface_stat: malloc Failed", __func__);
@@ -866,6 +866,32 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                 if(ret != WIFI_SUCCESS)
                 {
                    return ret;
+                }
+                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS not found", __func__);
+                    ALOGE("Expecting Peer stats event");
+                } else {
+                    mResultsParams.iface_stat->num_peers =
+                        nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS]);
+                    ALOGI("%s: numPeers is %u\n", __func__, mResultsParams.iface_stat->num_peers);
+                    if(mResultsParams.iface_stat->num_peers == 0)
+                    {
+                        ALOGE("Not Expecting Peer stats event");
+                        // Number of Radios are 1 for now
+                        mHandler.on_link_stats_results(mRequestId,
+                                mResultsParams.iface_stat, 1, mResultsParams.radio_stat);
+                        if(mResultsParams.radio_stat)
+                        {
+                            free(mResultsParams.radio_stat);
+                            mResultsParams.radio_stat = NULL;
+                        }
+                        if(mResultsParams.iface_stat)
+                        {
+                            free(mResultsParams.iface_stat);
+                            mResultsParams.iface_stat = NULL;
+                        }
+                    }
                 }
             }
             break;
@@ -898,8 +924,6 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                 }
                 if((numPeers = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])) > 0)
                 {
-
-
                     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO])
                     {
                         ALOGE("%s: QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO not found", __func__);
@@ -956,7 +980,8 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                         free (mResultsParams.iface_stat);
                     mResultsParams.iface_stat = pIfaceStat;
                 }
-                // Number of Radios are 1 for now : TODO get this info from the driver
+
+                // Number of Radios are 1 for now
                 mHandler.on_link_stats_results(mRequestId,
                         mResultsParams.iface_stat, 1, mResultsParams.radio_stat);
                 if(mResultsParams.radio_stat)
