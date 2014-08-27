@@ -856,6 +856,7 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                     ALOGE("%s: iface_stat: malloc Failed", __func__);
                     return WIFI_ERROR_OUT_OF_MEMORY;
                 }
+                memset(mResultsParams.iface_stat, 0, resultsBufSize);
                 ret = get_wifi_interface_info(&mResultsParams.iface_stat->info, tb_vendor);
                 if(ret != WIFI_SUCCESS)
                 {
@@ -928,6 +929,7 @@ int LLStatsCommand::handleEvent(WifiEvent &event)
                         return WIFI_ERROR_OUT_OF_MEMORY;
                     }
 
+                    memset(pIfaceStat, 0, resultsBufSize);
                     memcpy ( pIfaceStat, mResultsParams.iface_stat , sizeof(wifi_iface_stat));
                     wifi_peer_info *pPeerStats;
                     pIfaceStat->num_peers = numPeers;
