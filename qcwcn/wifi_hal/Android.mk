@@ -39,7 +39,8 @@ LOCAL_SRC_FILES := \
 	gscan.cpp \
 	gscan_event_handler.cpp \
 	rtt.cpp \
-	ifaceeventhandler.cpp
+	ifaceeventhandler.cpp \
+	tdls.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
