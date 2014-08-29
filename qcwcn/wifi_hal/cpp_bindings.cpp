@@ -867,13 +867,68 @@ int WifiVendorCommand::put_u32(int attribute, uint32_t value)
     return mMsg.put_u32(attribute, value);
 }
 
-int WifiVendorCommand::put_s32(int attribute, int value) {
-    return mMsg.put_s32(attribute, value);
-}
-
 int WifiVendorCommand::put_u64(int attribute, uint64_t value)
 {
     return mMsg.put_u64(attribute, value);
+}
+
+int WifiVendorCommand::put_s8(int attribute, s8 value)
+{
+    return mMsg.put_s8(attribute, value);
+}
+
+int WifiVendorCommand::put_s16(int attribute, s16 value)
+{
+    return mMsg.put_s16(attribute, value);
+}
+
+int WifiVendorCommand::put_s32(int attribute, s32 value) {
+    return mMsg.put_s32(attribute, value);
+}
+
+int WifiVendorCommand::put_s64(int attribute, s64 value)
+{
+    return mMsg.put_s64(attribute, value);
+}
+
+u8 WifiVendorCommand::get_u8(const struct nlattr *nla)
+{
+    return mMsg.get_u8(nla);
+}
+
+u16 WifiVendorCommand::get_u16(const struct nlattr *nla)
+{
+    return mMsg.get_u16(nla);
+}
+
+u32 WifiVendorCommand::get_u32(const struct nlattr *nla)
+{
+    return mMsg.get_u32(nla);
+}
+
+u64 WifiVendorCommand::get_u64(const struct nlattr *nla)
+{
+    return mMsg.get_u64(nla);
+}
+
+s8 WifiVendorCommand::get_s8(const struct nlattr *nla)
+{
+    return mMsg.get_s8(nla);
+}
+
+s16 WifiVendorCommand::get_s16(const struct nlattr *nla)
+{
+    return mMsg.get_s16(nla);
+}
+
+s32 WifiVendorCommand::get_s32(const struct nlattr *nla)
+{
+    return mMsg.get_s32(nla);
+}
+
+s64 WifiVendorCommand::get_s64(const struct nlattr *nla)
+{
+    return mMsg.get_s64(nla);
 }
 
 int WifiVendorCommand::put_string(int attribute, const char *value)
