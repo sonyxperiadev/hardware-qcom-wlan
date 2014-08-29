@@ -68,14 +68,14 @@ extern "C"
 #endif /* __cplusplus */
 
 typedef struct{
-    u8 state;
-    u8 reason;
+    wifi_tdls_state state;
+    wifi_tdls_reason reason;
 } TDLSgetStatusRspParams;
 
 typedef struct{
     mac_addr addr;
-    u8 state;
-    u8 reason;
+    wifi_tdls_state state;
+    wifi_tdls_reason reason;
 } TDLSStateChange;
 
 /* Response and Event Callbacks */
@@ -106,6 +106,8 @@ public:
     virtual int requestResponse();
 
     virtual int handleEvent(WifiEvent &event);
+
+    virtual int handleResponse(WifiEvent &reply);
 
     virtual int setCallbackHandler(wifi_tdls_handler nHandler, u32 event);
 
