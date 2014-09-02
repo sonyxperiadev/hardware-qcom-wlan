@@ -227,23 +227,14 @@ wifi_error wifi_start_gscan(wifi_request_id id,
     u32 num_scan_buckets, numChannelSpecs;
     wifi_scan_bucket_spec bucketSpec;
     struct nlattr *nlBuckectSpecList;
+    bool previousGScanRunning = false;
 
-    /* Check if a similar request to start gscan was made earlier.
-     * Right now we don't differentiate between the case where (i) the new
-     * Request Id is different from the current one vs (ii) case where both
-     * new and Request IDs are the same.
+    /* Wi-Fi HAL doesn't need to check if a similar request to start gscan was
+     *  made earlier. If start_gscan() is called while another gscan is already
+     *  running, the request will be sent down to driver and firmware. If new
+     * request is successfully honored, then Wi-Fi HAL will use the new request
+     * id for the GScanStartCmdEventHandler object.
      */
-    if (GScanStartCmdEventHandler) {
-        if (id == GScanStartCmdEventHandler->get_request_id()) {
-            ALOGE("wifi_start_gscan(): GSCAN Start for request Id %d is still "
-                 "running. Exit", id);
-            return WIFI_ERROR_TOO_MANY_REQUESTS;
-        } else {
-            ALOGE("wifi_start_gscan(): GSCAN Start for a different request "
-                "Id %d is requested. Not supported. Exit", id);
-            return WIFI_ERROR_NOT_SUPPORTED;
-        }
-    }
 
     gScanCommand = new GScanCommand(
                                 wifiHandle,
@@ -370,16 +361,24 @@ wifi_error wifi_start_gscan(wifi_request_id id,
     callbackHandler.on_full_scan_result = handler.on_full_scan_result;
     callbackHandler.on_scan_event = handler.on_scan_event;
     /* Create an object to handle the related events from firmware/driver. */
-    GScanStartCmdEventHandler = new GScanCommandEventHandler(
-                                wifiHandle,
-                                id,
-                                OUI_QCA,
-                                QCA_NL80211_VENDOR_SUBCMD_GSCAN_START,
-                                callbackHandler);
     if (GScanStartCmdEventHandler == NULL) {
-        ALOGE("wifi_start_gscan(): Error GScanStartCmdEventHandler NULL");
-        ret = WIFI_ERROR_UNKNOWN;
-        goto cleanup;
+        GScanStartCmdEventHandler = new GScanCommandEventHandler(
+                                    wifiHandle,
+                                    id,
+                                    OUI_QCA,
+                                    QCA_NL80211_VENDOR_SUBCMD_GSCAN_START,
+                                    callbackHandler);
+        if (GScanStartCmdEventHandler == NULL) {
+            ALOGE("wifi_start_gscan(): Error GScanStartCmdEventHandler NULL");
+            ret = WIFI_ERROR_UNKNOWN;
+            goto cleanup;
+        }
+    } else {
+        previousGScanRunning = true;
+        ALOGD("%s: "
+                "GScan is already running with request id=%d",
+                __func__,
+                GScanStartCmdEventHandler->get_request_id());
     }
 
     gScanCommand->waitForRsp(true);
@@ -394,13 +393,16 @@ wifi_error wifi_start_gscan(wifi_request_id id,
     {
         goto cleanup;
     }
+    if (GScanStartCmdEventHandler != NULL) {
+        GScanStartCmdEventHandler->set_request_id(id);
+    }
 
 cleanup:
     gScanCommand->freeRspParams(eGScanStartRspParams);
     ALOGI("wifi_start_gscan(): Delete object.");
     delete gScanCommand;
     /* Delete the command event handler object if ret != 0 */
-    if (ret && GScanStartCmdEventHandler) {
+    if (!previousGScanRunning && ret && GScanStartCmdEventHandler) {
         ALOGI("wifi_start_gscan(): Error ret:%d, delete event handler object.",
             ret);
         delete GScanStartCmdEventHandler;
@@ -427,14 +429,7 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
 
     ALOGI("Stopping GScan, halHandle = %p", wifiHandle);
 
-    if (GScanStartCmdEventHandler) {
-        if (id != GScanStartCmdEventHandler->get_request_id()) {
-            ALOGE("wifi_stop_gscan: GSCAN Stop requested for request Id %d "
-                "not matching that of existing GScan Start:%d. Exit",
-                id, GScanStartCmdEventHandler->get_request_id());
-            return WIFI_ERROR_INVALID_REQUEST_ID;
-        }
-    } else {
+    if (GScanStartCmdEventHandler == NULL) {
         ALOGE("wifi_stop_gscan: GSCAN isn't running or already stopped. "
             "Nothing to do. Exit");
         return WIFI_ERROR_NOT_AVAILABLE;
@@ -538,24 +533,17 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     struct nlattr *nlData, *nlApThresholdParamList;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
+    bool previousGScanSetBssidRunning = false;
 
     ALOGD("Setting GScan BSSID Hotlist, halHandle = %p", wifiHandle);
 
-    /* Check if a similar request to set bssid hotlist was made earlier.
-     * Right now we don't differentiate between the case where (i) the new
-     * Request Id is different from the current one vs (ii) case where both
-     * new and Request IDs are the same.
+    /* Wi-Fi HAL doesn't need to check if a similar request to set bssid
+     * hotlist was made earlier. If set_bssid_hotlist() is called while
+     * another one is running, the request will be sent down to driver and
+     * firmware. If the new request is successfully honored, then Wi-Fi HAL
+     * will use the new request id for the GScanSetBssidHotlistCmdEventHandler
+     * object.
      */
-    if (GScanSetBssidHotlistCmdEventHandler)
-        if (id == GScanSetBssidHotlistCmdEventHandler->get_request_id()) {
-            ALOGE("%s: GSCAN Set BSSID Hotlist for request Id %d is still"
-                "running. Exit", __func__, id);
-            return WIFI_ERROR_TOO_MANY_REQUESTS;
-        } else {
-            ALOGD("%s: GSCAN Set BSSID Hotlist for a different Request Id:%d"
-                "is requested. Not supported. Exit", __func__, id);
-            return WIFI_ERROR_NOT_SUPPORTED;
-        }
 
     gScanCommand =
         new GScanCommand(
@@ -648,20 +636,28 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     /* Create an object of the event handler class to take care of the
       * asychronous events on the north-bound.
       */
-    GScanSetBssidHotlistCmdEventHandler = new GScanCommandEventHandler(
+    if (GScanSetBssidHotlistCmdEventHandler == NULL) {
+        GScanSetBssidHotlistCmdEventHandler = new GScanCommandEventHandler(
                             wifiHandle,
                             id,
                             OUI_QCA,
                             QCA_NL80211_VENDOR_SUBCMD_GSCAN_SET_BSSID_HOTLIST,
                             callbackHandler);
-    if (GScanSetBssidHotlistCmdEventHandler == NULL) {
-        ALOGE("%s: Error instantiating GScanSetBssidHotlistCmdEventHandler.",
-            __func__);
-        ret = WIFI_ERROR_UNKNOWN;
-        goto cleanup;
+        if (GScanSetBssidHotlistCmdEventHandler == NULL) {
+            ALOGE("%s: Error instantiating "
+                "GScanSetBssidHotlistCmdEventHandler.", __func__);
+            ret = WIFI_ERROR_UNKNOWN;
+            goto cleanup;
+        }
+        ALOGD("%s: Handler object was created for HOTLIST_AP_FOUND.", __func__);
+    } else {
+        previousGScanSetBssidRunning = true;
+        ALOGD("%s: "
+                "A HOTLIST_AP_FOUND event handler object already exists "
+                "with request id=%d",
+                __func__,
+                GScanSetBssidHotlistCmdEventHandler->get_request_id());
     }
-
-    ALOGD("%s: Handler object was created for HOTLIST_AP_FOUND.", __func__);
 
     gScanCommand->waitForRsp(true);
     ret = gScanCommand->requestEvent();
@@ -675,13 +671,17 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     {
         goto cleanup;
     }
+    if (GScanSetBssidHotlistCmdEventHandler != NULL) {
+        GScanSetBssidHotlistCmdEventHandler->set_request_id(id);
+    }
 
 cleanup:
     gScanCommand->freeRspParams(eGScanSetBssidHotlistRspParams);
     ALOGI("%s: Delete object. ", __func__);
     delete gScanCommand;
     /* Delete the command event handler object if ret != 0 */
-    if (ret && GScanSetBssidHotlistCmdEventHandler) {
+    if (!previousGScanSetBssidRunning && ret
+        && GScanSetBssidHotlistCmdEventHandler) {
         delete GScanSetBssidHotlistCmdEventHandler;
         GScanSetBssidHotlistCmdEventHandler = NULL;
     }
@@ -704,14 +704,10 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
 
     ALOGE("Resetting GScan BSSID Hotlist, halHandle = %p", wifiHandle);
 
-    if (GScanSetBssidHotlistCmdEventHandler) {
-        if (id != GScanSetBssidHotlistCmdEventHandler->get_request_id()) {
-            ALOGE("%s: GSCAN Reset Hotlist BSSID requested for request Id %d"
-                "not matching that of existing GScan Set Hotlist BSSID:%d. "
-                "Exit", __func__, id,
-                GScanSetBssidHotlistCmdEventHandler->get_request_id());
-            return WIFI_ERROR_INVALID_REQUEST_ID;
-        }
+    if (GScanSetBssidHotlistCmdEventHandler == NULL) {
+        ALOGE("wifi_reset_bssid_hotlist: GSCAN bssid_hotlist isn't set. "
+            "Nothing to do. Exit");
+        return WIFI_ERROR_NOT_AVAILABLE;
     }
 
     gScanCommand = new GScanCommand(
@@ -809,24 +805,17 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
     struct nlattr *nlData, *nlApThresholdParamList;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
+    bool previousGScanSetSigChangeRunning = false;
 
     ALOGE("Setting GScan Significant Change, halHandle = %p", wifiHandle);
 
-    /* Check if a similar request to set significant change was made earlier.
-     * Right now we don't differentiate between the case where (i) the new
-     * Request Id is different from the current one vs (ii) both new and
-     * Request Ids are the same.
+    /* Wi-Fi HAL doesn't need to check if a similar request to set significant
+     * change list was made earlier. If set_significant_change() is called while
+     * another one is running, the request will be sent down to driver and
+     * firmware. If the new request is successfully honored, then Wi-Fi HAL
+     * will use the new request id for the GScanSetBssidHotlistCmdEventHandler
+     * object.
      */
-    if (GScanSetSignificantChangeCmdEventHandler)
-        if (id == GScanSetSignificantChangeCmdEventHandler->get_request_id()) {
-            ALOGE("%s: GSCAN Set Significant Change for request Id %d is still"
-                "running. Exit", __func__, id);
-            return WIFI_ERROR_TOO_MANY_REQUESTS;
-        } else {
-            ALOGE("%s: GSCAN Set Significant Change for a different Request "
-                "Id:%d is requested. Not supported. Exit", __func__, id);
-            return WIFI_ERROR_NOT_SUPPORTED;
-        }
 
     gScanCommand = new GScanCommand(
                     wifiHandle,
@@ -929,22 +918,31 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
     /* Create an object of the event handler class to take care of the
       * asychronous events on the north-bound.
       */
-    GScanSetSignificantChangeCmdEventHandler = new GScanCommandEventHandler(
+    if (GScanSetSignificantChangeCmdEventHandler == NULL) {
+        GScanSetSignificantChangeCmdEventHandler =
+            new GScanCommandEventHandler(
                      wifiHandle,
                      id,
                      OUI_QCA,
                      QCA_NL80211_VENDOR_SUBCMD_GSCAN_SET_SIGNIFICANT_CHANGE,
                      callbackHandler);
-    if (GScanSetSignificantChangeCmdEventHandler == NULL) {
-        ALOGE("%s: Error in instantiating, "
-            "GScanSetSignificantChangeCmdEventHandler.",
+        if (GScanSetSignificantChangeCmdEventHandler == NULL) {
+            ALOGE("%s: Error in instantiating, "
+                "GScanSetSignificantChangeCmdEventHandler.",
+                __func__);
+            ret = WIFI_ERROR_UNKNOWN;
+            goto cleanup;
+        }
+        ALOGD("%s: Event handler object was created for SIGNIFICANT_CHANGE.",
             __func__);
-        ret = WIFI_ERROR_UNKNOWN;
-        goto cleanup;
+    } else {
+        previousGScanSetSigChangeRunning = true;
+        ALOGD("%s: "
+            "A SIGNIFICANT_CHANGE event handler object already exists "
+            "with request id=%d",
+            __func__,
+            GScanSetSignificantChangeCmdEventHandler->get_request_id());
     }
-
-    ALOGD("%s: Event handler object was created for SIGNIFICANT_CHANGE.",
-            __func__);
 
     gScanCommand->waitForRsp(true);
     ret = gScanCommand->requestEvent();
@@ -958,12 +956,16 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
     {
         goto cleanup;
     }
+    if (GScanSetSignificantChangeCmdEventHandler != NULL) {
+        GScanSetSignificantChangeCmdEventHandler->set_request_id(id);
+    }
 
 cleanup:
     gScanCommand->freeRspParams(eGScanSetSignificantChangeRspParams);
     ALOGI("%s: Delete object.", __func__);
     /* Delete the command event handler object if ret != 0 */
-    if (ret && GScanSetSignificantChangeCmdEventHandler) {
+    if (!previousGScanSetSigChangeRunning && ret
+        && GScanSetSignificantChangeCmdEventHandler) {
         delete GScanSetSignificantChangeCmdEventHandler;
         GScanSetSignificantChangeCmdEventHandler = NULL;
     }
@@ -988,14 +990,10 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
 
     ALOGD("Resetting GScan Significant Change, halHandle = %p", wifiHandle);
 
-    if (GScanSetSignificantChangeCmdEventHandler) {
-        if (id != GScanSetSignificantChangeCmdEventHandler->get_request_id()) {
-            ALOGE("%s: GSCAN Reset Significant Change requested for request "
-                "Id %d not matching that of existing GScan Set Hotlist "
-                "BSSID:%d. Exit", __func__, id,
-                GScanSetSignificantChangeCmdEventHandler->get_request_id());
-            return WIFI_ERROR_INVALID_REQUEST_ID;
-        }
+    if (GScanSetSignificantChangeCmdEventHandler == NULL) {
+        ALOGE("wifi_reset_significant_change_handler: GSCAN significant_change"
+            " isn't set. Nothing to do. Exit");
+        return WIFI_ERROR_NOT_AVAILABLE;
     }
 
     gScanCommand =

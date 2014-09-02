@@ -50,6 +50,7 @@ public:
     virtual ~GScanCommandEventHandler();
     virtual int create();
     virtual int get_request_id();
+    virtual void set_request_id(int request_id);
     virtual int handleEvent(WifiEvent &event);
 };
 
