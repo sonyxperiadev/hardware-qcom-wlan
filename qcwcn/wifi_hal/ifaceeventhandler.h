@@ -78,6 +78,17 @@ public:
     virtual void setCallbackHandler(wifi_event_handler nHandler);
     virtual int get_request_id();
 };
+
+class SupportedFeatures: public WifiVendorCommand
+{
+    feature_set mSet;
+public:
+    SupportedFeatures(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
+    virtual ~SupportedFeatures();
+    virtual int requestResponse();
+    virtual int handleResponse(WifiEvent &reply);
+    virtual void getResponseparams(feature_set *pset);
+};
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

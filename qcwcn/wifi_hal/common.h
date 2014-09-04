@@ -99,6 +99,7 @@ typedef struct {
     interface_info **interfaces;                    // array of interfaces
     int num_interfaces;                             // number of interfaces
 
+    feature_set supported_feature_set;
     // add other details
 } hal_info;
 

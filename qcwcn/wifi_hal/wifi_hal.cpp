@@ -45,6 +45,7 @@
 #include "wifi_hal.h"
 #include "common.h"
 #include "cpp_bindings.h"
+#include "ifaceeventhandler.h"
 
 /*
  BUGBUG: normally, libnl allocates ports for all connections it makes; but
@@ -211,11 +212,14 @@ wifi_error wifi_initialize(wifi_handle *handle)
     wifi_add_membership(*handle, "regulatory");
     wifi_add_membership(*handle, "vendor");
 
-    wifi_init_interfaces(*handle);
-    // ALOGI("Found %d interfaces", info->num_interfaces);
+    wifi_error ret = wifi_init_interfaces(*handle);
+    if(ret != WIFI_SUCCESS)
+    {
+        ALOGI("Failed to initialized Wifi HAL");
+        return ret;
+    }
 
-    ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d handle %p", NL80211_CMD_VENDOR ,
-                       *handle);
+    ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d", NL80211_CMD_VENDOR);
     return WIFI_SUCCESS;
 }
 
@@ -486,6 +490,19 @@ static int get_interface(const char *name, interface_info *info)
     return WIFI_SUCCESS;
 }
 
+wifi_interface_handle wifi_get_iface_handle(wifi_handle handle, char *name)
+{
+    hal_info *info = (hal_info *)handle;
+    for (int i=0;i<info->num_interfaces;i++)
+    {
+        if (!strcmp(info->interfaces[i]->name, name))
+        {
+            return ((wifi_interface_handle )(info->interfaces)[i]);
+        }
+    }
+    return NULL;
+}
+
 wifi_error wifi_init_interfaces(wifi_handle handle)
 {
     hal_info *info = (hal_info *)handle;
@@ -532,6 +549,35 @@ wifi_error wifi_init_interfaces(wifi_handle handle)
     closedir(d);
 
     info->num_interfaces = n;
+    ALOGI("Found %d interfaces", info->num_interfaces);
+
+    /* Driver/firmware supported features are irrespective of interfaces
+     * It can be queried using any of the interfaces
+     * Hence use the first supported interface.
+     */
+    if (info->num_interfaces > 0) {
+        wifi_error ret;
+        wifi_handle handle = (info->interfaces[0])->handle;
+        wifi_interface_handle iface_handle;
+        iface_handle = wifi_get_iface_handle(handle,
+                (info->interfaces[0])->name);
+        ret = wifi_get_supported_feature_set(iface_handle,
+                &info->supported_feature_set);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("Could not get the supported features");
+            info->supported_feature_set = 0;
+            return ret;
+        }
+    }
+
+    if (info->supported_feature_set == 0)
+    {
+        ALOGI("No Features are supported by driver currently");
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+    ALOGI("Features set supported by driver currently : %x",
+            info->supported_feature_set);
+
     return WIFI_SUCCESS;
 }
 
@@ -552,24 +598,47 @@ wifi_error wifi_get_iface_name(wifi_interface_handle handle, char *name, size_t 
     return WIFI_SUCCESS;
 }
 
-wifi_interface_handle wifi_get_iface_handle(wifi_handle handle, char *name)
+/* Get the supported Feature set */
+wifi_error wifi_get_supported_feature_set(wifi_interface_handle iface, feature_set *set)
 {
-    hal_info *info = (hal_info *)handle;
-    for (int i=0;i<info->num_interfaces;i++)
-    {
-        if (!strcmp(info->interfaces[i]->name, name))
-        {
-            return ((wifi_interface_handle )(info->interfaces)[i]);
-        }
+    int ret = 0;
+    struct nlattr *nl_data;
+    SupportedFeatures *vCommand = NULL;
+    interface_info *iinfo = getIfaceInfo(iface);
+    wifi_handle handle = getWifiHandle(iface);
+    *set = 0;
+
+    vCommand = new SupportedFeatures(handle, 0,
+            OUI_QCA,
+            QCA_NL80211_VENDOR_SUBCMD_GET_SUPPORTED_FEATURES);
+    if (vCommand == NULL) {
+        ALOGE("%s: Error vCommand NULL", __func__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
     }
-    return NULL;
-}
 
+    /* create the message */
+    ret = vCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = vCommand->set_iface_id(iinfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    ret = vCommand->requestResponse();
+    if (ret != 0) {
+        ALOGE("%s: requestResponse Error:%d",__func__, ret);
+        goto cleanup;
+    }
+
+    vCommand->getResponseparams(set);
+    ALOGI("Supported feature set : %x", *set);
+
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
+}
 /////////////////////////////////////////////////////////////////////////////
-
-wifi_error wifi_get_supported_feature_set(wifi_interface_handle handle, feature_set *set) {
-    return WIFI_ERROR_NOT_SUPPORTED;
-}
 
 wifi_error wifi_get_concurrency_matrix(wifi_interface_handle handle, int max_size,
         feature_set *matrix, int *size) {

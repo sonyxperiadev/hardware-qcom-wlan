@@ -52,6 +52,8 @@ enum vendor_subcmds {
     QCA_NL80211_VENDOR_SUBCMD_TDLS_DISABLE = 35,
     QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_STATUS = 36,
     QCA_NL80211_VENDOR_SUBCMD_TDLS_STATE = 37,
+    /* Supported features. */
+    QCA_NL80211_VENDOR_SUBCMD_GET_SUPPORTED_FEATURES = 38,
 };
 
 enum qca_wlan_vendor_attr_ll_stats_set
@@ -673,5 +675,16 @@ enum qca_wlan_vendor_attr_tdls_state
     QCA_WLAN_VENDOR_ATTR_TDLS_STATE_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_TDLS_STATE_MAX =
         QCA_WLAN_VENDOR_ATTR_TDLS_STATE_AFTER_LAST - 1,
+};
+
+enum qca_wlan_vendor_attr_get_supported_features
+{
+    QCA_WLAN_VENDOR_ATTR_FEATURE_SET_INVALID = 0,
+    /* Unsigned 32-bit value */
+    QCA_WLAN_VENDOR_ATTR_FEATURE_SET = 1,
+    /* keep last */
+    QCA_WLAN_VENDOR_ATTR_FEATURE_SET_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_FEATURE_SET_MAX =
+        QCA_WLAN_VENDOR_ATTR_FEATURE_SET_AFTER_LAST - 1,
 };
 #endif

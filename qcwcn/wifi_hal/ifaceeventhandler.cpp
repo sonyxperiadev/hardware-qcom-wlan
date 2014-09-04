@@ -195,3 +195,60 @@ int wifiEventHandler::handleEvent(WifiEvent &event)
 
     return NL_SKIP;
 }
+
+SupportedFeatures::SupportedFeatures(wifi_handle handle, int id, u32 vendor_id,
+                                  u32 subcmd)
+        : WifiVendorCommand(handle, id, vendor_id, subcmd)
+{
+    ALOGD("SupportedFeatures %p constructed", this);
+    /* Initialize the member data variables here */
+    mSet = 0;
+}
+
+SupportedFeatures::~SupportedFeatures()
+{
+    ALOGD("SupportedFeatures %p destructor", this);
+}
+
+int SupportedFeatures::requestResponse()
+{
+    return WifiCommand::requestResponse(mMsg);
+}
+
+int SupportedFeatures::handleResponse(WifiEvent &reply)
+{
+    ALOGI("Got a SupportedFeatures message from Driver");
+    unsigned i=0;
+    u32 status;
+    WifiVendorCommand::handleResponse(reply);
+
+    // Parse the vendordata and get the attribute
+    switch(mSubcmd)
+    {
+        case QCA_NL80211_VENDOR_SUBCMD_GET_SUPPORTED_FEATURES:
+            {
+                struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET_MAX + 1];
+                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_FEATURE_SET_MAX,
+                        (struct nlattr *)mVendorData,
+                        mDataLen, NULL);
+
+                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET])
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_FEATURE_SET not found", __func__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                mSet = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]);
+                ALOGI("Supported feature set : %x", mSet);
+
+                break;
+            }
+        default :
+            ALOGE("%s: Wrong Supported stats subcmd received %d", __func__, mSubcmd);
+    }
+    return NL_SKIP;
+}
+
+void SupportedFeatures::getResponseparams(feature_set *pset)
+{
+    *pset = mSet;
+}
