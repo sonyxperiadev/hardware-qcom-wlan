@@ -1131,6 +1131,7 @@ wifi_error wifi_set_link_stats(wifi_interface_handle iface,
     struct nlattr *nl_data;
     interface_info *iinfo = getIfaceInfo(iface);
     wifi_handle handle = getWifiHandle(iface);
+
     LLCommand = LLStatsCommand::instance(handle);
     if (LLCommand == NULL) {
         ALOGE("%s: Error LLStatsCommand NULL", __func__);
@@ -1183,7 +1184,6 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
     struct nlattr *nl_data;
     interface_info *iinfo = getIfaceInfo(iface);
     wifi_handle handle = getWifiHandle(iface);
-    pthread_t tid;
 
     LLCommand = LLStatsCommand::instance(handle);
     if (LLCommand == NULL) {

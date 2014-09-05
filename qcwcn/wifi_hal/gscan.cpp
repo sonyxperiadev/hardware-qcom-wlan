@@ -40,6 +40,13 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
     struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(handle);
     wifi_handle wifiHandle = getWifiHandle(handle);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     if (channels == NULL) {
         ALOGE("%s: NULL channels pointer provided. Exit.",
@@ -132,6 +139,14 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
     wifi_gscan_capabilities tCapabilities;
     interface_info *ifaceInfo = getIfaceInfo(handle);
     wifi_handle wifiHandle = getWifiHandle(handle);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
 
     if (capabilities == NULL) {
         ALOGE("%s: NULL capabilities pointer provided. Exit.",
@@ -228,6 +243,13 @@ wifi_error wifi_start_gscan(wifi_request_id id,
     wifi_scan_bucket_spec bucketSpec;
     struct nlattr *nlBuckectSpecList;
     bool previousGScanRunning = false;
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     /* Wi-Fi HAL doesn't need to check if a similar request to start gscan was
      *  made earlier. If start_gscan() is called while another gscan is already
@@ -426,6 +448,13 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
 
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     ALOGI("Stopping GScan, halHandle = %p", wifiHandle);
 
@@ -534,6 +563,13 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
     bool previousGScanSetBssidRunning = false;
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     ALOGD("Setting GScan BSSID Hotlist, halHandle = %p", wifiHandle);
 
@@ -701,6 +737,13 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
     struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     ALOGE("Resetting GScan BSSID Hotlist, halHandle = %p", wifiHandle);
 
@@ -806,6 +849,13 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
     bool previousGScanSetSigChangeRunning = false;
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     ALOGE("Setting GScan Significant Change, halHandle = %p", wifiHandle);
 
@@ -987,6 +1037,13 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
     struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     ALOGD("Resetting GScan Significant Change, halHandle = %p", wifiHandle);
 
@@ -1100,6 +1157,13 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
 
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __func__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     if (results == NULL) {
         ALOGE("%s: NULL results pointer provided. Exit.",
