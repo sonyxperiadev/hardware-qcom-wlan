@@ -49,6 +49,10 @@
 #define DEFAULT_EVENT_CB_SIZE   (64)
 #define DEFAULT_CMD_SIZE        (64)
 
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
+
 typedef void (*wifi_internal_event_handler) (wifi_handle handle, int events);
 
 class WifiCommand;
