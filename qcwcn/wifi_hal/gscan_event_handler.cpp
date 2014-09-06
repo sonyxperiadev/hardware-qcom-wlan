@@ -45,6 +45,11 @@ int GScanCommandEventHandler::get_request_id()
     return mRequestId;
 }
 
+void GScanCommandEventHandler::set_request_id(int request_id)
+{
+    mRequestId = request_id;
+}
+
 GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
                                                 u32 vendor_id,
                                                 u32 subcmd,
