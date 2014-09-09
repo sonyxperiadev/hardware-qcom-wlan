@@ -845,6 +845,12 @@ out:
 
 }
 
+int WifiVendorCommand::requestResponse()
+{
+    ALOGD("%s: request a response", __func__);
+    return WifiCommand::requestResponse(mMsg);
+}
+
 int WifiVendorCommand::requestEvent()
 {
     int res = requestVendorEvent(mVendor_id, mSubcmd);

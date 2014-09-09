@@ -410,6 +410,8 @@ public:
 
     virtual int create();
 
+    virtual int requestResponse();
+
     virtual int requestEvent();
 
     virtual int put_u8(int attribute, uint8_t value);
