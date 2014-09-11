@@ -84,7 +84,7 @@ LOCAL_SRC_FILES := \
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
-LOCAL_SHARED_LIBRARIES += libdl
+LOCAL_SHARED_LIBRARIES += libdl libhardware_legacy
 
 ifneq ($(wildcard external/libnl),)
 LOCAL_SHARED_LIBRARIES += libnl

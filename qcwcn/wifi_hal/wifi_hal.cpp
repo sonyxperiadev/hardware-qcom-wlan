@@ -40,7 +40,7 @@
 
 #define LOG_TAG  "WifiHAL"
 
-#include <utils/Log.h>
+#include "hardware_legacy/wifi.h"
 
 #include "wifi_hal.h"
 #include "common.h"
@@ -49,10 +49,11 @@
 
 /*
  BUGBUG: normally, libnl allocates ports for all connections it makes; but
- being a static library, it doesn't really know how many other netlink connections
- are made by the same process, if connections come from different shared libraries.
- These port assignments exist to solve that problem - temporarily. We need to fix
- libnl to try and allocate ports across the entire process.
+ being a static library, it doesn't really know how many other netlink
+ connections are made by the same process, if connections come from different
+ shared libraries. These port assignments exist to solve that
+ problem - temporarily. We need to fix libnl to try and allocate ports across
+ the entire process.
  */
 
 #define WIFI_HAL_CMD_SOCK_PORT       644
@@ -60,11 +61,25 @@
 
 static void internal_event_handler(wifi_handle handle, int events);
 static int internal_valid_message_handler(nl_msg *msg, void *arg);
-static int wifi_get_multicast_id(wifi_handle handle, const char *name, const char *group);
+static int wifi_get_multicast_id(wifi_handle handle, const char *name,
+        const char *group);
 static int wifi_add_membership(wifi_handle handle, const char *group);
 static wifi_error wifi_init_interfaces(wifi_handle handle);
 
 /* Initialize/Cleanup */
+
+wifi_interface_handle wifi_get_iface_handle(wifi_handle handle, char *name)
+{
+    hal_info *info = (hal_info *)handle;
+    for (int i=0;i<info->num_interfaces;i++)
+    {
+        if (!strcmp(info->interfaces[i]->name, name))
+        {
+            return ((wifi_interface_handle )(info->interfaces)[i]);
+        }
+    }
+    return NULL;
+}
 
 void wifi_socket_set_local_port(struct nl_sock *sock, uint32_t port)
 {
@@ -92,10 +107,12 @@ static nl_sock * wifi_create_nl_socket(int port)
 
     struct sockaddr_nl *addr_nl = &(sock->s_local);
     /* ALOGI("socket address is %d:%d:%d:%d",
-        addr_nl->nl_family, addr_nl->nl_pad, addr_nl->nl_pid, addr_nl->nl_groups); */
+       addr_nl->nl_family, addr_nl->nl_pad, addr_nl->nl_pid,
+       addr_nl->nl_groups); */
 
     struct sockaddr *addr = NULL;
-    // ALOGI("sizeof(sockaddr) = %d, sizeof(sockaddr_nl) = %d", sizeof(*addr), sizeof(*addr_nl));
+    // ALOGI("sizeof(sockaddr) = %d, sizeof(sockaddr_nl) = %d", sizeof(*addr),
+    // sizeof(*addr_nl));
 
     // ALOGI("Connecting socket");
     if (nl_connect(sock, NETLINK_GENERIC)) {
@@ -139,9 +156,45 @@ static int no_seq_check(struct nl_msg *msg, void *arg)
     return NL_OK;
 }
 
+static wifi_error acquire_supported_features(wifi_interface_handle iface,
+        feature_set *set)
+{
+    int ret = 0;
+    interface_info *iinfo = getIfaceInfo(iface);
+    wifi_handle handle = getWifiHandle(iface);
+    *set = 0;
+
+    SupportedFeatures supportedFeatures(handle, 0,
+            OUI_QCA,
+            QCA_NL80211_VENDOR_SUBCMD_GET_SUPPORTED_FEATURES);
+
+    /* create the message */
+    ret = supportedFeatures.create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = supportedFeatures.set_iface_id(iinfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    ret = supportedFeatures.requestResponse();
+    if (ret != 0) {
+        ALOGE("%s: requestResponse Error:%d",__func__, ret);
+        goto cleanup;
+    }
+
+    supportedFeatures.getResponseparams(set);
+
+cleanup:
+    return (wifi_error)ret;
+}
+
 wifi_error wifi_initialize(wifi_handle *handle)
 {
     int err = 0;
+    bool driver_loaded = false;
+    wifi_error ret = WIFI_SUCCESS;
+    wifi_interface_handle iface_handle;
     srand(getpid());
 
     ALOGI("Initializing wifi");
@@ -160,7 +213,8 @@ wifi_error wifi_initialize(wifi_handle *handle)
         return WIFI_ERROR_UNKNOWN;
     }
 
-    struct nl_sock *event_sock = wifi_create_nl_socket(WIFI_HAL_EVENT_SOCK_PORT);
+    struct nl_sock *event_sock =
+        wifi_create_nl_socket(WIFI_HAL_EVENT_SOCK_PORT);
     if (event_sock == NULL) {
         ALOGE("Could not create handle");
         nl_socket_free(cmd_sock);
@@ -179,7 +233,8 @@ wifi_error wifi_initialize(wifi_handle *handle)
     nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &err);
     nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &err);
 
-    nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, internal_valid_message_handler, info);
+    nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, internal_valid_message_handler,
+            info);
     nl_cb_put(cb);
 
     info->cmd_sock = cmd_sock;
@@ -212,15 +267,46 @@ wifi_error wifi_initialize(wifi_handle *handle)
     wifi_add_membership(*handle, "regulatory");
     wifi_add_membership(*handle, "vendor");
 
-    wifi_error ret = wifi_init_interfaces(*handle);
-    if(ret != WIFI_SUCCESS)
-    {
-        ALOGI("Failed to initialized Wifi HAL");
-        return ret;
+    if (!is_wifi_driver_loaded()) {
+        ret = (wifi_error)wifi_load_driver();
+        if(ret != WIFI_SUCCESS) {
+            ALOGE("%s Failed to load driver : %d\n", __func__, ret);
+            return WIFI_ERROR_UNKNOWN;
+        }
+        driver_loaded = true;
     }
 
-    ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d", NL80211_CMD_VENDOR);
-    return WIFI_SUCCESS;
+    ret = wifi_init_interfaces(*handle);
+    if (ret != WIFI_SUCCESS) {
+        ALOGI("Failed to init interfaces");
+        goto unload;
+    }
+
+    if (info->num_interfaces == 0) {
+        ALOGI("No interfaces found");
+        ret = WIFI_ERROR_UNINITIALIZED;
+        goto unload;
+    }
+
+    iface_handle = wifi_get_iface_handle((info->interfaces[0])->handle,
+            (info->interfaces[0])->name);
+    ret = acquire_supported_features(iface_handle,
+            &info->supported_feature_set);
+    if (ret != WIFI_SUCCESS) {
+        ALOGI("Failed to get supported feature set : %d", ret);
+        //acquire_supported_features failure is acceptable condition as legacy
+        //drivers might not support the required vendor command. So, do not
+        //consider it as failure of wifi_initialize
+        ret = WIFI_SUCCESS;
+    }
+
+    ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
+            " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
+
+unload:
+    if (driver_loaded)
+        wifi_unload_driver();
+    return ret;
 }
 
 static int wifi_add_membership(wifi_handle handle, const char *group)
@@ -331,7 +417,7 @@ void wifi_event_loop(wifi_handle handle)
     internal_cleaned_up_handler(handle);
 }
 
-///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 static int internal_valid_message_handler(nl_msg *msg, void *arg)
 {
@@ -358,7 +444,8 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
         ALOGI("event received %s", event.get_cmdString());
     }
 
-    ALOGI("event received %s, vendor_id = 0x%0x", event.get_cmdString(), vendor_id);
+    ALOGI("event received %s, vendor_id = 0x%0x", event.get_cmdString(),
+            vendor_id);
     // event.log();
 
     bool dispatched = false;
@@ -385,7 +472,7 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
     return NL_OK;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 class GetMulticastIdCommand : public WifiCommand
 {
@@ -394,8 +481,8 @@ private:
     const char *mGroup;
     int   mId;
 public:
-    GetMulticastIdCommand(wifi_handle handle, const char *name, const char *group)
-        : WifiCommand(handle, 0)
+    GetMulticastIdCommand(wifi_handle handle, const char *name,
+            const char *group) : WifiCommand(handle, 0)
     {
         mName = name;
         mGroup = group;
@@ -430,7 +517,8 @@ public:
             ALOGI("No multicast groups found");
             return NL_SKIP;
         } else {
-            // ALOGI("Multicast groups attr size = %d", nla_len(tb[CTRL_ATTR_MCAST_GROUPS]));
+            // ALOGI("Multicast groups attr size = %d",
+            // nla_len(tb[CTRL_ATTR_MCAST_GROUPS]));
         }
 
         for_each_attr(mcgrp, tb[CTRL_ATTR_MCAST_GROUPS], i) {
@@ -439,7 +527,8 @@ public:
             struct nlattr *tb2[CTRL_ATTR_MCAST_GRP_MAX + 1];
             nla_parse(tb2, CTRL_ATTR_MCAST_GRP_MAX, (nlattr *)nla_data(mcgrp),
                 nla_len(mcgrp), NULL);
-            if (!tb2[CTRL_ATTR_MCAST_GRP_NAME] || !tb2[CTRL_ATTR_MCAST_GRP_ID]) {
+            if (!tb2[CTRL_ATTR_MCAST_GRP_NAME] || !tb2[CTRL_ATTR_MCAST_GRP_ID])
+            {
                 continue;
             }
 
@@ -460,7 +549,8 @@ public:
 
 };
 
-static int wifi_get_multicast_id(wifi_handle handle, const char *name, const char *group)
+static int wifi_get_multicast_id(wifi_handle handle, const char *name,
+        const char *group)
 {
     GetMulticastIdCommand cmd(handle, name, group);
     int res = cmd.requestResponse();
@@ -488,19 +578,6 @@ static int get_interface(const char *name, interface_info *info)
     info->id = if_nametoindex(name);
     // ALOGI("found an interface : %s, id = %d", name, info->id);
     return WIFI_SUCCESS;
-}
-
-wifi_interface_handle wifi_get_iface_handle(wifi_handle handle, char *name)
-{
-    hal_info *info = (hal_info *)handle;
-    for (int i=0;i<info->num_interfaces;i++)
-    {
-        if (!strcmp(info->interfaces[i]->name, name))
-        {
-            return ((wifi_interface_handle )(info->interfaces)[i]);
-        }
-    }
-    return NULL;
 }
 
 wifi_error wifi_init_interfaces(wifi_handle handle)
@@ -535,7 +612,8 @@ wifi_error wifi_init_interfaces(wifi_handle handle)
         if (de->d_name[0] == '.')
             continue;
         if (is_wifi_interface(de->d_name)) {
-            interface_info *ifinfo = (interface_info *)malloc(sizeof(interface_info));
+            interface_info *ifinfo
+                = (interface_info *)malloc(sizeof(interface_info));
             if (get_interface(de->d_name, ifinfo) != WIFI_SUCCESS) {
                 free(ifinfo);
                 continue;
@@ -551,37 +629,11 @@ wifi_error wifi_init_interfaces(wifi_handle handle)
     info->num_interfaces = n;
     ALOGI("Found %d interfaces", info->num_interfaces);
 
-    /* Driver/firmware supported features are irrespective of interfaces
-     * It can be queried using any of the interfaces
-     * Hence use the first supported interface.
-     */
-    if (info->num_interfaces > 0) {
-        wifi_error ret;
-        wifi_handle handle = (info->interfaces[0])->handle;
-        wifi_interface_handle iface_handle;
-        iface_handle = wifi_get_iface_handle(handle,
-                (info->interfaces[0])->name);
-        ret = wifi_get_supported_feature_set(iface_handle,
-                &info->supported_feature_set);
-        if (ret != WIFI_SUCCESS) {
-            ALOGE("Could not get the supported features");
-            info->supported_feature_set = 0;
-            return ret;
-        }
-    }
-
-    if (info->supported_feature_set == 0)
-    {
-        ALOGI("No Features are supported by driver currently");
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-    ALOGI("Features set supported by driver currently : %x",
-            info->supported_feature_set);
-
     return WIFI_SUCCESS;
 }
 
-wifi_error wifi_get_ifaces(wifi_handle handle, int *num, wifi_interface_handle **interfaces)
+wifi_error wifi_get_ifaces(wifi_handle handle, int *num,
+        wifi_interface_handle **interfaces)
 {
     hal_info *info = (hal_info *)handle;
 
@@ -591,7 +643,8 @@ wifi_error wifi_get_ifaces(wifi_handle handle, int *num, wifi_interface_handle *
     return WIFI_SUCCESS;
 }
 
-wifi_error wifi_get_iface_name(wifi_interface_handle handle, char *name, size_t size)
+wifi_error wifi_get_iface_name(wifi_interface_handle handle, char *name,
+        size_t size)
 {
     interface_info *info = (interface_info *)handle;
     strcpy(name, info->name);
@@ -599,49 +652,28 @@ wifi_error wifi_get_iface_name(wifi_interface_handle handle, char *name, size_t 
 }
 
 /* Get the supported Feature set */
-wifi_error wifi_get_supported_feature_set(wifi_interface_handle iface, feature_set *set)
+wifi_error wifi_get_supported_feature_set(wifi_interface_handle iface,
+        feature_set *set)
 {
     int ret = 0;
-    struct nlattr *nl_data;
-    SupportedFeatures *vCommand = NULL;
-    interface_info *iinfo = getIfaceInfo(iface);
     wifi_handle handle = getWifiHandle(iface);
     *set = 0;
+    hal_info *info = getHalInfo(handle);
 
-    vCommand = new SupportedFeatures(handle, 0,
-            OUI_QCA,
-            QCA_NL80211_VENDOR_SUBCMD_GET_SUPPORTED_FEATURES);
-    if (vCommand == NULL) {
-        ALOGE("%s: Error vCommand NULL", __func__);
-        return WIFI_ERROR_OUT_OF_MEMORY;
+    ret = acquire_supported_features(iface, set);
+    if (ret != WIFI_SUCCESS) {
+        *set = info->supported_feature_set;
+        ALOGI("Supported feature set acquired at initialization : %x", *set);
+    } else {
+        info->supported_feature_set = *set;
+        ALOGI("Supported feature set acquired : %x", *set);
     }
-
-    /* create the message */
-    ret = vCommand->create();
-    if (ret < 0)
-        goto cleanup;
-
-    ret = vCommand->set_iface_id(iinfo->name);
-    if (ret < 0)
-        goto cleanup;
-
-    ret = vCommand->requestResponse();
-    if (ret != 0) {
-        ALOGE("%s: requestResponse Error:%d",__func__, ret);
-        goto cleanup;
-    }
-
-    vCommand->getResponseparams(set);
-    ALOGI("Supported feature set : %x", *set);
-
-cleanup:
-    delete vCommand;
-    return (wifi_error)ret;
+    return WIFI_SUCCESS;
 }
 /////////////////////////////////////////////////////////////////////////////
 
-wifi_error wifi_get_concurrency_matrix(wifi_interface_handle handle, int max_size,
-        feature_set *matrix, int *size) {
+wifi_error wifi_get_concurrency_matrix(wifi_interface_handle handle,
+        int max_size, feature_set *matrix, int *size) {
     return WIFI_ERROR_NOT_SUPPORTED;
 }
 
