@@ -115,8 +115,13 @@ void wifi_unregister_handler(wifi_handle handle, int cmd)
 
     for (int i = 0; i < info->num_event_cb; i++) {
         if (info->event_cb[i].nl_cmd == cmd) {
-            memmove(&info->event_cb[i], &info->event_cb[i+1],
-                (info->num_event_cb - i) * sizeof(cb_info));
+            if(i < info->num_event_cb-1) {
+                /* No need to memmove if only one entry exist and deleting
+                 * the same, as the num_event_cb will become 0 in this case.
+                 */
+                memmove(&info->event_cb[i], &info->event_cb[i+1],
+                        (info->num_event_cb - i) * sizeof(cb_info));
+            }
             info->num_event_cb--;
             ALOGI("Successfully removed event handler for command %d", cmd);
             return;
@@ -133,9 +138,13 @@ void wifi_unregister_vendor_handler(wifi_handle handle, uint32_t id, int subcmd)
         if (info->event_cb[i].nl_cmd == NL80211_CMD_VENDOR
                 && info->event_cb[i].vendor_id == id
                 && info->event_cb[i].vendor_subcmd == subcmd) {
-
-            memmove(&info->event_cb[i], &info->event_cb[i+1],
-                (info->num_event_cb - i) * sizeof(cb_info));
+            if(i < info->num_event_cb-1) {
+                /* No need to memmove if only one entry exist and deleting
+                 * the same, as the num_event_cb will become 0 in this case.
+                 */
+                memmove(&info->event_cb[i], &info->event_cb[i+1],
+                        (info->num_event_cb - i) * sizeof(cb_info));
+            }
             info->num_event_cb--;
             ALOGI("Successfully removed event handler for vendor 0x%0x", id);
             return;
