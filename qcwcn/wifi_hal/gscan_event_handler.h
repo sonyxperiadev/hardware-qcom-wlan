@@ -32,8 +32,11 @@ private:
     // TODO: derive 3 other command event handler classes from this base and separate
     // the data member vars
     wifi_scan_result *mHotlistApFoundResults;
+    wifi_scan_result *mHotlistApLostResults;
     u32 mHotlistApFoundNumResults;
+    u32 mHotlistApLostNumResults;
     bool mHotlistApFoundMoreData;
+    bool mHotlistApLostMoreData;
     wifi_significant_change_result **mSignificantChangeResults;
     u32 mSignificantChangeNumResults;
     bool mSignificantChangeMoreData;

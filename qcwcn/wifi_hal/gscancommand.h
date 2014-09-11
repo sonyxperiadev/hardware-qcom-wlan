@@ -120,6 +120,8 @@ typedef struct {
     void (*on_full_scan_result) (wifi_request_id id, wifi_scan_result *result);
     /* Optional event - indicates progress of scanning statemachine */
     void (*on_scan_event) (wifi_scan_event event, unsigned status);
+    void (*on_hotlist_ap_lost)(wifi_request_id id,
+            unsigned num_results, wifi_scan_result *results);
 } GScanCallbackHandler;
 
 class GScanCommand: public WifiVendorCommand

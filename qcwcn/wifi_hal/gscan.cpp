@@ -615,10 +615,14 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     if (!nlData)
         goto cleanup;
 
-    numAp = (unsigned int)params.num_ap > MAX_HOTLIST_APS ? MAX_HOTLIST_APS : params.num_ap;
+    numAp = (unsigned int)params.num_ap > MAX_HOTLIST_APS ?
+        MAX_HOTLIST_APS : params.num_ap;
     if (gScanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
             id) ||
+        gScanCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_GSCAN_BSSID_HOTLIST_PARAMS_LOST_AP_SAMPLE_SIZE,
+            params.lost_ap_sample_size) ||
         gScanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_GSCAN_BSSID_HOTLIST_PARAMS_NUM_AP,
             numAp))
@@ -1329,6 +1333,8 @@ wifi_error wifi_set_scanning_mac_oui(wifi_interface_handle handle, oui scan_oui)
     if (!nlData)
         goto cleanup;
 
+    ALOGI("MAC_OUI - %02x:%02x:%02x", scan_oui[0], scan_oui[1], scan_oui[2]);
+
     /* Add the fixed part of the mac_oui to the nl command */
     ret = vCommand->put_bytes(
             QCA_WLAN_VENDOR_ATTR_SET_SCANNING_MAC_OUI,
@@ -1996,7 +2002,7 @@ int GScanCommand::handleEvent(WifiEvent &event)
                 resultsBufSize - sizeOfObtainedScanResults);
 
             /* To support fragmentation from firmware, monitor the
-             * MORE_DTATA flag and cache results until MORE_DATA = 0.
+             * MORE_DATA flag and cache results until MORE_DATA = 0.
              */
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_MORE_DATA]) {
