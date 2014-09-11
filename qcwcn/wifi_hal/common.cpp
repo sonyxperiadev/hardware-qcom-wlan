@@ -79,11 +79,11 @@ wifi_error wifi_register_vendor_handler(wifi_handle handle,
     hal_info *info = (hal_info *)handle;
 
     for (int i = 0; i < info->num_event_cb; i++) {
-        if(info->event_cb[info->num_event_cb].vendor_id  == id &&
-           info->event_cb[info->num_event_cb].vendor_subcmd == subcmd)
+        if(info->event_cb[i].vendor_id  == id &&
+           info->event_cb[i].vendor_subcmd == subcmd)
         {
-            info->event_cb[info->num_event_cb].cb_func = func;
-            info->event_cb[info->num_event_cb].cb_arg  = arg;
+            info->event_cb[i].cb_func = func;
+            info->event_cb[i].cb_arg  = arg;
             ALOGI("Updated event handler %p for vendor 0x%0x, subcmd 0x%0x"
                 " and arg %p", func, id, subcmd, arg);
             return WIFI_SUCCESS;
