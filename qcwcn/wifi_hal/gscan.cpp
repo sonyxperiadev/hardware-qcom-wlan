@@ -1298,6 +1298,59 @@ cleanup:
     return (wifi_error)ret;
 }
 
+/* Random MAC OUI for PNO */
+wifi_error wifi_set_scanning_mac_oui(wifi_interface_handle handle, oui scan_oui)
+{
+    int ret = 0;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+    interface_info *iinfo = getIfaceInfo(handle);
+    wifi_handle wifiHandle = getWifiHandle(handle);
+
+    vCommand = new WifiVendorCommand(wifiHandle, 0,
+            OUI_QCA,
+            QCA_NL80211_VENDOR_SUBCMD_SCANNING_MAC_OUI);
+    if (vCommand == NULL) {
+        ALOGE("%s: Error vCommand NULL", __func__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* create the message */
+    ret = vCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = vCommand->set_iface_id(iinfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    /* Add the fixed part of the mac_oui to the nl command */
+    ret = vCommand->put_bytes(
+            QCA_WLAN_VENDOR_ATTR_SET_SCANNING_MAC_OUI,
+            (char *)scan_oui,
+            WIFI_SCANNING_MAC_OUI_LENGTH);
+    if (ret < 0)
+        goto cleanup;
+
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+    if (ret != 0) {
+        ALOGE("%s: requestResponse Error:%d",__func__, ret);
+        goto cleanup;
+    }
+
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
+}
+
+
 GScanCommand::GScanCommand(wifi_handle handle, int id, u32 vendor_id,
                                   u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
