@@ -124,7 +124,7 @@ static int finish_handler_LLStats(struct nl_msg *msg, void *arg)
 //Call the appropriate callback handler after parsing the vendor data.
 int TdlsCommand::handleEvent(WifiEvent &event)
 {
-    ALOGI("Got a LLStats message from Driver");
+    ALOGI("Got a TDLS message from Driver");
     unsigned i=0;
     u32 status;
     int ret = WIFI_SUCCESS;
@@ -152,7 +152,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                 memcpy(mTDLSStateChange.addr,
                      (u8 *)nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE_MAC_ADDR]),
                            nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE_MAC_ADDR]));
-                ALOGI("TDLS: State : %u ", mTDLSStateChange.state);
+                ALOGI("TDLS: State Old : %u ", mTDLSStateChange.state);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE])
                 {
@@ -160,8 +160,8 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 mTDLSStateChange.state =
-                     nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE]);
-                ALOGI("TDLS: State : %u ", mTDLSStateChange.state);
+                     (wifi_tdls_state)get_s32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE]);
+                ALOGI("TDLS: State New : %u ", mTDLSStateChange.state);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATUS])
                 {
@@ -169,11 +169,28 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 mTDLSStateChange.reason =
-                    nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATUS]);
+                    (wifi_tdls_reason)get_s32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATUS]);
                 ALOGI("TDLS: Reason : %u ", mTDLSStateChange.reason);
             }
             break;
 
+        default:
+            //error case should not happen print log
+            ALOGE("%s: Wrong TDLS subcmd received %d", __func__, mSubcmd);
+    }
+
+    return NL_SKIP;
+}
+
+int TdlsCommand::handleResponse(WifiEvent &reply)
+{
+    ALOGI("Received a TDLS response message from Driver");
+    u32 status;
+    int i = 0;
+    WifiVendorCommand::handleResponse(reply);
+
+    switch(mSubcmd)
+    {
         case QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_STATUS:
             {
                 wifi_request_id id;
@@ -190,7 +207,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 mTDLSgetStatusRspParams.state =
-                     nla_get_u8(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE]);
+                     (wifi_tdls_state)get_s32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE]);
                 ALOGI("TDLS: State : %u ", mTDLSgetStatusRspParams.state);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON])
@@ -199,18 +216,17 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 mTDLSgetStatusRspParams.reason =
-                    nla_get_u8(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON]);
+                    (wifi_tdls_reason)get_s32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON]);
                 ALOGI("TDLS: Reason : %u ", mTDLSgetStatusRspParams.reason);
             }
             break;
-
-        default:
-            //error case should not happen print log
-            ALOGE("%s: Wrong LLStats subcmd received %d", __func__, mSubcmd);
+        default :
+            ALOGE("%s: Wrong TDLS subcmd response received %d",
+                __func__, mSubcmd);
     }
-
     return NL_SKIP;
 }
+
 
 int TdlsCommand::setCallbackHandler(wifi_tdls_handler nHandler, u32 event)
 {
@@ -233,8 +249,8 @@ void TdlsCommand::unregisterHandler(u32 subCmd)
 void TdlsCommand::getStatusRspParams( wifi_tdls_state *state,
                                       wifi_tdls_reason *reason)
 {
-    *state = (wifi_tdls_state)mTDLSgetStatusRspParams.state;
-    *reason = (wifi_tdls_reason)mTDLSgetStatusRspParams.reason;
+    *state = mTDLSgetStatusRspParams.state;
+    *reason = mTDLSgetStatusRspParams.reason;
 }
 
 int TdlsCommand::requestResponse()
