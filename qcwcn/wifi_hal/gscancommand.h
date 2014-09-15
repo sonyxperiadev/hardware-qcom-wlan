@@ -175,6 +175,10 @@ public:
     /* Takes wait time in seconds. */
     virtual int timed_wait(u16 wait_time);
     virtual void waitForRsp(bool wait);
+    virtual int gscan_get_cached_results(u32 num_results,
+                                         wifi_scan_result *results,
+                                         u32 starting_index,
+                                         struct nlattr **tb_vendor);
 };
 
 #ifdef __cplusplus

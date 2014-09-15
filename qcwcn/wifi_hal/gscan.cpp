@@ -1565,7 +1565,7 @@ int GScanCommand::handleResponse(WifiEvent &reply) {
 }
 
 /* Called to parse and extract cached results. */
-static int gscan_get_cached_results(u32 num_results,
+int GScanCommand::gscan_get_cached_results(u32 num_results,
                                           wifi_scan_result *results,
                                           u32 starting_index,
                                           struct nlattr **tb_vendor)
@@ -1657,7 +1657,7 @@ static int gscan_get_cached_results(u32 num_results,
             return WIFI_ERROR_INVALID_ARGS;
         }
         results[i].rssi =
-            nla_get_u32(
+            get_s32(
             tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RSSI]);
         if (!
             tb2[

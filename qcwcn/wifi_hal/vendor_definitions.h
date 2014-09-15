@@ -144,11 +144,11 @@ enum qca_wlan_vendor_attr_ll_stats_results
     QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_MGMT_ACTION_RX,
     /* Unsigned 32bit value */
     QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_MGMT_ACTION_TX,
-    /* Unsigned 32bit value */
+    /* Signed 32bit value */
     QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_RSSI_MGMT,
-    /* Unsigned 32bit value */
+    /* Signed 32bit value */
     QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_RSSI_DATA,
-    /* Unsigned 32bit value */
+    /* Signed 32bit value */
     QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_RSSI_ACK,
 
     /* Attributes of type QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_INFO_* are
