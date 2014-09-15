@@ -647,6 +647,45 @@ wifi_error wifi_get_concurrency_matrix(wifi_interface_handle handle, int max_siz
 
 wifi_error wifi_set_nodfs_flag(wifi_interface_handle handle, u32 nodfs)
 {
-    ALOGI("%s: Disabled", __func__);
-    return WIFI_ERROR_NOT_SUPPORTED;
+    int ret = 0;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+    interface_info *ifaceInfo = getIfaceInfo(handle);
+    wifi_handle wifiHandle = getWifiHandle(handle);
+
+    vCommand = new WifiVendorCommand(wifiHandle, 0,
+            OUI_QCA,
+            QCA_NL80211_VENDOR_SUBCMD_NO_DFS_FLAG);
+    if (vCommand == NULL) {
+        ALOGE("%s: Error vCommand NULL", __func__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* Create the message */
+    ret = vCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = vCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    /* Add the fixed part of the mac_oui to the nl command */
+    if (vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_SET_NO_DFS_FLAG, nodfs)) {
+        goto cleanup;
+    }
+
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+    /* Don't check response since we aren't expecting one */
+
+cleanup:
+    delete vCommand;
+    return (wifi_error)ret;
 }
