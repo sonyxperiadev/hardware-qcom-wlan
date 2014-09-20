@@ -67,31 +67,11 @@ extern "C"
 {
 #endif /* __cplusplus */
 
-typedef struct{
-    wifi_tdls_state state;
-    wifi_tdls_reason reason;
-} TDLSgetStatusRspParams;
-
-typedef struct{
-    mac_addr addr;
-    wifi_tdls_state state;
-    wifi_tdls_reason reason;
-} TDLSStateChange;
-
-/* Response and Event Callbacks */
-typedef struct {
-    /* Various Events Callback */
-    void (*on_tdls_state_changed)(mac_addr addr,
-                                  wifi_tdls_state state,
-                                  wifi_tdls_reason reason);
-} TDLSCallbackHandler;
-
 class TdlsCommand: public WifiVendorCommand
 {
 private:
     static TdlsCommand *mTdlsCommandInstance;
-    TDLSgetStatusRspParams mTDLSgetStatusRspParams;
-    TDLSStateChange mTDLSStateChange;
+    wifi_tdls_status mTDLSgetStatusRspParams;
     wifi_request_id mRequestId;
     wifi_tdls_handler mHandler;
 
@@ -113,8 +93,7 @@ public:
 
     virtual void unregisterHandler(u32 subCmd);
 
-    virtual void getStatusRspParams(wifi_tdls_state *state,
-                                    wifi_tdls_reason *reason);
+    virtual void getStatusRspParams(wifi_tdls_status *status);
 };
 
 #ifdef __cplusplus
