@@ -48,7 +48,11 @@ lowi_cb_table_t *LowiWifiHalApi = NULL;
 static wifi_error getLowiCbTable(lowi_cb_table_t **lowi_wifihal_api)
 {
     getCbTable_t* lowiCbTable = NULL;
-    void* lowi_handle = dlopen("liblowi_wifihal.so", RTLD_NOW);
+#if __WORDSIZE == 64
+    void* lowi_handle = dlopen("/vendor/lib64/liblowi_wifihal.so", RTLD_NOW);
+#else
+    void* lowi_handle = dlopen("/vendor/lib/liblowi_wifihal.so", RTLD_NOW);
+#endif
     if (!lowi_handle)
         ALOGE("NULL lowi_handle, err: %s", dlerror());
     if (lowi_handle != (void*)NULL)
