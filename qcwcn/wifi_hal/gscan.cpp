@@ -1492,11 +1492,6 @@ int GScanCommand::requestEvent()
             __func__, res, mWaitforRsp);
     }
 out:
-    /* Free the VendorData */
-    if (mVendorData) {
-        free(mVendorData);
-    }
-    mVendorData = NULL;
     /* Cleanup the mMsg */
     mMsg.destroy();
     return res;
