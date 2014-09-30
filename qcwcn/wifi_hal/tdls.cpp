@@ -168,7 +168,7 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                     return WIFI_ERROR_INVALID_ARGS;
                 }
                 status.state = (wifi_tdls_state)
-                    get_s32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE]);
+                    get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_STATE]);
                 ALOGI("TDLS: State New : %d ", status.state);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_REASON])
@@ -181,9 +181,28 @@ int TdlsCommand::handleEvent(WifiEvent &event)
                     get_s32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_REASON]);
                 ALOGI("TDLS: Reason : %d ", status.reason);
 
-                //TODO: Enhance the event to get channel and
-                // global_operating_class from the nl message once if
-                // the driver support added for the same.
+                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_CHANNEL])
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_CHANNEL not found",
+                            __func__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                status.channel =
+                    get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_CHANNEL]);
+                ALOGI("TDLS: channel : %d ", status.channel);
+
+                if (!tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_TDLS_GLOBAL_OPERATING_CLASS])
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_GLOBAL_OPERATING_CLASS"
+                            " not found", __func__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                status.global_operating_class = get_u32(
+                   tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GLOBAL_OPERATING_CLASS]);
+                ALOGI("TDLS: global_operating_class: %d ",
+                        status.global_operating_class);
+
                 if (mHandler.on_tdls_state_changed)
                     (*mHandler.on_tdls_state_changed)(addr, status);
                 else
@@ -221,16 +240,14 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                 ALOGI("QCA_NL80211_VENDOR_SUBCMD_TDLS_GET_STATUS Received");
                 memset(&mTDLSgetStatusRspParams, 0, sizeof(wifi_tdls_status));
 
-                //TODO: Enhance this to get channel and global_operating_class
-                // from the nl message once the driver changes are available
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE"
                             " not found", __func__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
-                mTDLSgetStatusRspParams.state = (wifi_tdls_state)
-                    get_s32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE]);
+                mTDLSgetStatusRspParams.state = (wifi_tdls_state)get_u32(
+                        tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_STATE]);
                 ALOGI("TDLS: State : %u ", mTDLSgetStatusRspParams.state);
 
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON])
@@ -239,9 +256,33 @@ int TdlsCommand::handleResponse(WifiEvent &reply)
                             " not found", __func__);
                     return WIFI_ERROR_INVALID_ARGS;
                 }
-                mTDLSgetStatusRspParams.reason = (wifi_tdls_reason)
-                    get_s32(tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON]);
-                ALOGI("TDLS: Reason : %u ", mTDLSgetStatusRspParams.reason);
+                mTDLSgetStatusRspParams.reason = (wifi_tdls_reason)get_s32(
+                        tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_REASON]);
+                ALOGI("TDLS: Reason : %d ", mTDLSgetStatusRspParams.reason);
+
+                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_CHANNEL])
+                {
+                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_CHANNEL"
+                            " not found", __func__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                mTDLSgetStatusRspParams.channel = get_u32(tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_CHANNEL]);
+                ALOGI("TDLS: channel : %d ", mTDLSgetStatusRspParams.channel);
+
+                if (!tb_vendor[
+                  QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_GLOBAL_OPERATING_CLASS])
+                {
+                    ALOGE("%s:"
+                   "QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_GLOBAL_OPERATING_CLASS"
+                    " not found", __func__);
+                    return WIFI_ERROR_INVALID_ARGS;
+                }
+                mTDLSgetStatusRspParams.global_operating_class =
+                  get_u32(tb_vendor[
+                  QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_GLOBAL_OPERATING_CLASS]);
+                ALOGI("TDLS: global_operating_class: %d ",
+                        mTDLSgetStatusRspParams.global_operating_class);
             }
             break;
         default :
@@ -273,7 +314,8 @@ void TdlsCommand::unregisterHandler(u32 subCmd)
 void TdlsCommand::getStatusRspParams(wifi_tdls_status *status)
 {
     status->channel = mTDLSgetStatusRspParams.channel;
-    status->global_operating_class = mTDLSgetStatusRspParams.global_operating_class;
+    status->global_operating_class =
+        mTDLSgetStatusRspParams.global_operating_class;
     status->state = mTDLSgetStatusRspParams.state;
     status->reason = mTDLSgetStatusRspParams.reason;
 }
@@ -417,7 +459,9 @@ cleanup:
     return (wifi_error)ret;
 }
 
-/* wifi_get_tdls_status - allows getting the status of TDLS for a specific route */
+/* wifi_get_tdls_status - allows getting the status of TDLS for a specific
+ * route
+ */
 wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
                                 wifi_tdls_status *status)
 {
