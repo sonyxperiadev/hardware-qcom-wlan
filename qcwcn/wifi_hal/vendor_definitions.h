@@ -60,6 +60,8 @@ enum vendor_subcmds {
     QCA_NL80211_VENDOR_SUBCMD_SCANNING_MAC_OUI = 39,
     /* Set nodfs_flag */
     QCA_NL80211_VENDOR_SUBCMD_NO_DFS_FLAG = 40,
+    /* Indicates BSSID Hotlist AP lost. */
+    QCA_NL80211_VENDOR_SUBCMD_GSCAN_HOTLIST_AP_LOST = 41,
 };
 
 enum qca_wlan_vendor_attr_ll_stats_set
@@ -496,6 +498,8 @@ enum qca_wlan_vendor_attr_gscan_config_params
      */
     QCA_WLAN_VENDOR_ATTR_GSCAN_SIGNIFICANT_CHANGE_PARAMS_NUM_AP,
 
+    /* Unsigned 32bit value; number of samples to confirm AP loss. */
+    QCA_WLAN_VENDOR_ATTR_GSCAN_BSSID_HOTLIST_PARAMS_LOST_AP_SAMPLE_SIZE,
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_MAX =
