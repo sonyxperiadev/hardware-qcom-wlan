@@ -40,6 +40,7 @@
 #endif
 #include "qca-vendor.h"
 #include "vendor_definitions.h"
+#include "wifi_hal.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -79,15 +80,24 @@ public:
     virtual int get_request_id();
 };
 
-class SupportedFeatures: public WifiVendorCommand
+class WifihalGeneric: public WifiVendorCommand
 {
+private:
+    wifi_interface_handle mHandle;
     feature_set mSet;
+    int mSetSizeMax;
+    int *mSetSizePtr;
+    feature_set *mConcurrencySet;
+
 public:
-    SupportedFeatures(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
-    virtual ~SupportedFeatures();
+    WifihalGeneric(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
+    virtual ~WifihalGeneric();
     virtual int requestResponse();
     virtual int handleResponse(WifiEvent &reply);
     virtual void getResponseparams(feature_set *pset);
+    virtual void setMaxSetSize(int set_size_max);
+    virtual void setSizePtr(int *set_size);
+    virtual void setConcurrencySet(feature_set set[]);
 };
 #ifdef __cplusplus
 }
