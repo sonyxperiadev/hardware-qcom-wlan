@@ -445,11 +445,13 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             reqId = nla_get_u32(
                     tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]
                     );
-            /* If this is not for us, just ignore it. */
+            /* If event has a different request_id, ignore that and use the
+             *  request_id value which we're maintaining.
+             */
             if (reqId != mRequestId) {
-                ALOGE("%s: Event has Req. ID:%d <> Ours:%d, ignore it.",
+                ALOGE("%s: Event has Req. ID:%d <> Ours:%d, continue...",
                     __func__, reqId, mRequestId);
-                break;
+                reqId = mRequestId;
             }
 
             /* Parse and extract the results. */
