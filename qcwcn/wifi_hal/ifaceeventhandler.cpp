@@ -196,29 +196,32 @@ int wifiEventHandler::handleEvent(WifiEvent &event)
     return NL_SKIP;
 }
 
-SupportedFeatures::SupportedFeatures(wifi_handle handle, int id, u32 vendor_id,
+WifihalGeneric::WifihalGeneric(wifi_handle handle, int id, u32 vendor_id,
                                   u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
-    ALOGD("SupportedFeatures %p constructed", this);
+    ALOGD("WifihalGeneric %p constructed", this);
     /* Initialize the member data variables here */
     mSet = 0;
+    mSetSizeMax = 0;
+    mSetSizePtr = NULL;
+    mConcurrencySet = 0;
 }
 
-SupportedFeatures::~SupportedFeatures()
+WifihalGeneric::~WifihalGeneric()
 {
-    ALOGD("SupportedFeatures %p destructor", this);
+    ALOGD("WifihalGeneric %p destructor", this);
 }
 
-int SupportedFeatures::requestResponse()
+int WifihalGeneric::requestResponse()
 {
     return WifiCommand::requestResponse(mMsg);
 }
 
-int SupportedFeatures::handleResponse(WifiEvent &reply)
+int WifihalGeneric::handleResponse(WifiEvent &reply)
 {
-    ALOGI("Got a SupportedFeatures message from Driver");
-    unsigned i=0;
+    ALOGI("Got a Wi-Fi HAL module message from Driver");
+    int i = 0;
     u32 status;
     WifiVendorCommand::handleResponse(reply);
 
@@ -242,13 +245,69 @@ int SupportedFeatures::handleResponse(WifiEvent &reply)
 
                 break;
             }
+        case QCA_NL80211_VENDOR_SUBCMD_GET_CONCURRENCY_MATRIX:
+            {
+                struct nlattr *tb_vendor[
+                    QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_MAX + 1];
+                nla_parse(tb_vendor,
+                    QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_MAX,
+                    (struct nlattr *)mVendorData,mDataLen, NULL);
+
+                if (tb_vendor[
+                    QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_RESULTS_SET_SIZE]) {
+                    u32 val;
+                    val = nla_get_u32(
+                        tb_vendor[
+                    QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_RESULTS_SET_SIZE]);
+
+                    ALOGD("%s: Num of concurrency combinations: %d",
+                        __func__, val);
+                    val = val > (unsigned int)mSetSizeMax ?
+                          (unsigned int)mSetSizeMax : val;
+                    *mSetSizePtr = val;
+
+                    /* Extract the list of channels. */
+                    if (*mSetSizePtr > 0 &&
+                        tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_RESULTS_SET]) {
+                        nla_memcpy(mConcurrencySet,
+                            tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_RESULTS_SET],
+                            sizeof(feature_set) * (*mSetSizePtr));
+                    }
+
+                    ALOGD("%s: Get concurrency matrix response received.",
+                        __func__);
+                    ALOGD("%s: Num of concurrency combinations : %d",
+                        __func__, *mSetSizePtr);
+                    ALOGD("%s: List of valid concurrency combinations is: ",
+                        __func__);
+                    for(i = 0; i < *mSetSizePtr; i++)
+                    {
+                        ALOGD("%x", *(mConcurrencySet + i));
+                    }
+                }
+            }
+            break;
         default :
-            ALOGE("%s: Wrong Supported stats subcmd received %d", __func__, mSubcmd);
+            ALOGE("%s: Wrong Wi-Fi HAL event received %d", __func__, mSubcmd);
     }
     return NL_SKIP;
 }
 
-void SupportedFeatures::getResponseparams(feature_set *pset)
+void WifihalGeneric::getResponseparams(feature_set *pset)
 {
     *pset = mSet;
+}
+
+void WifihalGeneric::setMaxSetSize(int set_size_max) {
+    mSetSizeMax = set_size_max;
+}
+
+void WifihalGeneric::setConcurrencySet(feature_set set[]) {
+    mConcurrencySet = set;
+}
+
+void WifihalGeneric::setSizePtr(int *set_size) {
+    mSetSizePtr = set_size;
 }

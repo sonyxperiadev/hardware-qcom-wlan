@@ -164,7 +164,7 @@ static wifi_error acquire_supported_features(wifi_interface_handle iface,
     wifi_handle handle = getWifiHandle(iface);
     *set = 0;
 
-    SupportedFeatures supportedFeatures(handle, 0,
+    WifihalGeneric supportedFeatures(handle, 0,
             OUI_QCA,
             QCA_NL80211_VENDOR_SUBCMD_GET_SUPPORTED_FEATURES);
 
@@ -670,12 +670,72 @@ wifi_error wifi_get_supported_feature_set(wifi_interface_handle iface,
     }
     return WIFI_SUCCESS;
 }
-/////////////////////////////////////////////////////////////////////////////
 
 wifi_error wifi_get_concurrency_matrix(wifi_interface_handle handle,
-        int max_size, feature_set *matrix, int *size) {
-    return WIFI_ERROR_NOT_SUPPORTED;
+                                       int set_size_max,
+                                       feature_set set[], int *set_size)
+{
+    int ret = 0;
+    struct nlattr *nlData;
+    WifihalGeneric *vCommand = NULL;
+    interface_info *ifaceInfo = getIfaceInfo(handle);
+    wifi_handle wifiHandle = getWifiHandle(handle);
+
+    if (set == NULL) {
+        ALOGE("%s: NULL set pointer provided. Exit.",
+            __func__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    vCommand = new WifihalGeneric(wifiHandle, 0,
+            OUI_QCA,
+            QCA_NL80211_VENDOR_SUBCMD_GET_CONCURRENCY_MATRIX);
+    if (vCommand == NULL) {
+        ALOGE("%s: Error vCommand NULL", __func__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* Create the message */
+    ret = vCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    ret = vCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    if (vCommand->put_u32(
+        QCA_WLAN_VENDOR_ATTR_GET_CONCURRENCY_MATRIX_CONFIG_PARAM_SET_SIZE_MAX,
+        set_size_max))
+    {
+        goto cleanup;
+    }
+    vCommand->attr_end(nlData);
+
+    /* Populate the input received from caller/framework. */
+    vCommand->setMaxSetSize(set_size_max);
+    vCommand->setSizePtr(set_size);
+    vCommand->setConcurrencySet(set);
+
+    ret = vCommand->requestResponse();
+    if (ret) {
+        ALOGE("%s: requestResponse() error: %d", __func__, ret);
+    }
+
+cleanup:
+    ALOGI("%s: Delete object.", __func__);
+    delete vCommand;
+    if (ret) {
+        *set_size = 0;
+    }
+    return (wifi_error)ret;
 }
+
 
 wifi_error wifi_set_nodfs_flag(wifi_interface_handle handle, u32 nodfs)
 {
