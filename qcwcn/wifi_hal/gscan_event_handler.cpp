@@ -152,7 +152,8 @@ GScanCommandEventHandler::~GScanCommandEventHandler()
     }
 }
 
-static wifi_error gscan_parse_hotlist_ap_results(u32 num_results,
+wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ap_results(
+                                            u32 num_results,
                                             wifi_scan_result *results,
                                             u32 starting_index,
                                             struct nlattr **tb_vendor)
@@ -244,7 +245,7 @@ static wifi_error gscan_parse_hotlist_ap_results(u32 num_results,
             return WIFI_ERROR_INVALID_ARGS;
         }
         results[i].rssi =
-            nla_get_u32(
+            get_s32(
             tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RSSI]);
         if (!
             tb2[
@@ -561,7 +562,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 break;
             }
             result->rssi =
-                nla_get_u32(
+                get_s32(
                 tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RSSI]
                 );
 
