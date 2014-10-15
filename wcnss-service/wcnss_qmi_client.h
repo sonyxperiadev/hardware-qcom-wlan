@@ -25,6 +25,17 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------*/
+#if defined(__BIONIC_FORTIFY)
+#include <sys/system_properties.h>
+#endif
+
+#define MODEM_BASEBAND_PROPERTY   "ro.baseband"
+#if defined(__BIONIC_FORTIFY)
+#define MODEM_BASEBAND_PROPERTY_SIZE  PROP_VALUE_MAX
+#else
+#define MODEM_BASEBAND_PROPERTY_SIZE  10
+#endif
+#define MODEM_BASEBAND_VALUE_APQ  "apq"
 
 #ifdef WCNSS_QMI
 #ifndef WCNSS_QMI_CLIENT_H

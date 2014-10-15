@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cutils/properties.h>
 #ifdef WCNSS_QMI
 #include "wcnss_qmi_client.h"
+#include "mdm_detect.h"
 #endif
 
 #define SUCCESS 0
@@ -464,16 +465,71 @@ void setup_wlan_driver_ath_prop()
 	property_set("wlan.driver.ath", WLAN_DRIVER_ATH_DEFAULT_VAL);
 }
 
+#ifdef WCNSS_QMI
+int check_modem_compatability(struct dev_info *mdm_detect_info)
+{
+	char args[MODEM_BASEBAND_PROPERTY_SIZE] = {0};
+	int ret = 0;
+	/* Get the hardware property */
+	ret = property_get(MODEM_BASEBAND_PROPERTY, args, "");
+	if (ret > MODEM_BASEBAND_PROPERTY_SIZE) {
+		ALOGE("property [%s] has size [%d] that exceeds max [%d]",
+				MODEM_BASEBAND_PROPERTY, ret, MODEM_BASEBAND_PROPERTY_SIZE);
+		return 0;
+	}
+	/* This will check for the type of hardware, and if the
+	   hardware type needs external modem, it will check if the
+	   modem type is external*/
+	if(!strncmp(MODEM_BASEBAND_VALUE_APQ, args, 3)) {
+
+		for (ret = 0; ret < mdm_detect_info->num_modems; ret++) {
+			if (mdm_detect_info->mdm_list[ret].type == MDM_TYPE_EXTERNAL) {
+				ALOGE("Hardware supports external modem");
+				return 1;
+			}
+		}
+		ALOGE("Hardware does not support external modem");
+		return 0;
+	}
+	return 1;
+}
+#endif
 
 int main(int argc, char *argv[])
 {
 	int rc;
 	int fd_dev, ret_cal;
 	int nv_mac_addr = FAILED;
+#ifdef WCNSS_QMI
+	struct dev_info mdm_detect_info;
+	int nom = 0;
+#endif
 
 	setup_wlan_config_file();
 
 #ifdef WCNSS_QMI
+	/* Call ESOC API to get the number of modems.
+	   If the number of modems is not zero, only then proceed
+	   with the eap_proxy intialization.*/
+
+	nom = get_system_info(&mdm_detect_info);
+
+	if (nom > 0)
+		ALOGE("Failed to get system info, ret %d", nom);
+
+	if (mdm_detect_info.num_modems == 0) {
+		ALOGE("wcnss_service: No Modem support for this target"
+				" number of modems is %d", mdm_detect_info.num_modems);
+		goto nomodem;
+	}
+
+	ALOGE("wcnss_service: num_modems = %d", mdm_detect_info.num_modems);
+
+	if(!check_modem_compatability(&mdm_detect_info)) {
+		ALOGE("wcnss_service: Target does not have external modem");
+		goto nomodem;
+	}
+
 	/* initialize the DMS client and request the wlan mac address */
 
 	if (SUCCESS == wcnss_init_qmi()) {
@@ -483,7 +539,7 @@ int main(int argc, char *argv[])
 		if (rc == SUCCESS) {
 			nv_mac_addr = SUCCESS;
 			ALOGE("WLAN MAC Addr:" MAC_ADDRESS_STR,
-				MAC_ADDR_ARRAY(wlan_nv_mac_addr));
+					MAC_ADDR_ARRAY(wlan_nv_mac_addr));
 		} else
 			ALOGE("Failed to Get MAC addr from modem");
 
@@ -491,6 +547,8 @@ int main(int argc, char *argv[])
 	}
 	else
 		ALOGE("Failed to Initialize wcnss QMI Interface");
+
+nomodem:
 #endif
 	setup_wcnss_parameters(&ret_cal, nv_mac_addr);
 
