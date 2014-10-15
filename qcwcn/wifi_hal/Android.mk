@@ -21,10 +21,11 @@ include $(CLEAR_VARS)
 LOCAL_REQUIRED_MODULES :=
 
 LOCAL_CFLAGS += -Wno-unused-parameter -Wno-int-to-pointer-cast
-LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses
+LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses -DNAN_2_0
 LOCAL_CPPFLAGS += -Wno-conversion-null
 
 LOCAL_C_INCLUDES += \
+	$(LOCAL_PATH) \
 	external/libnl/include \
 	$(call include-path-for, libhardware_legacy)/hardware_legacy \
 	external/wpa_supplicant_8/src/drivers \
@@ -40,7 +41,11 @@ LOCAL_SRC_FILES := \
 	gscan_event_handler.cpp \
 	rtt.cpp \
 	ifaceeventhandler.cpp \
-	tdls.cpp
+	tdls.cpp \
+	nan.cpp \
+	nan_ind.cpp \
+	nan_req.cpp \
+	nan_rsp.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
@@ -61,10 +66,11 @@ include $(CLEAR_VARS)
 LOCAL_REQUIRED_MODULES :=
 
 LOCAL_CFLAGS += -Wno-unused-parameter -Wno-int-to-pointer-cast
-LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses
+LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses -DNAN_2_0
 LOCAL_CPPFLAGS += -Wno-conversion-null
 
 LOCAL_C_INCLUDES += \
+	$(LOCAL_PATH) \
 	external/libnl/include \
 	$(call include-path-for, libhardware_legacy)/hardware_legacy \
 	external/wpa_supplicant_8/src/drivers \
@@ -80,7 +86,11 @@ LOCAL_SRC_FILES := \
 	gscan_event_handler.cpp \
 	rtt.cpp \
 	ifaceeventhandler.cpp \
-	tdls.cpp
+	tdls.cpp \
+	nan.cpp \
+	nan_ind.cpp \
+	nan_req.cpp \
+	nan_rsp.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
