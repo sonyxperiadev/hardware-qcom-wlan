@@ -696,7 +696,7 @@ int WifiCommand::response_handler(struct nl_msg *msg, void *arg) {
         ALOGE("Failed to parse reply message = %d", res);
         return NL_SKIP;
     } else {
-        reply.log();
+        // reply.log(); /* Don't call log() to avoid excess WiFi HAL logging */
         return cmd->handleResponse(reply);
     }
 }
