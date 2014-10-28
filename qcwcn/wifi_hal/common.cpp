@@ -57,7 +57,15 @@ wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_
 {
     hal_info *info = (hal_info *)handle;
 
-    /* TODO: check for multiple handlers? */
+    for (int i = 0; i < info->num_event_cb; i++) {
+        if(info->event_cb[i].nl_cmd == cmd &&
+           info->event_cb[i].cb_arg == arg) {
+            info->event_cb[i].cb_func = func;
+            ALOGI("Updated event handler %p for nl_cmd 0x%0x"
+                    " and arg %p", func, cmd, arg);
+            return WIFI_SUCCESS;
+        }
+    }
 
     if (info->num_event_cb < info->alloc_event_cb) {
         info->event_cb[info->num_event_cb].nl_cmd  = cmd;
