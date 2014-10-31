@@ -90,6 +90,7 @@ wifi_error wifi_reset_iface_event_handler(wifi_request_id id,
         if (id == mwifiEventHandler->get_request_id()) {
             ALOGI("Delete Object mwifiEventHandler for id = %d", id);
             delete mwifiEventHandler;
+            mwifiEventHandler = NULL;
         } else {
             ALOGE("%s: Iface Event Handler Set for a different Request "
                 "Id:%d is requested. Not supported. Exit", __func__, id);
@@ -117,13 +118,14 @@ int IfaceEventHandlerCommand::handleEvent(WifiEvent &event)
     {
         case NL80211_CMD_REG_CHANGE:
         {
-            if(!tb[NL80211_ATTR_REG_ALPHA2])
-            {
-                ALOGE("%s: NL80211_ATTR_REG_ALPHA2 not found", __func__);
-                return WIFI_ERROR_INVALID_ARGS;
-            }
             char code[2];
-            memcpy(&code[0], (char *) nla_data(tb[NL80211_ATTR_REG_ALPHA2]), 2); //nla_len(tb[NL80211_ATTR_REG_ALPHA2])
+            memset(&code[0], 0, 2);
+            if(tb[NL80211_ATTR_REG_ALPHA2])
+            {
+                memcpy(&code[0], (char *) nla_data(tb[NL80211_ATTR_REG_ALPHA2]), 2);
+            } else {
+                ALOGE("%s: NL80211_ATTR_REG_ALPHA2 not found", __func__);
+            }
             ALOGI("Country : %c%c", code[0], code[1]);
             if(mHandler.on_country_code_changed)
             {
@@ -172,10 +174,10 @@ int IfaceEventHandlerCommand::get_request_id()
 wifiEventHandler::wifiEventHandler(wifi_handle handle, int id, u32 subcmd)
         : WifiCommand(handle, id)
 {
-    ALOGD("wifiEventHandler %p constructed", this);
-    registerHandler(mSubcmd);
     mRequestId = id;
     mSubcmd = subcmd;
+    registerHandler(mSubcmd);
+    ALOGD("wifiEventHandler %p constructed", this);
 }
 
 wifiEventHandler::~wifiEventHandler()
