@@ -62,7 +62,7 @@ static int dms_init_done = FAILED;
 
 static char *dms_find_modem_port( char *prop_value_ptr)
 {
-	char *qmi_modem_port_ptr = QMI_PORT_RMNET_1;
+	char *qmi_modem_port_ptr = QMI_PORT_RMNET_0;
 
 	/* Sanity check */
 	if (prop_value_ptr == NULL) {
@@ -93,7 +93,7 @@ static char *dms_find_modem_port( char *prop_value_ptr)
 		QMI_UIM_PROP_BASEBAND_VALUE_APQ) == 0) ||
 		(strcmp(prop_value_ptr,
 		QMI_UIM_PROP_BASEBAND_VALUE_SGLTE) == 0)) {
-		qmi_modem_port_ptr = QMI_PORT_RMNET_1;
+		qmi_modem_port_ptr = QMI_PORT_RMNET_0;
 	} else if (strcmp(prop_value_ptr,
 		QMI_UIM_PROP_BASEBAND_VALUE_DSDA) == 0) {
 		/* If it is a DSDA configuration, use the existing API */
@@ -146,6 +146,15 @@ int wcnss_init_qmi()
 
 	qmi_client_err = qmi_client_init((const char *)qmi_modem_port,
 			dms_service, NULL, dms_service, &dms_qmi_client);
+
+	if ((qmi_client_err == QMI_PORT_NOT_OPEN_ERR) &&
+			(strcmp(qmi_modem_port, QMI_PORT_RMNET_0) == 0)){
+		ALOGE("%s: Retrying with port RMNET_1: %d",
+				__func__, qmi_client_err);
+		qmi_modem_port = QMI_PORT_RMNET_1;
+		qmi_client_err = qmi_client_init((const char *)qmi_modem_port,
+			       dms_service, NULL, dms_service, &dms_qmi_client);
+	}
 
 	if (qmi_client_err != QMI_NO_ERR){
 		ALOGE("%s: Error while Initializing QMI Client: %d",
