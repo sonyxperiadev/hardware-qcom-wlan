@@ -30,6 +30,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <errno.h>
 #include <dirent.h>
+#include <ctype.h>
 #include <grp.h>
 #include <utime.h>
 #include <sys/stat.h>
@@ -68,6 +69,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define WCNSS_HAS_CAL_DATA\
 		"/sys/module/wcnsscore/parameters/has_calibrated_data"
 #define WLAN_DRIVER_ATH_DEFAULT_VAL "0"
+
+#define ASCII_A		65
+#define ASCII_a		97
+#define ASCII_0		48
+#define HEXA_A		10
+#define HEX_BASE		16
 
 #ifdef WCNSS_QMI
 #define WLAN_ADDR_SIZE   6
@@ -329,6 +336,28 @@ out_nocopy:
 	property_set("wlan.driver.config", WLAN_INI_FILE_DEST);
 	return;
 }
+unsigned int convert_string_to_hex(char* string)
+{
+	int idx = 0;
+	unsigned long int hex_num = 0;
+	for(idx; string[idx] != '\0'; idx++){
+		if(isalpha(string[idx])) {
+			if(string[idx] >='a' && string[idx] <='f') {
+				hex_num = hex_num * HEX_BASE + ((int)string[idx]
+					       - ASCII_a + HEXA_A);
+			} else if ( string[idx] >='A' && string[idx] <='F') {
+				hex_num = hex_num * HEX_BASE + ((int)string[idx]
+						- ASCII_A + HEXA_A);
+			} else
+				hex_num = hex_num * HEX_BASE + (int)string[idx];
+		} else {
+			hex_num = hex_num * HEX_BASE + (string[idx]- ASCII_0);
+		}
+	}
+	hex_num = hex_num & 0xFFFFFFFF;
+	return hex_num;
+}
+
 
 void setup_wcnss_parameters(int *cal, int nv_mac_addr)
 {
@@ -336,7 +365,7 @@ void setup_wcnss_parameters(int *cal, int nv_mac_addr)
 	char serial[PROPERTY_VALUE_MAX];
 	int fd, rc, pos = 0;
 	struct stat st;
-	unsigned int serial_num;
+	unsigned int serial_num = 0;
 
 	fd = open(WCNSS_CTRL, O_WRONLY);
 	if (fd < 0) {
@@ -346,8 +375,8 @@ void setup_wcnss_parameters(int *cal, int nv_mac_addr)
 
 	rc = property_get("ro.serialno", serial, "");
 	if (rc) {
-
-		sscanf(serial, "%08X", &serial_num);
+		serial_num = convert_string_to_hex(serial);
+		ALOGE("Serial Number is  %x", serial_num);
 
 		msg[pos++] = WCNSS_USR_SERIAL_NUM >> BYTE_1;
 		msg[pos++] = WCNSS_USR_SERIAL_NUM >> BYTE_0;
