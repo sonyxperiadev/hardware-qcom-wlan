@@ -70,16 +70,21 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct wpa_driver_nl80211_data *driver;
 	struct ifreq ifr;
 	android_wifi_priv_cmd priv_cmd;
 	int ret = 0;
 
 	if (os_strcasecmp(cmd, "STOP") == 0) {
-		linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 0);
-		wpa_msg(drv->ctx, MSG_INFO, WPA_EVENT_DRIVER_STATE "STOPPED");
+		dl_list_for_each(driver, &drv->global->interfaces, struct wpa_driver_nl80211_data, list) {
+				linux_set_iface_flags(drv->global->ioctl_sock, driver->first_bss->ifname, 0);
+				wpa_msg(drv->ctx, MSG_INFO, WPA_EVENT_DRIVER_STATE "STOPPED");
+		}
 	} else if (os_strcasecmp(cmd, "START") == 0) {
-		linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 1);
-		wpa_msg(drv->ctx, MSG_INFO, WPA_EVENT_DRIVER_STATE "STARTED");
+		dl_list_for_each(driver, &drv->global->interfaces, struct wpa_driver_nl80211_data, list) {
+			linux_set_iface_flags(drv->global->ioctl_sock, driver->first_bss->ifname, 1);
+			wpa_msg(drv->ctx, MSG_INFO, WPA_EVENT_DRIVER_STATE "STARTED");
+		}
 	} else if (os_strcasecmp(cmd, "MACADDR") == 0) {
 		u8 macaddr[ETH_ALEN] = {};
 
