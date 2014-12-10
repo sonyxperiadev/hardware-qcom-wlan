@@ -270,7 +270,7 @@ int NanCommand::handleNanResponse()
     }
     //Call the NotifyResponse Handler
     if (ret == 0 && mHandler.NotifyResponse) {
-        (*mHandler.NotifyResponse)(&rsp_data);
+        (*mHandler.NotifyResponse)(&rsp_data, mUserData);
     }
     return ret;
 }

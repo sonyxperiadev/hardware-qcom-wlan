@@ -42,7 +42,8 @@ int NanCommand::handleNanIndication()
         memset(&publishRepliedInd, 0, sizeof(publishRepliedInd));
         res = getNanPublishReplied(&publishRepliedInd);
         if (!res && mHandler.EventPublishReplied) {
-            (*mHandler.EventPublishReplied)(&publishRepliedInd);
+            (*mHandler.EventPublishReplied)(&publishRepliedInd,
+                                            mUserData);
         }
         break;
 
@@ -51,7 +52,8 @@ int NanCommand::handleNanIndication()
         memset(&publishTerminatedInd, 0, sizeof(publishTerminatedInd));
         res = getNanPublishTerminated(&publishTerminatedInd);
         if (!res && mHandler.EventPublishTerminated) {
-            (*mHandler.EventPublishTerminated)(&publishTerminatedInd);
+            (*mHandler.EventPublishTerminated)(&publishTerminatedInd,
+                                               mUserData);
         }
         break;
 
@@ -60,7 +62,7 @@ int NanCommand::handleNanIndication()
         memset(&matchInd, 0, sizeof(matchInd));
         res = getNanMatch(&matchInd);
         if (!res && mHandler.EventMatch) {
-            (*mHandler.EventMatch)(&matchInd);
+            (*mHandler.EventMatch)(&matchInd, mUserData);
         }
         break;
 
@@ -69,7 +71,7 @@ int NanCommand::handleNanIndication()
         memset(&unMatchInd, 0, sizeof(unMatchInd));
         res = getNanUnMatch(&unMatchInd);
         if (!res && mHandler.EventUnMatch) {
-            (*mHandler.EventUnMatch)(&unMatchInd);
+            (*mHandler.EventUnMatch)(&unMatchInd, mUserData);
         }
         break;
 
@@ -78,7 +80,8 @@ int NanCommand::handleNanIndication()
         memset(&subscribeTerminatedInd, 0, sizeof(subscribeTerminatedInd));
         res = getNanSubscribeTerminated(&subscribeTerminatedInd);
         if (!res && mHandler.EventSubscribeTerminated) {
-            (*mHandler.EventSubscribeTerminated)(&subscribeTerminatedInd);
+            (*mHandler.EventSubscribeTerminated)(&subscribeTerminatedInd,
+                                                 mUserData);
         }
         break;
 
@@ -87,7 +90,8 @@ int NanCommand::handleNanIndication()
         memset(&discEngEventInd, 0, sizeof(discEngEventInd));
         res = getNanDiscEngEvent(&discEngEventInd);
         if (!res && mHandler.EventDiscEngEvent) {
-            (*mHandler.EventDiscEngEvent)(&discEngEventInd);
+            (*mHandler.EventDiscEngEvent)(&discEngEventInd,
+                                          mUserData);
         }
         break;
 
@@ -96,7 +100,8 @@ int NanCommand::handleNanIndication()
         memset(&followupInd, 0, sizeof(followupInd));
         res = getNanFollowup(&followupInd);
         if (!res && mHandler.EventFollowup) {
-            (*mHandler.EventFollowup)(&followupInd);
+            (*mHandler.EventFollowup)(&followupInd,
+                                      mUserData);
         }
         break;
 
@@ -105,7 +110,8 @@ int NanCommand::handleNanIndication()
         memset(&disabledInd, 0, sizeof(disabledInd));
         res = getNanDisabled(&disabledInd);
         if (!res && mHandler.EventDisabled) {
-            (*mHandler.EventDisabled)(&disabledInd);
+            (*mHandler.EventDisabled)(&disabledInd,
+                                      mUserData);
         }
         break;
 
@@ -114,7 +120,8 @@ int NanCommand::handleNanIndication()
         memset(&tcaInd, 0, sizeof(tcaInd));
         res = getNanTca(&tcaInd);
         if (!res && mHandler.EventTca) {
-            (*mHandler.EventTca)(&tcaInd);
+            (*mHandler.EventTca)(&tcaInd,
+                                 mUserData);
         }
         break;
 
@@ -123,7 +130,8 @@ int NanCommand::handleNanIndication()
         memset(&beaconSdfPayloadInd, 0, sizeof(beaconSdfPayloadInd));
         res = getNanBeaconSdfPayload(&beaconSdfPayloadInd);
         if (!res && mHandler.EventSdfPayload) {
-            (*mHandler.EventSdfPayload)(&beaconSdfPayloadInd);
+            (*mHandler.EventSdfPayload)(&beaconSdfPayloadInd,
+                                        mUserData);
         }
         break;
 
