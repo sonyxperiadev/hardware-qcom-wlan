@@ -51,7 +51,6 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "tdls.h"
-#include "vendor_definitions.h"
 
 #ifdef __GNUC__
 #define PRINTF_FORMAT(a,b) __attribute__ ((format (printf, (a), (b))))
