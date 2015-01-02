@@ -39,7 +39,6 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "link_layer_stats.h"
-#include "vendor_definitions.h"
 
 #ifdef __GNUC__
 #define PRINTF_FORMAT(a,b) __attribute__ ((format (printf, (a), (b))))

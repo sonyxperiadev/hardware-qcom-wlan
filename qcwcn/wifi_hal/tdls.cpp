@@ -36,6 +36,7 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "tdlsCommand.h"
+#include "vendor_definitions.h"
 
 //Singleton Static Instance
 TdlsCommand* TdlsCommand::mTdlsCommandInstance  = NULL;
