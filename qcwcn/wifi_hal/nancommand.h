@@ -73,6 +73,8 @@ private:
     void fillNanTransmitPostDiscoveryVal(
         const NanTransmitPostDiscovery *pTxDisc,
         u8 *pOutValue);
+    int calcNanFurtherAvailabilityMapSize(
+        const NanFurtherAvailabilityMap *pFam);
     void fillNanFurtherAvailabilityMapVal(
         const NanFurtherAvailabilityMap *pFam,
         u8 *pOutValue);

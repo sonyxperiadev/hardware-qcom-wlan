@@ -44,8 +44,6 @@ typedef int NanVersion;
 #define NAN_MAJOR_VERSION               2
 #define NAN_MINOR_VERSION               0
 #define NAN_MICRO_VERSION               0
-#define NAN_TRANSMIT_POST_CONNECTIVITY_CAPABILITY_SIZE 4
-#define NAN_FURTHER_AVAILABILITY_MAP_SIZE 8
 #define NAN_MAX_SOCIAL_CHANNEL 3
 
 /* NAN Maximum Lengths */
@@ -56,6 +54,7 @@ typedef int NanVersion;
 #define NAN_MAX_MESH_DATA_LEN                   32
 #define NAN_MAX_CLUSTER_ATTRIBUTE_LEN           255
 #define NAN_MAX_SUBSCRIBE_MAX_ADDRESS           42
+#define NAN_MAX_FAM_CHANNELS                    32
 
 /*
   Definition of various NanRequestType
@@ -488,16 +487,9 @@ typedef enum {
     NAN_DURATION_32MS = 1,
     NAN_DURATION_64MS = 2
 } NanAvailDuration;
-/*
-  Further availability map which can sent and received from
-  Discovery engine
-*/
+
+/* Further availability per channel information */
 typedef struct {
-    /*
-       Number of channels indicates the number of entries
-       in vector which is part of fam
-    */
-    u8 numchans;
     /* Defined above */
     NanAvailDuration entry_control;
     /*
@@ -541,9 +533,19 @@ typedef struct {
        - Duration field is equal to 2, AIB [0], AIB [1], AIB [2] and AIB [3] are valid
     */
     u32 avail_interval_bitmap;
-    /* Additional Vendor elements if numchans > 1*/
-    u32 vendor_elements_len;
-    u8 vendor_elements[NAN_MAX_VSA_DATA_LEN];
+} NanFurtherAvailabilityChannel;
+
+/*
+  Further availability map which can be sent and received from
+  Discovery engine
+*/
+typedef struct {
+    /*
+       Number of channels indicates the number of channel
+       entries which is part of fam
+    */
+    u8 numchans;
+    NanFurtherAvailabilityChannel famchan[NAN_MAX_FAM_CHANNELS];
 } NanFurtherAvailabilityMap;
 
 /*
