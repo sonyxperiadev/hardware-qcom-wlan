@@ -865,6 +865,32 @@ typedef enum
     /* Reserved 20480 - 65535*/
     NAN_TLV_TYPE_FW_LAST = 65535
 } NanFwTlvType;
+
+typedef struct PACKED
+{
+    u8 availIntDuration:2;
+    u8 mapId:4;
+    u8 reserved:2;
+} NanApiEntryCtrl;
+
+/*
+ * Valid Operating Classes were derived from IEEE Std. 802.11-2012 Annex E
+ * Table E-4 Global Operating Classe and, filtered by channel, are: 81, 83,
+ * 84, 103, 114, 115, 116, 124, 125.
+ */
+typedef struct PACKED
+{
+    NanApiEntryCtrl entryCtrl;
+    u8 opClass;
+    u8 channel;
+    u8 availIntBitmap[4];
+} NanFurtherAvailabilityChan, *pNanFurtherAvailabilityChan;
+
+typedef struct PACKED
+{
+    u8 numChan;
+    u8 pFaChan[];
+} NanFurtherAvailabilityMapAttrTlv, *pNanFurtherAvailabilityMapAttrTlv;
 #endif /* NAN_2_0 */
 
 #ifdef __cplusplus

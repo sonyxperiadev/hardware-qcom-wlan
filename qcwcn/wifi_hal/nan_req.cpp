@@ -324,12 +324,13 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
          (
            pReq->config_discovery_attr ? (SIZEOF_TLV_HDR + \
            calcNanTransmitPostDiscoverySize(&pReq->discovery_attr_val)) : 0 \
-         ) + \
-         (
-           pReq->config_fam ? (SIZEOF_TLV_HDR + \
-           NAN_FURTHER_AVAILABILITY_MAP_SIZE + \
-           pReq->fam_val.vendor_elements_len) : 0 \
          );
+
+    if (pReq->config_fam && \
+        calcNanFurtherAvailabilityMapSize(&pReq->fam_val)) {
+        message_len += (SIZEOF_TLV_HDR + \
+           calcNanFurtherAvailabilityMapSize(&pReq->fam_val));
+    }
 #endif /* NAN_2_0 */
 
     pNanConfigurationReqMsg pFwReq = (pNanConfigurationReqMsg)malloc(message_len);
@@ -428,12 +429,12 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
                       calcNanTransmitPostDiscoverySize(&pReq->discovery_attr_val),
                       (const u8*)(tlvs + SIZEOF_TLV_HDR), tlvs);
     }
-    if (pReq->config_fam) {
+    if (pReq->config_fam && \
+        calcNanFurtherAvailabilityMapSize(&pReq->fam_val)) {
         fillNanFurtherAvailabilityMapVal(&pReq->fam_val,
                                         (u8*)(tlvs + SIZEOF_TLV_HDR));
         tlvs = addTlv(NAN_TLV_TYPE_FURTHER_AVAILABILITY_MAP,
-                      (NAN_FURTHER_AVAILABILITY_MAP_SIZE + \
-                       pReq->fam_val.vendor_elements_len),
+                      calcNanFurtherAvailabilityMapSize(&pReq->fam_val),
                       (const u8*)(tlvs + SIZEOF_TLV_HDR), tlvs);
     }
 #endif /* NAN_2_0 */
@@ -1049,23 +1050,50 @@ void NanCommand::fillNanFurtherAvailabilityMapVal(
     const NanFurtherAvailabilityMap *pFam,
     u8 *pOutValue)
 {
+    int idx = 0;
+
     if (pFam && pOutValue) {
-        u32 famsize = NAN_FURTHER_AVAILABILITY_MAP_SIZE + \
-            pFam->vendor_elements_len;
+        u32 famsize = calcNanFurtherAvailabilityMapSize(pFam);
+        pNanFurtherAvailabilityMapAttrTlv pFwReq = \
+            (pNanFurtherAvailabilityMapAttrTlv)pOutValue;
+
         memset(pOutValue, 0, famsize);
-        pOutValue[0] = pFam->numchans;
-        pOutValue[1] = (pFam->mapid & 0x0F) << 2;
-        pOutValue[1] |= (pFam->entry_control & 0x03);
-        pOutValue[2] = pFam->class_val;
-        pOutValue[3] = pFam->channel;
-        memcpy(&pOutValue[4], &pFam->avail_interval_bitmap,
-               sizeof(pFam->avail_interval_bitmap));
-        memcpy(&pOutValue[NAN_FURTHER_AVAILABILITY_MAP_SIZE],
-               pFam->vendor_elements,
-               pFam->vendor_elements_len);
+        pFwReq->numChan = pFam->numchans;
+        for (idx = 0; idx < pFam->numchans; idx++) {
+            const NanFurtherAvailabilityChannel *pFamChan =  \
+                &pFam->famchan[idx];
+            pNanFurtherAvailabilityChan pFwFamChan = \
+                (pNanFurtherAvailabilityChan)((u8*)&pFwReq->pFaChan[0] + \
+                (idx * sizeof(NanFurtherAvailabilityChan)));
+
+            pFwFamChan->entryCtrl.availIntDuration = \
+                pFamChan->entry_control;
+            pFwFamChan->entryCtrl.mapId = \
+                pFamChan->mapid;
+            pFwFamChan->opClass =  pFamChan->class_val;
+            pFwFamChan->channel = pFamChan->channel;
+            memcpy(&pFwFamChan->availIntBitmap,
+                   &pFamChan->avail_interval_bitmap,
+                   sizeof(pFwFamChan->availIntBitmap));
+        }
         ALOGI("%s: Filled FurtherAvailabilityMapVal", __func__);
         hexdump((char*)pOutValue, famsize);
     }
     return;
+}
+
+int NanCommand::calcNanFurtherAvailabilityMapSize(
+    const NanFurtherAvailabilityMap *pFam)
+{
+    int ret = 0;
+    if (pFam && pFam->numchans &&
+        pFam->numchans <= NAN_MAX_FAM_CHANNELS) {
+        /* Fixed size of u8 for numchans*/
+        ret = sizeof(u8);
+        /* numchans * sizeof(FamChannels) */
+        ret += (pFam->numchans * sizeof(NanFurtherAvailabilityChan));
+    }
+    ALOGI("%s:size:%d", __func__, ret);
+    return ret;
 }
 
