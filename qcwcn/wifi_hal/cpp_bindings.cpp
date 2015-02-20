@@ -39,11 +39,11 @@
 #include "common.h"
 #include "cpp_bindings.h"
 
-void appendFmt(char *buf, int &offset, const char *fmt, ...)
+void appendFmt(char *buf, size_t buf_len, int &offset, const char *fmt, ...)
 {
     va_list params;
     va_start(params, fmt);
-    offset += vsprintf(buf + offset, fmt, params);
+    offset += vsnprintf(buf + offset, buf_len - offset, fmt, params);
     va_end(params);
 }
 
@@ -504,24 +504,24 @@ void WifiEvent::log() {
         char line[81];
         int linelen = min(16, len - i);
         int offset = 0;
-        appendFmt(line, offset, "%02x", data[i]);
+        appendFmt(line, sizeof(line), offset, "%02x", data[i]);
         for (int j = 1; j < linelen; j++) {
-            appendFmt(line, offset, " %02x", data[i+j]);
+            appendFmt(line, sizeof(line), offset, " %02x", data[i+j]);
         }
 
         for (int j = linelen; j < 16; j++) {
-            appendFmt(line, offset, "   ");
+            appendFmt(line, sizeof(line), offset, "   ");
         }
 
         line[23] = '-';
 
-        appendFmt(line, offset, "  ");
+        appendFmt(line, sizeof(line), offset, "  ");
 
         for (int j = 0; j < linelen; j++) {
             if (isprint(data[i+j])) {
-                appendFmt(line, offset, "%c", data[i+j]);
+                appendFmt(line, sizeof(line), offset, "%c", data[i+j]);
             } else {
-                appendFmt(line, offset, "-");
+                appendFmt(line, sizeof(line), offset, "-");
             }
         }
 

@@ -290,6 +290,15 @@ wifi_error wifi_initialize(wifi_handle *handle)
 
     iface_handle = wifi_get_iface_handle((info->interfaces[0])->handle,
             (info->interfaces[0])->name);
+    if (iface_handle == NULL) {
+        int i;
+        for (i = 0; i < info->num_interfaces; i++)
+        {
+            free(info->interfaces[i]);
+        }
+        ALOGE("%s no iface with %s\n", __func__, info->interfaces[0]->name);
+        return WIFI_ERROR_UNKNOWN;
+    }
     ret = acquire_supported_features(iface_handle,
             &info->supported_feature_set);
     if (ret != WIFI_SUCCESS) {
@@ -574,7 +583,7 @@ static bool is_wifi_interface(const char *name)
 
 static int get_interface(const char *name, interface_info *info)
 {
-    strcpy(info->name, name);
+    strlcpy(info->name, name, (IFNAMSIZ + 1));
     info->id = if_nametoindex(name);
     // ALOGI("found an interface : %s, id = %d", name, info->id);
     return WIFI_SUCCESS;
@@ -606,6 +615,10 @@ wifi_error wifi_init_interfaces(wifi_handle handle)
         return WIFI_ERROR_UNKNOWN;
 
     info->interfaces = (interface_info **)malloc(sizeof(interface_info *) * n);
+    if (info->interfaces == NULL) {
+        ALOGE("%s: Error info->interfaces NULL", __func__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
 
     int i = 0;
     while ((de = readdir(d))) {
@@ -614,6 +627,15 @@ wifi_error wifi_init_interfaces(wifi_handle handle)
         if (is_wifi_interface(de->d_name)) {
             interface_info *ifinfo
                 = (interface_info *)malloc(sizeof(interface_info));
+            if (ifinfo == NULL) {
+                ALOGE("%s: Error ifinfo NULL", __func__);
+                while (i > 0) {
+                    free(info->interfaces[i-1]);
+                    i--;
+                }
+                free(info->interfaces);
+                return WIFI_ERROR_OUT_OF_MEMORY;
+            }
             if (get_interface(de->d_name, ifinfo) != WIFI_SUCCESS) {
                 free(ifinfo);
                 continue;
@@ -647,7 +669,7 @@ wifi_error wifi_get_iface_name(wifi_interface_handle handle, char *name,
         size_t size)
 {
     interface_info *info = (interface_info *)handle;
-    strcpy(name, info->name);
+    strlcpy(name, info->name, size);
     return WIFI_SUCCESS;
 }
 
