@@ -16,6 +16,7 @@
 
 #include "sync.h"
 
+#include "nan.h"
 #include "nan_i.h"
 #include "wifi_hal.h"
 #include "common.h"
