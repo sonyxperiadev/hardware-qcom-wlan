@@ -260,6 +260,8 @@ wifi_error wifi_initialize(wifi_handle *handle)
     }
     ALOGI("%s: family_id:%d", __func__, info->nl80211_family_id);
 
+    pthread_mutex_init(&info->cb_lock, NULL);
+
     *handle = (wifi_handle) info;
 
     wifi_add_membership(*handle, "scan");
@@ -350,6 +352,7 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     }
 
     (*cleaned_up_handler)(handle);
+    pthread_mutex_destroy(&info->cb_lock);
     free(info);
 
     ALOGI("Internal cleanup completed");
@@ -458,6 +461,9 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
     // event.log();
 
     bool dispatched = false;
+
+    pthread_mutex_lock(&info->cb_lock);
+
     for (int i = 0; i < info->num_event_cb; i++) {
         if (cmd == info->event_cb[i].nl_cmd) {
             if (cmd == NL80211_CMD_VENDOR
@@ -469,8 +475,11 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
             }
 
             cb_info *cbi = &(info->event_cb[i]);
+            pthread_mutex_unlock(&info->cb_lock);
             (*(cbi->cb_func))(msg, cbi->cb_arg);
             dispatched = true;
+
+            return NL_OK;
         }
     }
 
@@ -478,6 +487,7 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
         ALOGI("event ignored!!");
     }
 
+    pthread_mutex_unlock(&info->cb_lock);
     return NL_OK;
 }
 

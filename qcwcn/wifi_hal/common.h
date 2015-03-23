@@ -94,6 +94,7 @@ typedef struct {
     cb_info *event_cb;                              // event callbacks
     int num_event_cb;                               // number of event callbacks
     int alloc_event_cb;                             // number of allocated callback objects
+    pthread_mutex_t cb_lock;                        // mutex for the event_cb access
 
     cmd_info *cmd;                                  // Outstanding commands
     int num_cmd;                                    // number of commands

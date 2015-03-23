@@ -57,13 +57,17 @@ wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_
 {
     hal_info *info = (hal_info *)handle;
 
+    pthread_mutex_lock(&info->cb_lock);
+
+    wifi_error result = WIFI_ERROR_OUT_OF_MEMORY;
+
     for (int i = 0; i < info->num_event_cb; i++) {
         if(info->event_cb[i].nl_cmd == cmd &&
            info->event_cb[i].cb_arg == arg) {
             info->event_cb[i].cb_func = func;
             ALOGI("Updated event handler %p for nl_cmd 0x%0x"
                     " and arg %p", func, cmd, arg);
-            return WIFI_SUCCESS;
+            result = WIFI_SUCCESS;
         }
     }
 
@@ -75,16 +79,23 @@ wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_
         info->event_cb[info->num_event_cb].cb_arg  = arg;
         info->num_event_cb++;
         ALOGI("Successfully added event handler %p for command %d", func, cmd);
-        return WIFI_SUCCESS;
+        result = WIFI_SUCCESS; 
     } else {
-        return WIFI_ERROR_OUT_OF_MEMORY;
+        result = WIFI_ERROR_OUT_OF_MEMORY;
     }
+
+    pthread_mutex_unlock(&info->cb_lock);
+    return result;
 }
 
 wifi_error wifi_register_vendor_handler(wifi_handle handle,
         uint32_t id, int subcmd, nl_recvmsg_msg_cb_t func, void *arg)
 {
     hal_info *info = (hal_info *)handle;
+
+    pthread_mutex_lock(&info->cb_lock);
+
+    wifi_error result = WIFI_ERROR_OUT_OF_MEMORY;
 
     for (int i = 0; i < info->num_event_cb; i++) {
         if(info->event_cb[i].vendor_id  == id &&
@@ -94,7 +105,7 @@ wifi_error wifi_register_vendor_handler(wifi_handle handle,
             info->event_cb[i].cb_arg  = arg;
             ALOGI("Updated event handler %p for vendor 0x%0x, subcmd 0x%0x"
                 " and arg %p", func, id, subcmd, arg);
-            return WIFI_SUCCESS;
+            result = WIFI_SUCCESS;
         }
     }
 
@@ -107,10 +118,13 @@ wifi_error wifi_register_vendor_handler(wifi_handle handle,
         info->num_event_cb++;
         ALOGI("Added event handler %p for vendor 0x%0x, subcmd 0x%0x and arg"
             " %p", func, id, subcmd, arg);
-        return WIFI_SUCCESS;
+        result = WIFI_SUCCESS;
     } else {
-        return WIFI_ERROR_OUT_OF_MEMORY;
+        result = WIFI_ERROR_OUT_OF_MEMORY;
     }
+
+    pthread_mutex_unlock(&info->cb_lock);
+    return result;
 }
 
 void wifi_unregister_handler(wifi_handle handle, int cmd)
@@ -119,7 +133,10 @@ void wifi_unregister_handler(wifi_handle handle, int cmd)
 
     if (cmd == NL80211_CMD_VENDOR) {
         ALOGE("Must use wifi_unregister_vendor_handler to remove vendor handlers");
+        return;
     }
+
+    pthread_mutex_lock(&info->cb_lock);
 
     for (int i = 0; i < info->num_event_cb; i++) {
         if (info->event_cb[i].nl_cmd == cmd) {
@@ -132,14 +149,18 @@ void wifi_unregister_handler(wifi_handle handle, int cmd)
             }
             info->num_event_cb--;
             ALOGI("Successfully removed event handler for command %d", cmd);
-            return;
+            break;
         }
     }
+
+    pthread_mutex_unlock(&info->cb_lock);
 }
 
 void wifi_unregister_vendor_handler(wifi_handle handle, uint32_t id, int subcmd)
 {
     hal_info *info = (hal_info *)handle;
+
+    pthread_mutex_lock(&info->cb_lock);
 
     for (int i = 0; i < info->num_event_cb; i++) {
 
@@ -155,9 +176,11 @@ void wifi_unregister_vendor_handler(wifi_handle handle, uint32_t id, int subcmd)
             }
             info->num_event_cb--;
             ALOGI("Successfully removed event handler for vendor 0x%0x", id);
-            return;
+            break;
         }
     }
+
+    pthread_mutex_unlock(&info->cb_lock);
 }
 
 
