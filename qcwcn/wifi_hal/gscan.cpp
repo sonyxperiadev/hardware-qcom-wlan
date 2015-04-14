@@ -66,6 +66,8 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
     srand( time(NULL) );
     requestId = rand();
 
+    ALOGI("%s: RequestId: %d", __func__, requestId);
+
     gScanCommand = new GScanCommand(
                             wifiHandle,
                             requestId,
@@ -174,6 +176,7 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
      */
     srand(time(NULL));
     requestId = rand();
+    ALOGI("%s: RequestId: %d", __func__, requestId);
 
     gScanCommand = new GScanCommand(
                             wifiHandle,
@@ -268,7 +271,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
      * request is successfully honored, then Wi-Fi HAL will use the new request
      * id for the GScanStartCmdEventHandler object.
      */
-
+    ALOGI("%s: RequestId: %d", __func__, id);
     gScanCommand = new GScanCommand(
                                 wifiHandle,
                                 id,
@@ -465,6 +468,7 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
+    ALOGI("%s: RequestId: %d", __func__, id);
     gScanCommand = new GScanCommand(
                                 wifiHandle,
                                 id,
@@ -551,6 +555,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
      * object.
      */
 
+    ALOGI("%s: RequestId: %d", __func__, id);
     gScanCommand =
         new GScanCommand(
                     wifiHandle,
@@ -701,6 +706,7 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
+    ALOGI("%s: RequestId: %d", __func__, id);
     gScanCommand = new GScanCommand(
                         wifiHandle,
                         id,
@@ -785,6 +791,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
      * object.
      */
 
+    ALOGI("%s: RequestId: %d", __func__, id);
     gScanCommand = new GScanCommand(
                     wifiHandle,
                     id,
@@ -944,6 +951,7 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
+    ALOGI("%s: RequestId: %d", __func__, id);
     gScanCommand =
         new GScanCommand
                     (
@@ -1039,7 +1047,7 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
     srand(time(NULL));
     requestId = rand();
 
-    ALOGE("Getting GScan Cached Results, halHandle = %p", wifiHandle);
+    ALOGE("Getting GScan Cached Results, requestId = %d", requestId);
 
     gScanCommand = new GScanCommand(
                         wifiHandle,
@@ -1224,6 +1232,7 @@ wifi_error wifi_set_ssid_hotlist(wifi_request_id id,
      * object.
      */
 
+    ALOGI("%s: RequestId = %d", __func__, id);
     gScanCommand =
         new GScanCommand(
                     wifiHandle,
@@ -1377,6 +1386,7 @@ wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
+    ALOGI("%s: RequestId = %d", __func__, id);
     gScanCommand = new GScanCommand(
                         wifiHandle,
                         id,
@@ -2175,6 +2185,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
      * object.
      */
 
+    ALOGI("%s: RequestId = %d", __func__, id);
     gScanCommand =
         new GScanCommand(
                     wifiHandle,
@@ -2346,6 +2357,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
      * will use the new request id for the
      * GScanPnoSetPasspointListCmdEventHandler object.
      */
+    ALOGI("%s: RequestId = %d", __func__, id);
     gScanCommand =
         new GScanCommand(
                     wifiHandle,
@@ -2512,6 +2524,7 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
+    ALOGI("%s: RequestId = %d", __func__, id);
     gScanCommand = new GScanCommand(
                     wifiHandle,
                     id,
@@ -2771,6 +2784,7 @@ wifi_error wifi_set_ssid_white_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    ALOGI("%s: RequestId = %d", __func__, id);
     roamCommand = new GScanCommand(
                                 wifiHandle,
                                 id,
@@ -2869,6 +2883,7 @@ wifi_error wifi_set_gscan_roam_params(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    ALOGI("%s: RequestId = %d", __func__, id);
     roamCommand = new GScanCommand(wifiHandle,
                                    id,
                                    OUI_QCA,
@@ -2955,6 +2970,7 @@ wifi_error wifi_enable_lazy_roam(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    ALOGI("%s: RequestId = %d", __func__, id);
     roamCommand =
          new GScanCommand(wifiHandle,
                           id,
@@ -3039,6 +3055,7 @@ wifi_error wifi_set_bssid_preference(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    ALOGI("%s: RequestId = %d", __func__, id);
     roamCommand =
          new GScanCommand(wifiHandle,
                           id,
@@ -3133,6 +3150,7 @@ wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    ALOGI("%s: RequestId = %d", __func__, id);
     roamCommand =
          new GScanCommand(wifiHandle,
                           id,
