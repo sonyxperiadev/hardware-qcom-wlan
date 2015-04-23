@@ -1302,7 +1302,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 nla_data(tbVendor[
                     QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_DATA]),
                 lengthOfInfoElements);
-
+#ifdef QC_HAL_DEBUG
             ALOGE("handleEvent:FULL_SCAN_RESULTS: ts  %lld ", result->ts);
             ALOGE("handleEvent:FULL_SCAN_RESULTS: SSID  %s ", result->ssid) ;
             ALOGE("handleEvent:FULL_SCAN_RESULTS: "
@@ -1323,6 +1323,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 result->ie_length);
 
             ALOGE("%s: Invoking the callback. \n", __FUNCTION__);
+#endif
             if (mHandler.on_full_scan_result) {
                 (*mHandler.on_full_scan_result)(reqId, result);
                 /* Reset flag and num counter. */
