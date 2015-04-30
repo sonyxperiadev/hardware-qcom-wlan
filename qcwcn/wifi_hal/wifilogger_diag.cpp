@@ -32,7 +32,9 @@
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
 #include <linux/rtnetlink.h>
+#include <netinet/in.h>
 #include "wifiloggercmd.h"
+#include "wifilogger_event_defs.h"
 #include "wifilogger_diag.h"
 #include "pkt_stats.h"
 
@@ -67,6 +69,26 @@
 #define WIFI_EVENT_ROAM_SCAN_CONFIG 46
 #endif
 
+#define RING_BUF_ENTRY_SIZE 512
+#define MAX_CONNECTIVITY_EVENTS 15 // should match the value in wifi_logger.h
+static event_remap_t events[MAX_CONNECTIVITY_EVENTS] = {
+    {WLAN_PE_DIAG_ASSOC_REQ_EVENT, WIFI_EVENT_ASSOCIATION_REQUESTED},
+    {WLAN_PE_DIAG_AUTH_COMP_EVENT, WIFI_EVENT_AUTH_COMPLETE},
+    {WLAN_PE_DIAG_ASSOC_COMP_EVENT, WIFI_EVENT_ASSOC_COMPLETE},
+    {WLAN_PE_DIAG_AUTH_START_EVENT, WIFI_EVENT_FW_AUTH_STARTED},
+    {WLAN_PE_DIAG_ASSOC_START_EVENT, WIFI_EVENT_FW_ASSOC_STARTED},
+    {WLAN_PE_DIAG_REASSOC_START_EVENT, WIFI_EVENT_FW_RE_ASSOC_STARTED},
+    {WLAN_PE_DIAG_SCAN_REQ_EVENT, WIFI_EVENT_DRIVER_SCAN_REQUESTED},
+    {WLAN_PE_DIAG_SCAN_RES_FOUND_EVENT, WIFI_EVENT_DRIVER_SCAN_RESULT_FOUND},
+    {WLAN_PE_DIAG_SCAN_COMP_EVENT, WIFI_EVENT_DRIVER_SCAN_COMPLETE},
+    {WLAN_PE_DIAG_DISASSOC_REQ_EVENT, WIFI_EVENT_DISASSOCIATION_REQUESTED},
+    {WLAN_PE_DIAG_ASSOC_REQ_EVENT, WIFI_EVENT_RE_ASSOCIATION_REQUESTED},
+    {WLAN_PE_DIAG_ROAM_AUTH_START_EVENT, WIFI_EVENT_ROAM_AUTH_STARTED},
+    {WLAN_PE_DIAG_ROAM_AUTH_COMP_EVENT, WIFI_EVENT_ROAM_AUTH_COMPLETE},
+    {WLAN_PE_DIAG_ROAM_ASSOC_START_EVENT, WIFI_EVENT_ROAM_ASSOC_STARTED},
+    {WLAN_PE_DIAG_ROAM_ASSOC_COMP_EVENT, WIFI_EVENT_ROAM_ASSOC_COMPLETE},
+};
+
 tlv_log* addLoggerTlv(u16 type, u16 length, u8* value, tlv_log *pOutTlv)
 {
 
@@ -77,25 +99,704 @@ tlv_log* addLoggerTlv(u16 type, u16 length, u8* value, tlv_log *pOutTlv)
    return((tlv_log *)((u8 *)pOutTlv + sizeof(tlv_log) + length));
 }
 
+static wifi_error update_connectivity_ring_buf(hal_info *info,
+                                               wifi_ring_buffer_entry *rbe,
+                                               u32 size)
+{
+    struct timeval time;
+    u32 total_length = size + sizeof(wifi_ring_buffer_entry);
+
+    rbe->entry_size = size;
+    rbe->flags = RING_BUFFER_ENTRY_FLAGS_HAS_BINARY |
+                              RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
+    rbe->type = ENTRY_TYPE_CONNECT_EVENT;
+    gettimeofday(&time,NULL);
+    rbe->timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+
+    /* Write if verbose level and handler are set */
+    if (info->rb_infos[CONNECTIVITY_EVENTS_RB_ID].verbose_level >= 1 &&
+        info->on_ring_buffer_data)
+        return ring_buffer_write(&info->rb_infos[CONNECTIVITY_EVENTS_RB_ID],
+                      (u8*)rbe, total_length, 1);
+
+    return WIFI_SUCCESS;
+}
+
+static wifi_error process_bt_coex_scan_event(hal_info *info,
+                                             u32 id, u8* buf, int length)
+{
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    tlv_log *pTlv;
+    int tot_len;
+    u8 out_buf[RING_BUF_ENTRY_SIZE];
+    u16 vendor_data;
+    wifi_error status;
+
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, RING_BUF_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+    pTlv = &pConnectEvent->tlvs[0];
+
+    if (id == EVENT_WLAN_BT_COEX_BT_SCAN_START) {
+        wlan_bt_coex_bt_scan_start_payload_type *pBtScanStart;
+        bt_coex_bt_scan_start_vendor_data_t *pBtScanStartVenData;
+        pConnectEvent->event = WIFI_EVENT_BT_COEX_BT_SCAN_START;
+        pBtScanStart = (wlan_bt_coex_bt_scan_start_payload_type *)buf;
+        pBtScanStartVenData =
+              (bt_coex_bt_scan_start_vendor_data_t *)&pBtScanStart->scan_type;
+        memcpy(pBtScanStartVenData,
+               pBtScanStart, sizeof(bt_coex_bt_scan_start_vendor_data_t));
+        pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                            sizeof(bt_coex_bt_scan_start_vendor_data_t),
+                            (u8 *)pBtScanStartVenData, pTlv);
+        tot_len = sizeof(tlv_log) + sizeof(bt_coex_bt_scan_start_vendor_data_t);
+    } else if(id == EVENT_WLAN_BT_COEX_BT_SCAN_STOP) {
+        wlan_bt_coex_bt_scan_stop_payload_type *pBtScanStop;
+        bt_coex_bt_scan_stop_vendor_data_t *pBtScanStopVenData;
+        pConnectEvent->event = WIFI_EVENT_BT_COEX_BT_SCAN_STOP;
+        pBtScanStop = (wlan_bt_coex_bt_scan_stop_payload_type *)buf;
+        pBtScanStopVenData =
+                (bt_coex_bt_scan_stop_vendor_data_t *)&pBtScanStop->scan_type;
+        memcpy(pBtScanStopVenData,
+               pBtScanStop, sizeof(bt_coex_bt_scan_stop_vendor_data_t));
+        pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                            sizeof(bt_coex_bt_scan_stop_vendor_data_t),
+                            (u8 *)pBtScanStopVenData, pTlv);
+        tot_len = sizeof(tlv_log) + sizeof(bt_coex_bt_scan_stop_vendor_data_t);
+    }
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write bt_coex_scan event into ring buffer");
+    }
+
+    return status;
+}
+
+static wifi_error process_bt_coex_event(hal_info *info, u32 id,
+                                        u8* buf, int length)
+{
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    tlv_log *pTlv;
+    int tot_len;
+    u8 out_buf[RING_BUF_ENTRY_SIZE];
+    bt_coex_common_data *pBtCoexData;
+    bt_coex_vendor_data *pBtCoexVenData;
+    bt_coex_bt_hid_vendor_data_t *pBtCoexHidVenData;
+    u16 vendor_data;
+    wifi_error status;
+
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, RING_BUF_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+
+    switch (id) {
+        case EVENT_WLAN_BT_COEX_BT_SCO_START:
+        {
+            wlan_bt_coex_bt_sco_start_payload_type *pBtCoexStartPL;
+            pBtCoexStartPL = (wlan_bt_coex_bt_sco_start_payload_type *)buf;
+            pBtCoexData = (struct bt_coex_common_data *)pBtCoexStartPL;
+            pBtCoexVenData =
+                      (struct bt_coex_vendor_data *)&pBtCoexStartPL->link_type;
+            pConnectEvent->event = WIFI_EVENT_BT_COEX_BT_SCO_START;
+        }
+        break;
+        case EVENT_WLAN_BT_COEX_BT_SCO_STOP:
+        {
+            wlan_bt_coex_bt_sco_stop_payload_type *pBtCoexStopPL;
+            pBtCoexStopPL = (wlan_bt_coex_bt_sco_stop_payload_type *)buf;
+            pBtCoexData = (struct bt_coex_common_data *)pBtCoexStopPL;
+            pBtCoexVenData =
+                    (struct bt_coex_vendor_data *)&pBtCoexStopPL->link_type ;
+            pConnectEvent->event = WIFI_EVENT_BT_COEX_BT_SCO_STOP;
+        }
+        break;
+        case EVENT_WIFI_BT_COEX_BT_HID_START:
+        {
+            wlan_bt_coex_bt_hid_start_payload_type *pBtCoexHidStartPL;
+            pBtCoexHidStartPL = (wlan_bt_coex_bt_hid_start_payload_type *)buf;
+            pBtCoexData = (struct bt_coex_common_data *)pBtCoexHidStartPL;
+            pConnectEvent->event = WIFI_EVENT_BT_COEX_BT_HID_START;
+        }
+        break;
+        case EVENT_WIFI_BT_COEX_BT_HID_STOP:
+        {
+            wlan_bt_coex_bt_hid_stop_payload_type *pBtCoexHidStopPL;
+            pBtCoexHidStopPL = (wlan_bt_coex_bt_hid_stop_payload_type *)buf;
+            pBtCoexData = (struct bt_coex_common_data *)pBtCoexHidStopPL;
+            pConnectEvent->event = WIFI_EVENT_BT_COEX_BT_HID_STOP;
+        }
+        break;
+        default:
+            return WIFI_SUCCESS;
+    }
+
+    pTlv = &pConnectEvent->tlvs[0];
+    pTlv = addLoggerTlv(WIFI_TAG_LINK_ID, sizeof(pBtCoexData->link_id),
+                        (u8 *)&pBtCoexData->link_id, pTlv);
+    tot_len = sizeof(tlv_log) + sizeof(pBtCoexData->link_id);
+    pTlv = addLoggerTlv(WIFI_TAG_LINK_ROLE, sizeof(pBtCoexData->link_role),
+                        (u8 *)&pBtCoexData->link_role, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pBtCoexData->link_role);
+    pTlv = addLoggerTlv(WIFI_TAG_LINK_STATE, sizeof(pBtCoexData->link_state),
+                        (u8 *)&pBtCoexData->link_state, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pBtCoexData->link_state);
+
+    if ((pConnectEvent->event == EVENT_WLAN_BT_COEX_BT_SCO_START) ||
+        (pConnectEvent->event == EVENT_WLAN_BT_COEX_BT_SCO_STOP)) {
+        pTlv = addLoggerTlv(WIFI_TAG_LINK_TYPE,
+                            sizeof(pBtCoexVenData->link_type),
+                            (u8 *)&pBtCoexVenData->link_type, pTlv);
+        tot_len += sizeof(tlv_log) + sizeof(pBtCoexVenData->link_type);
+
+        pTlv = addLoggerTlv(WIFI_TAG_TSCO, sizeof(pBtCoexVenData->Tsco),
+                           (u8 *)&pBtCoexVenData->Tsco, pTlv);
+        tot_len += sizeof(tlv_log) + sizeof(pBtCoexVenData->Tsco);
+        pTlv = addLoggerTlv(WIFI_TAG_RSCO, sizeof(pBtCoexVenData->Rsco),
+                        (u8 *)&pBtCoexVenData->Rsco, pTlv);
+        tot_len += sizeof(tlv_log) + sizeof(pBtCoexVenData->Rsco);
+    }
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write bt_coex_event into ring buffer");
+    }
+
+    return status;
+}
+
+static wifi_error process_extscan_event(hal_info *info, u32 id,
+                                        u8* buf, int length)
+{
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    tlv_log *pTlv;
+    int tot_len = 0;
+    u8 out_buf[RING_BUF_ENTRY_SIZE];
+    wifi_error status;
+
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, RING_BUF_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+    pTlv = &pConnectEvent->tlvs[0];
+
+    switch (id) {
+    case EVENT_WLAN_EXTSCAN_CYCLE_STARTED:
+    case EVENT_WLAN_EXTSCAN_CYCLE_COMPLETED:
+        {
+            ext_scan_cycle_vendor_data *pExtScanCycleVenData;
+            if (id  == EVENT_WLAN_EXTSCAN_CYCLE_STARTED) {
+                wlan_ext_scan_cycle_started_payload_type *pExtScanCycleStarted;
+                pConnectEvent->event = WIFI_EVENT_G_SCAN_CYCLE_STARTED;
+                pExtScanCycleStarted =
+                               (wlan_ext_scan_cycle_started_payload_type *)buf;
+                pTlv = addLoggerTlv(WIFI_TAG_SCAN_ID, sizeof(u32),
+                                (u8 *)&pExtScanCycleStarted->scan_id, pTlv);
+                tot_len += sizeof(tlv_log) + sizeof(u32);
+                pExtScanCycleVenData = (ext_scan_cycle_vendor_data *)
+                                        (pExtScanCycleStarted + 1);
+            } else {
+                wlan_ext_scan_cycle_completed_payload_type *pExtScanCycleCompleted;
+                pConnectEvent->event = WIFI_EVENT_G_SCAN_CYCLE_COMPLETED;
+                pExtScanCycleCompleted =
+                (wlan_ext_scan_cycle_completed_payload_type *)buf;
+                pTlv = addLoggerTlv(WIFI_TAG_SCAN_ID, sizeof(u32),
+                                (u8 *)&pExtScanCycleCompleted->scan_id, pTlv);
+                tot_len += sizeof(tlv_log) + sizeof(u32);
+                pExtScanCycleVenData = (ext_scan_cycle_vendor_data *)
+                                        &pExtScanCycleCompleted->timer_tick ;
+            }
+            pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                                sizeof(ext_scan_cycle_vendor_data),
+                                (u8 *)&pExtScanCycleVenData, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(ext_scan_cycle_vendor_data);
+        }
+        break;
+    case EVENT_WLAN_EXTSCAN_BUCKET_STARTED:
+        {
+            wlan_ext_scan_bucket_started_payload_type *pExtScanBucketStarted;
+            u32 bucket_id;
+            pConnectEvent->event = WIFI_EVENT_G_SCAN_BUCKET_STARTED;
+            pExtScanBucketStarted =
+                            (wlan_ext_scan_bucket_started_payload_type *)buf;
+            bucket_id = (u32)pExtScanBucketStarted->bucket_id;
+            pTlv = addLoggerTlv(WIFI_TAG_BUCKET_ID, sizeof(u32),
+                                (u8 *)&bucket_id, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(u32);
+        }
+        break;
+    case EVENT_WLAN_EXTSCAN_BUCKET_COMPLETED:
+        {
+            wlan_ext_scan_bucket_completed_payload_type *pExtScanBucketCompleted;
+            u32 bucket_id;
+            pConnectEvent->event = WIFI_EVENT_G_SCAN_BUCKET_COMPLETED;
+            pExtScanBucketCompleted =
+                            (wlan_ext_scan_bucket_completed_payload_type *)buf;
+            bucket_id = (u32)pExtScanBucketCompleted->bucket_id;
+            pTlv = addLoggerTlv(WIFI_TAG_BUCKET_ID, sizeof(u32),
+                                (u8 *)&bucket_id, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(u32);
+        }
+        break;
+    case EVENT_WLAN_EXTSCAN_FEATURE_STOP:
+        {
+            wlan_ext_scan_feature_stop_payload_type *pExtScanStop;
+            pConnectEvent->event = WIFI_EVENT_G_SCAN_STOP;
+            pExtScanStop = (wlan_ext_scan_feature_stop_payload_type *)buf;
+            pTlv = addLoggerTlv(WIFI_TAG_REQUEST_ID,
+                                sizeof(wlan_ext_scan_feature_stop_payload_type),
+                                (u8 *)&pExtScanStop, pTlv);
+            tot_len += sizeof(tlv_log) +
+                       sizeof(wlan_ext_scan_feature_stop_payload_type);
+        }
+        break;
+    case EVENT_WLAN_EXTSCAN_RESULTS_AVAILABLE:
+        {
+            wlan_ext_scan_results_available_payload_type *pExtScanResultsAvail;
+            ext_scan_results_available_vendor_data *pExtScanResultsAvailVenData;
+            u32 request_id;
+            pConnectEvent->event = WIFI_EVENT_G_SCAN_RESULTS_AVAILABLE;
+            pExtScanResultsAvail =
+                          (wlan_ext_scan_results_available_payload_type *)buf;
+            request_id = pExtScanResultsAvail->request_id;
+            pTlv = addLoggerTlv(WIFI_TAG_REQUEST_ID, sizeof(u32),
+                          (u8 *)&request_id, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(u32);
+            pExtScanResultsAvailVenData =
+                                    (ext_scan_results_available_vendor_data *)
+                                    &pExtScanResultsAvail->table_type;
+            pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                                sizeof(ext_scan_results_available_vendor_data),
+                                (u8 *)&pExtScanResultsAvailVenData, pTlv);
+            tot_len += sizeof(tlv_log) +
+                       sizeof(ext_scan_results_available_vendor_data);
+        }
+        break;
+    }
+
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write ext_scan event into ring buffer");
+    }
+
+    return status;
+}
+
+static wifi_error process_addba_event(hal_info *info, u32 id,
+                                      u8* buf, int length)
+{
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    tlv_log *pTlv;
+    int tot_len;
+    u8 out_buf[RING_BUF_ENTRY_SIZE];
+    wlan_add_block_ack_success_payload_type *pAddBASuccess;
+    wlan_add_block_ack_failed_payload_type *pAddBAFailed;
+    u32 reason_code;
+    wifi_error status;
+
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, RING_BUF_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+
+    pConnectEvent->event = WIFI_EVENT_BLOCK_ACK_NEGOTIATION_COMPLETE;
+    pTlv = &pConnectEvent->tlvs[0];
+    pTlv = addLoggerTlv(WIFI_TAG_REASON_CODE, sizeof(u32),
+                        (u8 *)&reason_code, pTlv);
+    tot_len = sizeof(tlv_log) + sizeof(u32);
+
+    if (id == EVENT_WLAN_ADD_BLOCK_ACK_SUCCESS) {
+        pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                            sizeof(wlan_add_block_ack_success_payload_type),
+                            (u8 *)&pAddBASuccess, pTlv);
+        tot_len += sizeof(tlv_log) + sizeof(pAddBASuccess);
+    } else {
+        pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                            sizeof(wlan_add_block_ack_failed_payload_type),
+                            (u8 *)&pAddBAFailed, pTlv);
+        tot_len += sizeof(tlv_log) + sizeof(pAddBAFailed);
+    }
+
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write addba event into ring buffer");
+    }
+
+    return status;
+}
+
+static wifi_error process_roam_event(hal_info *info, u32 id,
+                                     u8* buf, int length)
+{
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    tlv_log *pTlv;
+    int tot_len = 0;
+    u8 out_buf[RING_BUF_ENTRY_SIZE];
+    wifi_error status;
+
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, RING_BUF_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+
+    switch (id)
+    {
+    case EVENT_WLAN_ROAM_SCAN_STARTED:
+        {
+            wlan_roam_scan_started_payload_type *pRoamScanStarted;
+            roam_scan_started_vendor_data_t *pRoamScanStartedVenData;
+            pConnectEvent->event = WIFI_EVENT_ROAM_SCAN_STARTED;
+            pRoamScanStarted = (wlan_roam_scan_started_payload_type *)buf;
+            pTlv = &pConnectEvent->tlvs[0];
+            pTlv = addLoggerTlv(WIFI_TAG_SCAN_ID,
+                                sizeof(pRoamScanStarted->scan_id),
+                                (u8 *)&pRoamScanStarted->scan_id, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(pRoamScanStarted->scan_id);
+            pRoamScanStartedVenData = (roam_scan_started_vendor_data_t *)
+                                       &pRoamScanStarted->roam_scan_flags;
+            pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                                sizeof(roam_scan_started_vendor_data_t),
+                                (u8 *)&pRoamScanStartedVenData, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(roam_scan_started_vendor_data_t);
+        }
+        break;
+    case EVENT_WLAN_ROAM_SCAN_COMPLETE:
+        {
+            wlan_roam_scan_complete_payload_type *pRoamScanComplete;
+            roam_scan_complete_vendor_data_t *pRoamScanCompleteVenData;
+            pConnectEvent->event = WIFI_EVENT_ROAM_SCAN_COMPLETE;
+            pRoamScanComplete = (wlan_roam_scan_complete_payload_type *)buf;
+            pTlv = &pConnectEvent->tlvs[0];
+
+            pTlv = addLoggerTlv(WIFI_TAG_SCAN_ID,
+                                sizeof(pRoamScanComplete->scan_id),
+                                (u8 *)&pRoamScanComplete->scan_id, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(pRoamScanComplete->scan_id);
+            pTlv = addLoggerTlv(WIFI_TAG_REASON_CODE,
+                                sizeof(pRoamScanComplete->reason),
+                                (u8 *)&pRoamScanComplete->reason, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(pRoamScanComplete->reason);
+
+            pRoamScanCompleteVenData = (roam_scan_complete_vendor_data_t *)
+                                        &pRoamScanComplete->completion_flags;
+            pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                                sizeof(roam_scan_complete_vendor_data_t),
+                                (u8 *)&pRoamScanCompleteVenData, pTlv);
+            tot_len += sizeof(tlv_log) +
+                       sizeof(roam_scan_complete_vendor_data_t);
+        }
+        break;
+    case EVENT_WLAN_ROAM_CANDIDATE_FOUND:
+        {
+            wlan_roam_candidate_found_payload_type *pRoamCandidateFound;
+            roam_candidate_found_vendor_data_t *pRoamCandidateFoundVendata;
+            pConnectEvent->event = WIFI_EVENT_ROAM_CANDIDATE_FOUND;
+            pRoamCandidateFound = (wlan_roam_candidate_found_payload_type *)buf;
+            pTlv = &pConnectEvent->tlvs[0];
+            pTlv = addLoggerTlv(WIFI_TAG_CHANNEL,
+                                sizeof(pRoamCandidateFound->channel),
+                                (u8 *)&pRoamCandidateFound->channel, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(pRoamCandidateFound->channel);
+
+            pTlv = addLoggerTlv(WIFI_TAG_RSSI, sizeof(pRoamCandidateFound->rssi),
+                                (u8 *)&pRoamCandidateFound->rssi, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(pRoamCandidateFound->rssi);
+
+            pTlv = addLoggerTlv(WIFI_TAG_BSSID,
+                                sizeof(pRoamCandidateFound->bssid),
+                                (u8 *)pRoamCandidateFound->bssid, pTlv);
+            tot_len += sizeof(tlv_log) + sizeof(pRoamCandidateFound->bssid);
+
+            pRoamCandidateFoundVendata = (roam_candidate_found_vendor_data_t *)
+                                          pRoamCandidateFound->ssid;
+            pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                                sizeof(roam_candidate_found_vendor_data_t),
+                                (u8 *)pRoamCandidateFoundVendata, pTlv);
+            tot_len += sizeof(tlv_log) +
+                       sizeof(roam_candidate_found_vendor_data_t);
+        }
+        break;
+        case EVENT_WLAN_ROAM_SCAN_CONFIG:
+        {
+            wlan_roam_scan_config_payload_type *pRoamScanConfig;
+            pConnectEvent->event = WIFI_EVENT_ROAM_SCAN_CONFIG;
+            pRoamScanConfig = (wlan_roam_scan_config_payload_type *)buf;
+            pTlv = &pConnectEvent->tlvs[0];
+            pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC,
+                                sizeof(wlan_roam_scan_config_payload_type),
+                                (u8 *)&pRoamScanConfig, pTlv);
+            tot_len += sizeof(tlv_log) +
+                       sizeof(wlan_roam_scan_config_payload_type);
+        }
+        break;
+    }
+
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write roam event into ring buffer");
+    }
+
+    return status;
+}
+
+static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, int length)
+{
+    u32 *buffer;
+    u32 header1 = 0, header2 = 0, count = 0;
+    u32 num_buf = 0, index = 0, diagid = 0, id = 0;
+    char *payload;
+    u32 payloadlen, timestamp = 0;
+
+    buffer = (u32 *)buf;
+    buffer++;
+
+    num_buf = length - 4;
+
+    while (num_buf > count) {
+        header1 = *(buffer + index);
+        header2 = *(buffer + 1 + index);
+        payload = (char *)(buffer + 2 + index);
+        diagid  = DIAG_GET_TYPE(header1);
+        timestamp = DIAG_GET_TIME_STAMP(header1);
+        payloadlen = 0;
+#ifdef QC_HAL_DEBUG
+        ALOGD("\n diagid = %d  timestamp = %d"
+              " header1 = %x heade2 = %x\n",
+              diagid,  timestamp, header1, header2);
+#endif
+        switch (diagid) {
+        case WLAN_DIAG_TYPE_EVENT:
+        {
+            id = DIAG_GET_ID(header2);
+            payloadlen = DIAG_GET_PAYLEN16(header2);
+#ifdef QC_HAL_DEBUG
+            ALOGD("DIAG_TYPE_FW_EVENT: id = %d"
+                  " payloadlen = %d \n", id, payloadlen);
+#endif
+            switch (id) {
+                case EVENT_WLAN_BT_COEX_BT_SCO_START:
+                case EVENT_WLAN_BT_COEX_BT_SCO_STOP:
+                case EVENT_WIFI_BT_COEX_BT_HID_START:
+                case EVENT_WIFI_BT_COEX_BT_HID_STOP:
+                    process_bt_coex_event(info, id, (u8 *)payload, payloadlen);
+                    break;
+                case EVENT_WLAN_BT_COEX_BT_SCAN_START:
+                case EVENT_WLAN_BT_COEX_BT_SCAN_STOP:
+                    process_bt_coex_scan_event(info, id,
+                                              (u8 *)payload,
+                                              payloadlen);
+                    break;
+               case EVENT_WLAN_EXTSCAN_CYCLE_STARTED:
+               case EVENT_WLAN_EXTSCAN_CYCLE_COMPLETED:
+               case EVENT_WLAN_EXTSCAN_BUCKET_STARTED:
+               case EVENT_WLAN_EXTSCAN_BUCKET_COMPLETED:
+               case EVENT_WLAN_EXTSCAN_FEATURE_STOP:
+               case EVENT_WLAN_EXTSCAN_RESULTS_AVAILABLE:
+                    process_extscan_event(info, id, (u8 *)payload, payloadlen);
+                    break;
+               case EVENT_WLAN_ROAM_SCAN_STARTED:
+               case EVENT_WLAN_ROAM_SCAN_COMPLETE:
+               case EVENT_WLAN_ROAM_CANDIDATE_FOUND:
+               case EVENT_WLAN_ROAM_SCAN_CONFIG:
+                    process_roam_event(info, id, (u8 *)payload, payloadlen);
+                    break;
+               case EVENT_WLAN_ADD_BLOCK_ACK_SUCCESS:
+               case EVENT_WLAN_ADD_BLOCK_ACK_FAILED:
+                    process_addba_event(info, id, (u8 *)payload, payloadlen);
+                    break;
+               default:
+                    return WIFI_SUCCESS;
+            }
+        }
+        break;
+        case WLAN_DIAG_TYPE_LOG:
+        {
+            id = DIAG_GET_ID(header2);
+            payloadlen = DIAG_GET_PAYLEN16(header2);
+#ifdef QC_HAL_DEBUG
+            ALOGD("DIAG_TYPE_FW_LOG: id = %d"
+                  " payloadlen = %d \n", id,  payloadlen);
+#endif
+        }
+        break;
+        case WLAN_DIAG_TYPE_MSG:
+        {
+            id = DIAG_GET_ID(header2);
+            payloadlen = DIAG_GET_PAYLEN(header2);
+#ifdef QC_HAL_DEBUG
+            ALOGD("%s: payloadlen = %d \n", __FUNCTION__, payloadlen);
+#endif
+        }
+        break;
+        default:
+          return WIFI_SUCCESS;
+        }
+        count  += payloadlen + 8;
+        index = count >> 2;
+#ifdef QC_HAL_DEBUG
+        ALOGD("Loope end:id = %d  payloadlen = %d count = %d index = %d\n",
+               id,  payloadlen,  count, index);
+#endif
+    }
+    return WIFI_SUCCESS;
+}
+
+static wifi_error remap_event(int in_event, int *out_event)
+{
+    int i = 0;
+    while (i < MAX_CONNECTIVITY_EVENTS) {
+        if (events[i].q_event == in_event) {
+            *out_event = events[i].g_event;
+#ifdef QC_HAL_DEBUG
+            ALOGI("Event info %d", *out_event);
+#endif
+            return WIFI_SUCCESS;
+        }
+        i++;
+    }
+    return WIFI_ERROR_UNKNOWN;
+}
+
+static wifi_error process_wlan_pe_event(hal_info *info, u8* buf, int length)
+{
+    wlan_pe_event_t *pWlanPeEvent;
+    pe_event_vendor_data_t *pPeEventVenData;
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    tlv_log *pTlv;
+    int tot_len;
+    u8 out_buf[RING_BUF_ENTRY_SIZE];
+    u32 vendor_data = 0;
+    wifi_error status;
+
+    pWlanPeEvent = (wlan_pe_event_t *)buf;
+
+#ifdef QC_HAL_DEBUG
+    ALOGD(MAC_ADDR_STR, MAC_ADDR_ARRAY(pWlanPeEvent->bssid));
+    ALOGD("Event type %d Sme State %d mlm_state %d"
+          "Status %d Reason code %d \n",
+          pWlanPeEvent->event_type,
+          pWlanPeEvent->sme_state,
+          pWlanPeEvent->mlm_state,
+          pWlanPeEvent->status,
+          pWlanPeEvent->reason_code);
+#endif
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, RING_BUF_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+
+    status = remap_event(pWlanPeEvent->event_type, (int *)&pConnectEvent->event);
+    if (status != WIFI_SUCCESS)
+        return status;
+
+    pTlv = &pConnectEvent->tlvs[0];
+    pTlv = addLoggerTlv(WIFI_TAG_BSSID, sizeof(pWlanPeEvent->bssid),
+                        (u8 *)pWlanPeEvent->bssid, pTlv);
+    tot_len = sizeof(tlv_log) + sizeof(pWlanPeEvent->bssid);
+    pTlv = addLoggerTlv(WIFI_TAG_STATUS, sizeof(pWlanPeEvent->status),
+                        (u8 *)&pWlanPeEvent->status, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pWlanPeEvent->status);
+    pTlv = addLoggerTlv(WIFI_TAG_REASON_CODE, sizeof(pWlanPeEvent->reason_code),
+                        (u8 *)&pWlanPeEvent->reason_code, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pWlanPeEvent->reason_code);
+
+    pPeEventVenData = (pe_event_vendor_data_t *)&pWlanPeEvent->sme_state;
+    memcpy(pPeEventVenData, pWlanPeEvent, sizeof(pe_event_vendor_data_t));
+    pTlv = addLoggerTlv(WIFI_TAG_VENDOR_SPECIFIC, sizeof(pe_event_vendor_data_t),
+                        (u8 *)pPeEventVenData, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pe_event_vendor_data_t);
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write pe event into ring buffer");
+    }
+
+    return status;
+}
+
+static wifi_error process_wlan_eapol_event(hal_info *info, u8* buf, int length)
+{
+    wifi_ring_buffer_driver_connectivity_event *pConnectEvent;
+    wlan_eapol_event_t *pWlanEapolEvent;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    u8 out_buf[RING_BUF_ENTRY_SIZE];
+    int tot_len;
+    tlv_log *pTlv;
+    u32 eapol_msg_type = 0;
+    wifi_error status;
+
+    pWlanEapolEvent = (wlan_eapol_event_t *)buf;
+    pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
+    memset(pRingBufferEntry, 0, RING_BUF_ENTRY_SIZE);
+    pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
+                     (pRingBufferEntry + 1);
+
+    if (pWlanEapolEvent->event_sub_type ==
+        WLAN_DRIVER_EAPOL_FRAME_TRANSMIT_REQUESTED)
+        pConnectEvent->event = WIFI_EVENT_DRIVER_EAPOL_FRAME_TRANSMIT_REQUESTED;
+    else
+        pConnectEvent->event = WIFI_EVENT_DRIVER_EAPOL_FRAME_RECEIVED;
+
+    pTlv = &pConnectEvent->tlvs[0];
+
+    if ((pWlanEapolEvent->eapol_key_info & EAPOL_MASK) == EAPOL_M1_MASK)
+        eapol_msg_type = 1;
+    else if ((pWlanEapolEvent->eapol_key_info & EAPOL_MASK) == EAPOL_M2_MASK)
+        eapol_msg_type = 2;
+    else if ((pWlanEapolEvent->eapol_key_info & EAPOL_MASK) == EAPOL_M3_MASK)
+        eapol_msg_type = 3;
+    else if ((pWlanEapolEvent->eapol_key_info & EAPOL_MASK) == EAPOL_M4_MASK)
+        eapol_msg_type = 4;
+    else
+        ALOGI("Unknow EAPOL message type \n");
+#ifdef QC_HAL_DEBUG
+    ALOGD("EAPOL MSG type %d msg_type 0x%x\n",
+          eapol_msg_type, pWlanEapolEvent->eapol_key_info);
+    ALOGD(MAC_ADDR_STR, MAC_ADDR_ARRAY(pWlanEapolEvent->dest_addr));
+    ALOGD(MAC_ADDR_STR, MAC_ADDR_ARRAY(pWlanEapolEvent->src_addr));
+#endif
+    pTlv = addLoggerTlv(WIFI_TAG_EAPOL_MESSAGE_TYPE, sizeof(u32),
+                        (u8 *)&eapol_msg_type, pTlv);
+    tot_len = sizeof(tlv_log) + sizeof(u32);
+    pTlv = addLoggerTlv(WIFI_TAG_ADDR1, sizeof(pWlanEapolEvent->dest_addr),
+                        (u8 *)pWlanEapolEvent->dest_addr, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pWlanEapolEvent->dest_addr);
+    pTlv = addLoggerTlv(WIFI_TAG_ADDR2, sizeof(pWlanEapolEvent->src_addr),
+                        (u8 *)pWlanEapolEvent->src_addr, pTlv);
+    tot_len += sizeof(tlv_log) + sizeof(pWlanEapolEvent->src_addr);
+
+    status = update_connectivity_ring_buf(info, pRingBufferEntry, tot_len);
+    if (status != WIFI_SUCCESS) {
+        ALOGE("Failed to write eapol event into ring buffer");
+    }
+
+    return status;
+}
+
 static int process_wakelock_event(hal_info *info, u8* buf, int length)
 {
     wlan_wake_lock_event_t *pWlanWakeLockEvent;
     wake_lock_event *pWakeLockEvent = NULL;
     wifi_power_event *pPowerEvent = NULL;
     wifi_ring_buffer_entry *pRingBufferEntry = NULL;
-    int len_wakelock_event = 0, len_power_event = 0, ret = 0;
+    int len_wakelock_event = 0, len_power_event = 0;
     int len_ring_buffer_entry = 0, num_records = 0;
     tlv_log *pTlv;
     struct timeval time;
-
-    ALOGD("Received a wake lock event");
+    wifi_error ret = WIFI_SUCCESS;
 
     pWlanWakeLockEvent = (wlan_wake_lock_event_t *)(buf);
+#ifdef QC_HAL_DEBUG
     ALOGD("wle status = %d reason %d timeout %d name_len %d name %s \n",
           pWlanWakeLockEvent->status, pWlanWakeLockEvent->reason,
           pWlanWakeLockEvent->timeout, pWlanWakeLockEvent->name_len,
           pWlanWakeLockEvent->name);
-
+#endif
     len_wakelock_event = sizeof(wake_lock_event) +
                             pWlanWakeLockEvent->name_len + 1;
 
@@ -143,16 +844,16 @@ static int process_wakelock_event(hal_info *info, u8* buf, int length)
     pRingBufferEntry->timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
 
     memcpy(pRingBufferEntry + 1, pPowerEvent, len_power_event);
+#ifdef QC_HAL_DEBUG
     ALOGI("Ring buffer Length %d \n", len_ring_buffer_entry);
-
+#endif
     // Write if verbose and handler is set
     num_records = 1;
     if (info->rb_infos[POWER_EVENTS_RB_ID].verbose_level >= 1 &&
         info->on_ring_buffer_data)
         ring_buffer_write(&info->rb_infos[POWER_EVENTS_RB_ID],
-                      (u8*)pRingBufferEntry, len_ring_buffer_entry, num_records);
-    else
-        ALOGI("Verbose level not set \n");
+                      (u8*)pRingBufferEntry,
+                      len_ring_buffer_entry, num_records);
 cleanup:
     if (pWakeLockEvent)
         free(pWakeLockEvent);
@@ -185,9 +886,6 @@ static wifi_error update_stats_to_ring_buf(hal_info *info,
                           (u8*)pRingBufferEntry,
                           size,
                           num_records);
-    else
-        ALOGV("Verbose level not set \n");
-
 
     return WIFI_SUCCESS;
 }
@@ -570,9 +1268,9 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
     tAniNlHdr *wnl = (tAniNlHdr *)nlmsg_hdr(msg);
     u8 *buf;
     wifi_error status;
-
-    //ALOGD("event sub type = %x", wnl->wmsg.type);
-
+#ifdef QC_HAL_DEBUG
+    ALOGD("event sub type = %x", wnl->wmsg.type);
+#endif
     if (wnl->wmsg.type == ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE) {
         uint32_t diag_host_type;
 
@@ -591,9 +1289,18 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                 case EVENT_WLAN_WAKE_LOCK:
                     process_wakelock_event(info, buf, event_hdr->length);
                     break;
-                default:
-                    ALOGD("Unsupported Event %d \n", event_hdr->event_id);
+                case EVENT_WLAN_PE:
+                    process_wlan_pe_event(info, buf, event_hdr->length);
                     break;
+                case EVENT_WLAN_EAPOL:
+                    process_wlan_eapol_event(info, buf, event_hdr->length);
+                    break;
+                default:
+#ifdef QC_HAL_DEBUG
+                    ALOGD(":%s: Unsupported Event %d", __FUNCTION__,
+                          event_hdr->event_id);
+#endif
+                    return WIFI_SUCCESS;
             }
         } else if (diag_host_type == DIAG_TYPE_HOST_LOG_MSGS) {
             drv_msg_t *drv_msg = (drv_msg_t *) (buf);
@@ -627,8 +1334,27 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                 }
             }
         }
-    }
+    } else {
+        uint16_t diag_fw_type;
+        uint32_t event_id;
+        buf = (uint8_t *)NLMSG_DATA(wnl);
 
-//    hexdump((char *)nlmsg_data(nlhdr), nlhdr->nlmsg_len);
+        fw_event_hdr_t *event_hdr =
+                          (fw_event_hdr_t *)(buf);
+        diag_fw_type = event_hdr->diag_type;
+#ifdef QC_HAL_DEBUG
+        ALOGD("diag_type  = %d diag_length %d",
+              event_hdr->diag_type, event_hdr->length);
+#endif
+        if (diag_fw_type == DIAG_TYPE_FW_MSG) {
+            dbglog_slot *slot;
+            u16 length = 0;
+            u32 version = 0;
+
+            slot = (dbglog_slot *)buf;
+            length = get_le32((u8 *)&slot->length);
+            process_fw_diag_msg(info, &slot->payload[0], length);
+        }
+    }
     return WIFI_SUCCESS;
 }

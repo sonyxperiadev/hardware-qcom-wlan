@@ -31,11 +31,46 @@
 
 #include "common.h"
 #include "wifi_hal.h"
+#include "wifilogger_event_defs.h"
 
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
 #include <linux/rtnetlink.h>
+
+#define DIAG_FWID_OFFSET            24
+#define DIAG_FWID_MASK              0xFF000000 /* Bit 24-31 */
+
+#define DIAG_TIMESTAMP_OFFSET       0
+#define DIAG_TIMESTAMP_MASK         0x00FFFFFF /* Bit 0-23 */
+
+#define DIAG_ID_OFFSET              16
+#define DIAG_ID_MASK                0xFFFF0000 /* Bit 16-31 */
+
+#define DIAG_PAYLEN_OFFSET          0
+#define DIAG_PAYLEN_MASK            0x000000FF /* Bit 0-7 */
+
+#define DIAG_PAYLEN_OFFSET16        0
+#define DIAG_PAYLEN_MASK16          0x0000FFFF /* Bit 0-16 */
+
+
+
+#define DIAG_GET_TYPE(arg) \
+     ((arg & DIAG_FWID_MASK) >> DIAG_FWID_OFFSET)
+
+#define DIAG_GET_TIME_STAMP(arg) \
+     ((arg & DIAG_TIMESTAMP_MASK) >> DIAG_TIMESTAMP_OFFSET)
+
+#define DIAG_GET_ID(arg) \
+     ((arg & DIAG_ID_MASK) >> DIAG_ID_OFFSET)
+
+
+#define DIAG_GET_PAYLEN(arg) \
+     ((arg & DIAG_PAYLEN_MASK) >> DIAG_PAYLEN_OFFSET)
+
+#define DIAG_GET_PAYLEN16(arg) \
+     ((arg & DIAG_PAYLEN_MASK16) >> DIAG_PAYLEN_OFFSET16)
+
 
 #define ANI_NL_MSG_LOG_REG_TYPE  0x0001
 #define ANI_NL_MSG_BASE     0x10    /* Some arbitrary base */
@@ -44,8 +79,6 @@
 #define ANI_NL_MSG_LOG_HOST_EVENT_LOG_TYPE 0x5050
 
 #define WLAN_PKT_LOG_STATS            0x18E0
-
-#define EVENT_WLAN_WAKE_LOCK 0xAA2 /* 96 bytes payload */
 
 /*
  *  - verbose_level 0 corresponds to no collection
@@ -68,6 +101,7 @@ enum wifilogger_fw_diag_type {
    DIAG_TYPE_FW_EVENT,     /* send fw event- to diag*/
    DIAG_TYPE_FW_LOG,       /* send log event- to diag*/
    DIAG_TYPE_FW_DEBUG_MSG, /* send dbg message- to diag*/
+   DIAG_TYPE_FW_MSG = 4,   /* send fw message- to diag*/
 };
 
 enum wifilogger_host_diag_type {
@@ -75,14 +109,32 @@ enum wifilogger_host_diag_type {
    DIAG_TYPE_HOST_EVENTS=2,
 };
 
-struct dbglog_slot {
-    unsigned int diag_type;
-    unsigned int timestamp;
-    unsigned int length;
-    unsigned int dropped;
+enum wlan_diag_frame_type {
+     WLAN_DIAG_TYPE_CONFIG,
+     WLAN_DIAG_TYPE_EVENT,
+     WLAN_DIAG_TYPE_LOG,
+     WLAN_DIAG_TYPE_MSG,
+     WLAN_DIAG_TYPE_LEGACY_MSG,
+};
+
+static uint32_t get_le32(const uint8_t *pos)
+{
+    return pos[0] | (pos[1] << 8) | (pos[2] << 16) | (pos[3] << 24);
+}
+
+typedef struct event_remap {
+    int q_event;
+    int g_event;
+} event_remap_t;
+
+typedef struct {
+    u32 diag_type;
+    u32 timestamp;
+    u32 length;
+    u32 dropped;
     /* max ATH6KL_FWLOG_PAYLOAD_SIZE bytes */
     u_int8_t payload[0];
-}__packed;
+}__attribute__((packed)) dbglog_slot;
 
 typedef enum eAniNlModuleTypes {
     ANI_NL_MSG_NETSIM = ANI_NL_MSG_BASE,// NetSim Messages (to the server)
@@ -131,6 +183,12 @@ typedef struct host_event_hdr_s
     u16 length;
 } host_event_hdr_t;
 
+typedef struct fw_event_hdr_s
+{
+    u16 diag_type;
+    u16 length;
+} fw_event_hdr_t;
+
 typedef struct wlan_wake_lock_event {
     u32 status;
     u32 reason;
@@ -140,4 +198,75 @@ typedef struct wlan_wake_lock_event {
 } wlan_wake_lock_event_t;
 
 wifi_error diag_message_handler(hal_info *info, nl_msg *msg);
+
+typedef struct bt_coex_common_data {
+    u8 link_id;
+    u8 link_state;
+    u8 link_role;
+} __attribute__((packed)) bt_coex_common_data_t;
+
+typedef struct bt_coex_vendor_data {
+    u8 link_type;
+    u16 Tsco;
+    u8 Rsco;
+} __attribute__((packed)) bt_coex_vendor_data_t;
+
+typedef struct bt_coex_hid_vendor_data {
+    u8 Tsniff;
+    u8 attempts;
+} bt_coex_hid_vendor_data_t;
+
+typedef struct ext_scan_cycle_vendor_data {
+    u32 timer_tick;
+    u32 scheduled_bucket_mask;
+    u32 scan_cycle_count;
+} __attribute__((packed)) ext_scan_cycle_vendor_data_t;
+
+typedef struct ext_scan_results_available_vendor_data {
+    u32 table_type;
+    u32 entries_in_use;
+    u32 maximum_entries;
+    u32 scan_count_after_getResults;
+    u8 threshold_num_scans;
+} __attribute__((packed)) ext_scan_results_available_vendor_data;
+
+typedef struct {
+    u32 roam_scan_flags;
+    u32 cur_rssi;
+    u16 scan_params[18];
+    u16 scan_channels[40]; // first 40 channels only
+} __attribute__((packed)) roam_scan_started_vendor_data_t;
+
+typedef struct {
+    u32 completion_flags;
+    u32 num_candidate;
+    u32 flags;
+} __attribute__((packed)) roam_scan_complete_vendor_data_t;
+
+typedef struct {
+    u8 ssid[33];
+    u8 auth_mode;
+    u8 ucast_cipher;
+    u8 mcast_cipher;
+} __attribute__((packed)) roam_candidate_found_vendor_data_t;
+
+typedef struct {
+    u8 scan_type;
+    u8 scan_bitmap;
+} __attribute__((packed)) bt_coex_bt_scan_start_vendor_data_t;
+
+typedef struct {
+    u8 scan_type;
+    u8 scan_bitmap;
+} __attribute__((packed)) bt_coex_bt_scan_stop_vendor_data_t;
+
+typedef struct {
+    u16 sme_state;
+    u16 mlm_state;
+} __attribute__((packed)) pe_event_vendor_data_t;
+
+typedef struct {
+    u8 Tsniff;
+    u8 attempts;
+} __attribute__((packed)) bt_coex_bt_hid_vendor_data_t;
 #endif /* __WIFI_HAL_WIFILOGGER_DIAG_H__ */
