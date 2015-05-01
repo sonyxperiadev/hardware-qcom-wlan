@@ -49,9 +49,9 @@ tlv_log* addLoggerTlv(u16 type, u16 length, u8* value, tlv_log *pOutTlv)
 static int process_wakelock_event(hal_info *info, u8* buf, int length)
 {
     wlan_wake_lock_event_t *pWlanWakeLockEvent;
-    wake_lock_event *pWakeLockEvent;
-    wifi_power_event *pPowerEvent;
-    wifi_ring_buffer_entry *pRingBufferEntry;
+    wake_lock_event *pWakeLockEvent = NULL;
+    wifi_power_event *pPowerEvent = NULL;
+    wifi_ring_buffer_entry *pRingBufferEntry = NULL;
     int len_wakelock_event = 0, len_power_event = 0, ret = 0;
     int len_ring_buffer_entry = 0, num_records = 0;
     tlv_log *pTlv;

@@ -91,7 +91,7 @@ void TdlsCommand::setSubCmd(u32 subcmd)
  */
 int TdlsCommand::handleEvent(WifiEvent &event)
 {
-    ALOGI("Got a TDLS message from Driver");
+    ALOGV("Got a TDLS message from Driver");
     unsigned i=0;
     u32 status;
     int ret = WIFI_SUCCESS;
@@ -313,7 +313,7 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
     wifi_handle handle = getWifiHandle(iface);
     pTdlsCommand = TdlsCommand::instance(handle);
 
-    ALOGE("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter", __FUNCTION__);
     if (pTdlsCommand == NULL) {
         ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
@@ -333,7 +333,7 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nl_data)
         goto cleanup;
-    ALOGE("%s: MAC_ADDR: "MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
+    ALOGD("%s: MAC_ADDR: "MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
     ret = pTdlsCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAC_ADDR,
                                   (char *)addr, 6);
     if (ret < 0)
@@ -373,7 +373,7 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
     }
 
 cleanup:
-    ALOGE("%s: Exit", __FUNCTION__);
+    ALOGI("%s: Exit", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -394,7 +394,7 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
     wifi_handle handle = getWifiHandle(iface);
     pTdlsCommand = TdlsCommand::instance(handle);
 
-    ALOGE("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter", __FUNCTION__);
     if (pTdlsCommand == NULL) {
         ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
@@ -409,8 +409,8 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
     ret = pTdlsCommand->set_iface_id(iinfo->name);
     if (ret < 0)
         goto cleanup;
-    ALOGE("%s: ifindex obtained:%d", __FUNCTION__, ret);
-    ALOGE("%s: MAC_ADDR: "MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
+    ALOGD("%s: ifindex obtained:%d", __FUNCTION__, ret);
+    ALOGD("%s: MAC_ADDR: "MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
 
     /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
@@ -428,7 +428,7 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
     }
 
 cleanup:
-    ALOGE("%s: Exit", __FUNCTION__);
+    ALOGI("%s: Exit", __FUNCTION__);
     return (wifi_error)ret;
 }
 
@@ -445,7 +445,7 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
     wifi_handle handle = getWifiHandle(iface);
     pTdlsCommand = TdlsCommand::instance(handle);
 
-    ALOGE("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter", __FUNCTION__);
     if (pTdlsCommand == NULL) {
         ALOGE("%s: Error TdlsCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
@@ -460,7 +460,7 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
     ret = pTdlsCommand->set_iface_id(iinfo->name);
     if (ret < 0)
         goto cleanup;
-    ALOGE("%s: ifindex obtained:%d", __FUNCTION__, ret);
+    ALOGD("%s: ifindex obtained:%d", __FUNCTION__, ret);
 
     /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
@@ -479,6 +479,6 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
     pTdlsCommand->getStatusRspParams(status);
 
 cleanup:
-    ALOGE("%s: Exit", __FUNCTION__);
+    ALOGI("%s: Exit", __FUNCTION__);
     return (wifi_error)ret;
 }

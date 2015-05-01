@@ -39,9 +39,9 @@
 #define LOGGER_MEMDUMP_FILENAME "/proc/debug/fwdump"
 #define LOGGER_MEMDUMP_CHUNKSIZE (4 * 1024)
 
-char power_events_ring_name[32] = "power_events_rb";
-char connectivity_events_ring_name[32] = "connectivity_events_rb";
-char pkt_stats_ring_name[32] = "pkt_stats_rb";
+char power_events_ring_name[] = "power_events_rb";
+char connectivity_events_ring_name[] = "connectivity_events_rb";
+char pkt_stats_ring_name[] = "pkt_stats_rb";
 
 static int get_ring_id(hal_info *info, char *ring_name)
 {
@@ -75,7 +75,6 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
      * No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    srand( time(NULL) );
     requestId = rand();
 
     if (buffer_name == NULL) {
@@ -183,7 +182,6 @@ wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
         get_rb_status(rb_info, rbs);
     }
     *num_buffers = NUM_RING_BUFS;
-cleanup:
     return (wifi_error)ret;
 }
 
@@ -206,7 +204,6 @@ wifi_error wifi_get_logger_supported_feature_set(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    srand( time(NULL) );
     requestId = rand();
 
     wifiLoggerCommand = new WifiLoggerCommand(
@@ -276,7 +273,6 @@ wifi_error wifi_get_ring_data(wifi_interface_handle iface,
         return WIFI_ERROR_UNKNOWN;
     }
 
-    srand( time(NULL) );
     requestId = rand();
 
     wifiLoggerCommand = new WifiLoggerCommand(
@@ -344,7 +340,6 @@ wifi_error wifi_get_firmware_version(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    srand( time(NULL) );
     requestId = rand();
 
     wifiLoggerCommand = new WifiLoggerCommand(
@@ -409,7 +404,6 @@ wifi_error wifi_get_driver_version(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    srand( time(NULL) );
     requestId = rand();
 
     wifiLoggerCommand = new WifiLoggerCommand(
@@ -473,7 +467,6 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
      */
-    srand( time(NULL) );
     requestId = rand();
 
     wifiLoggerCommand = new WifiLoggerCommand(
@@ -534,11 +527,11 @@ wifi_error wifi_set_log_handler(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
+    info->on_ring_buffer_data = handler.on_ring_buffer_data;
     if (handler.on_ring_buffer_data == NULL) {
         ALOGE("Input handler is NULL");
         return WIFI_ERROR_UNKNOWN;
     }
-    info->on_ring_buffer_data = handler.on_ring_buffer_data;
     return WIFI_SUCCESS;
 }
 

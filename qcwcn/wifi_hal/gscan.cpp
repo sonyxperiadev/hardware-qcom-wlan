@@ -46,28 +46,24 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
     wifi_handle wifiHandle = getWifiHandle(handle);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("%s: Enter band:%d max_channels:%d", __FUNCTION__,
-          band, max_channels);
-
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    /* No request id from caller, so generate one and pass it on to the driver.
+     * Generate one randomly.
+     */
+    requestId = rand();
+    ALOGI("%s: RequestId:%d Enter band:%d max_channels:%d", __FUNCTION__,
+          requestId, band, max_channels);
+
     if (channels == NULL) {
         ALOGE("%s: NULL channels pointer provided. Exit.",
             __FUNCTION__);
         return WIFI_ERROR_INVALID_ARGS;
     }
-
-    /* No request id from caller, so generate one and pass it on to the driver.
-     * Generate one randomly.
-     */
-    srand( time(NULL) );
-    requestId = rand();
-
-    ALOGI("%s: RequestId: %d", __FUNCTION__, requestId);
 
     gScanCommand = new GScanCommand(
                             wifiHandle,
@@ -134,27 +130,23 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
     wifi_handle wifiHandle = getWifiHandle(handle);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
-
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    /* No request id from caller, so generate one and pass it on to the driver.
+     * Generate it randomly.
+     */
+    requestId = rand();
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, requestId);
 
     if (capabilities == NULL) {
         ALOGE("%s: NULL capabilities pointer provided. Exit.",
             __FUNCTION__);
         return WIFI_ERROR_INVALID_ARGS;
     }
-
-    /* No request id from caller, so generate one and pass it on to the driver.
-     * Generate it randomly.
-     */
-    srand(time(NULL));
-    requestId = rand();
-    ALOGI("%s: RequestId: %d", __FUNCTION__, requestId);
 
     gScanCommand = new GScanCommand(
                             wifiHandle,
@@ -227,21 +219,19 @@ wifi_error wifi_start_gscan(wifi_request_id id,
     bool previousGScanRunning = false;
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
-
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    ALOGI("%s: Enter RequestId:%d ", __FUNCTION__, id);
     /* Wi-Fi HAL doesn't need to check if a similar request to start gscan was
      *  made earlier. If start_gscan() is called while another gscan is already
      *  running, the request will be sent down to driver and firmware. If new
      * request is successfully honored, then Wi-Fi HAL will use the new request
      * id for the GScanStartCmdEventHandler object.
      */
-    ALOGI("%s: RequestId: %d", __FUNCTION__, id);
     gScanCommand = new GScanCommand(
                                 wifiHandle,
                                 id,
@@ -439,21 +429,19 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
-
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
     if (GScanStartCmdEventHandler == NULL) {
         ALOGE("%s: GSCAN isn't running or already stopped. "
             "Nothing to do. Exit", __FUNCTION__);
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
-    ALOGI("%s: RequestId: %d", __FUNCTION__, id);
     gScanCommand = new GScanCommand(
                                 wifiHandle,
                                 id,
@@ -530,7 +518,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set bssid
      * hotlist was made earlier. If set_bssid_hotlist() is called while
@@ -540,7 +528,6 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
      * object.
      */
 
-    ALOGI("%s: RequestId: %d", __FUNCTION__, id);
     gScanCommand =
         new GScanCommand(
                     wifiHandle,
@@ -691,7 +678,7 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     if (GScanSetBssidHotlistCmdEventHandler == NULL) {
         ALOGE("wifi_reset_bssid_hotlist: GSCAN bssid_hotlist isn't set. "
@@ -699,7 +686,6 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
-    ALOGI("%s: RequestId: %d", __FUNCTION__, id);
     gScanCommand = new GScanCommand(
                         wifiHandle,
                         id,
@@ -774,7 +760,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set significant
      * change list was made earlier. If set_significant_change() is called while
@@ -784,7 +770,6 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
      * object.
      */
 
-    ALOGI("%s: RequestId: %d", __FUNCTION__, id);
     gScanCommand = new GScanCommand(
                     wifiHandle,
                     id,
@@ -948,7 +933,7 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     if (GScanSetSignificantChangeCmdEventHandler == NULL) {
         ALOGE("wifi_reset_significant_change_handler: GSCAN significant_change"
@@ -956,7 +941,6 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
-    ALOGI("%s: RequestId: %d", __FUNCTION__, id);
     gScanCommand =
         new GScanCommand
                     (
@@ -1033,26 +1017,22 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
-
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
+    /* No request id from caller, so generate one and pass it on to the driver. */
+    /* Generate it randomly */
+    requestId = rand();
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, requestId);
+
     if (results == NULL || num == NULL) {
         ALOGE("%s: NULL pointer provided. Exit.",
             __FUNCTION__);
         return WIFI_ERROR_INVALID_ARGS;
     }
-
-    /* No request id from caller, so generate one and pass it on to the driver. */
-    /* Generate it randomly */
-    srand(time(NULL));
-    requestId = rand();
-
-    ALOGI("%s: requestId = %d", __FUNCTION__, requestId);
 
     gScanCommand = new GScanCommand(
                         wifiHandle,
@@ -1227,7 +1207,7 @@ wifi_error wifi_set_ssid_hotlist(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set ssid
      * hotlist was made earlier. If set_ssid_hotlist() is called while
@@ -1237,7 +1217,6 @@ wifi_error wifi_set_ssid_hotlist(wifi_request_id id,
      * object.
      */
 
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
     gScanCommand =
         new GScanCommand(
                     wifiHandle,
@@ -1394,7 +1373,7 @@ wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     if (GScanSetSsidHotlistCmdEventHandler == NULL) {
         ALOGE("wifi_reset_ssid_hotlist: GSCAN ssid_hotlist isn't set. "
@@ -1402,7 +1381,6 @@ wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
     gScanCommand = new GScanCommand(
                         wifiHandle,
                         id,
@@ -2221,7 +2199,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set ePNO
      * list was made earlier. If wifi_set_epno_list() is called while
@@ -2231,7 +2209,6 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
      * object.
      */
 
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
     gScanCommand =
         new GScanCommand(
                     wifiHandle,
@@ -2394,7 +2371,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     /* Wi-Fi HAL doesn't need to check if a similar request to set ePNO
      * passpoint list was made earlier. If wifi_set_passpoint_list() is called
@@ -2403,7 +2380,6 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
      * will use the new request id for the
      * GScanPnoSetPasspointListCmdEventHandler object.
      */
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
     gScanCommand =
         new GScanCommand(
                     wifiHandle,
@@ -2562,7 +2538,7 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     if (GScanPnoSetPasspointListCmdEventHandler == NULL) {
         ALOGE("wifi_reset_passpoint_list: ePNO passpoint_list isn't set. "
@@ -2570,7 +2546,6 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
         return WIFI_ERROR_NOT_AVAILABLE;
     }
 
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
     gScanCommand = new GScanCommand(
                     wifiHandle,
                     id,
@@ -2819,20 +2794,19 @@ wifi_error wifi_set_ssid_white_list(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
-
-    ALOGI("Number of SSIDs : %d", num_networks);
-    for (i = 0; i < num_networks; i++) {
-        ALOGI("ssid %d : %s", i, ssids[i].ssid);
-    }
-
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
+
+    ALOGI("Number of SSIDs : %d", num_networks);
+    for (i = 0; i < num_networks; i++) {
+        ALOGI("ssid %d : %s", i, ssids[i].ssid);
+    }
+
     roamCommand = new GScanCommand(
                                 wifiHandle,
                                 id,
@@ -2910,7 +2884,13 @@ wifi_error wifi_set_gscan_roam_params(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     if(params) {
         ALOGI("A_band_boost_threshold   %d", params->A_band_boost_threshold);
@@ -2925,13 +2905,6 @@ wifi_error wifi_set_gscan_roam_params(wifi_request_id id,
         return WIFI_ERROR_INVALID_ARGS;
     }
 
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
     roamCommand = new GScanCommand(wifiHandle,
                                    id,
                                    OUI_QCA,
@@ -3010,15 +2983,15 @@ wifi_error wifi_enable_lazy_roam(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("Setting lazy roam: %s", enable?"ENABLE":"DISABLE");
-
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
+    ALOGI("%s: RequestId:%d Setting lazy roam: %s",
+          __FUNCTION__, id, enable?"ENABLE":"DISABLE");
+
     roamCommand =
          new GScanCommand(wifiHandle,
                           id,
@@ -3081,7 +3054,13 @@ wifi_error wifi_set_bssid_preference(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     ALOGI("Number of BSSIDs: %d", num_bssid);
     if(prefs && num_bssid) {
@@ -3097,13 +3076,6 @@ wifi_error wifi_set_bssid_preference(wifi_request_id id,
         return WIFI_ERROR_INVALID_ARGS;
     }
 
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
     roamCommand =
          new GScanCommand(wifiHandle,
                           id,
@@ -3183,7 +3155,13 @@ wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    ALOGI("%s: Enter", __FUNCTION__);
+    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
+        ALOGE("%s: GSCAN is not supported by driver",
+            __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
 
     for (i = 0; i < params.num_bssid; i++) {
         ALOGI("BSSID: %d : %02x:%02x:%02x:%02x:%02x:%02x", i,
@@ -3192,13 +3170,6 @@ wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
                 params.bssids[i][4], params.bssids[i][5]);
     }
 
-    if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
-        ALOGE("%s: GSCAN is not supported by driver",
-            __FUNCTION__);
-        return WIFI_ERROR_NOT_SUPPORTED;
-    }
-
-    ALOGI("%s: RequestId = %d", __FUNCTION__, id);
     roamCommand =
          new GScanCommand(wifiHandle,
                           id,
