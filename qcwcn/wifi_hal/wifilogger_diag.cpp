@@ -38,37 +38,6 @@
 #include "wifilogger_diag.h"
 #include "pkt_stats.h"
 
-#ifndef WIFI_TAG_REQUEST_ID
-/* Adding new TAGs here until wifi_logger.h is fixed. */
-#define WIFI_TAG_REQUEST_ID 16
-#define WIFI_TAG_BUCKET_ID 17
-#define WIFI_TAG_GSCAN_PARAMS 18
-#define WIFI_TAG_GSCAN_CAPABILITIES 19
-#define WIFI_TAG_SCAN_ID 20
-#define WIFI_TAG_RSSI 21
-#define WIFI_TAG_CHANNEL 22
-#define WIFI_TAG_LINK_ID 23
-#define WIFI_TAG_LINK_ROLE 24
-#define WIFI_TAG_LINK_STATE 25
-#define WIFI_TAG_LINK_TYPE 26
-#define WIFI_TAG_TSCO 27
-#define WIFI_TAG_RSCO 28
-#define WIFI_TAG_EAPOL_MESSAGE_TYPE 29
-#endif
-
-#ifndef WIFI_EVENT_G_SCAN_STOP
-/* Adding new events here until wifi_logger.h is fixed */
-#define WIFI_EVENT_G_SCAN_STOP 38
-#define WIFI_EVENT_G_SCAN_CYCLE_STARTED 39
-#define WIFI_EVENT_G_SCAN_CYCLE_COMPLETED 40
-#define WIFI_EVENT_G_SCAN_BUCKET_STARTED 41
-#define WIFI_EVENT_G_SCAN_BUCKET_COMPLETED 42
-#define WIFI_EVENT_G_SCAN_RESULTS_AVAILABLE 43
-#define WIFI_EVENT_G_SCAN_CAPABILITIES 44
-#define WIFI_EVENT_ROAM_CANDIDATE_FOUND 45
-#define WIFI_EVENT_ROAM_SCAN_CONFIG 46
-#endif
-
 #define RING_BUF_ENTRY_SIZE 512
 #define MAX_CONNECTIVITY_EVENTS 15 // should match the value in wifi_logger.h
 static event_remap_t events[MAX_CONNECTIVITY_EVENTS] = {
