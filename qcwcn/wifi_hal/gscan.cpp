@@ -45,11 +45,25 @@ wifi_error wifi_get_valid_channels(wifi_interface_handle handle,
     interface_info *ifaceInfo = getIfaceInfo(handle);
     wifi_handle wifiHandle = getWifiHandle(handle);
     hal_info *info = getHalInfo(wifiHandle);
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route GSCAN request through LOWI if supported */
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->get_valid_channels == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->get_valid_channels(handle, band, max_channels,
+                          channels, num_channels);
+        ALOGI("%s: lowi get_valid_channels "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     /* No request id from caller, so generate one and pass it on to the driver.
@@ -129,11 +143,25 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
     interface_info *ifaceInfo = getIfaceInfo(handle);
     wifi_handle wifiHandle = getWifiHandle(handle);
     hal_info *info = getHalInfo(wifiHandle);
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route GSCAN request through LOWI if supported */
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->get_gscan_capabilities == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->get_gscan_capabilities(handle,
+                                                     capabilities);
+        ALOGI("%s: lowi get_gscan_capabilities "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     /* No request id from caller, so generate one and pass it on to the driver.
@@ -218,11 +246,24 @@ wifi_error wifi_start_gscan(wifi_request_id id,
     struct nlattr *nlBuckectSpecList;
     bool previousGScanRunning = false;
     hal_info *info = getHalInfo(wifiHandle);
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route GSCAN request through LOWI if supported */
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->start_gscan  == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->start_gscan(id, iface, params, handler);
+        ALOGI("%s: lowi start_gscan "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     ALOGI("%s: Enter RequestId:%d ", __FUNCTION__, id);
@@ -424,6 +465,7 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
     int ret = 0;
     GScanCommand *gScanCommand;
     struct nlattr *nlData;
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -433,6 +475,18 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route GSCAN request through LOWI if supported */
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->stop_gscan == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->stop_gscan(id, iface);
+        ALOGI("%s: lowi start_gscan "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
@@ -511,11 +565,24 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     bool previousGScanSetBssidRunning = false;
     hal_info *info = getHalInfo(wifiHandle);
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route request through LOWI if supported*/
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->set_bssid_hotlist == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->set_bssid_hotlist(id, iface, params,handler);
+        ALOGI("%s: lowi set_bssid_hotlist "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
@@ -671,11 +738,24 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route request through LOWI if supported*/
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->reset_bssid_hotlist == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->reset_bssid_hotlist(id, iface);
+        ALOGI("%s: lowi reset_bssid_hotlist "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
@@ -753,11 +833,27 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     bool previousGScanSetSigChangeRunning = false;
     hal_info *info = getHalInfo(wifiHandle);
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route request through LOWI if supported*/
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->set_significant_change_handler == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->set_significant_change_handler(id,
+                                                             iface,
+                                                             params,
+                                                             handler);
+        ALOGI("%s: lowi set_significant_change_handler "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
@@ -926,11 +1022,24 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route request through LOWI if supported*/
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->reset_significant_change_handler == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->reset_significant_change_handler(id, iface);
+        ALOGI("%s: lowi reset_significant_change_handler "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
@@ -1012,6 +1121,7 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
     GScanCommand *gScanCommand;
     struct nlattr *nlData;
     wifi_cached_scan_results *cached_results;
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -1021,6 +1131,22 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route GSCAN request through LOWI if supported */
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->get_cached_gscan_results == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->get_cached_gscan_results(iface,
+                                                       flush,
+                                                       max,
+                                                       results,
+                                                       num);
+        ALOGI("%s: lowi start_gscan "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     /* No request id from caller, so generate one and pass it on to the driver. */
@@ -1200,11 +1326,24 @@ wifi_error wifi_set_ssid_hotlist(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     bool previousGScanSetSsidRunning = false;
     hal_info *info = getHalInfo(wifiHandle);
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route request through LOWI if supported*/
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->set_ssid_hotlist == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->set_ssid_hotlist(id, iface, params,handler);
+        ALOGI("%s: lowi set_ssid_hotlist "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
@@ -1366,11 +1505,24 @@ wifi_error wifi_reset_ssid_hotlist(wifi_request_id id,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
+    lowi_cb_table_t *lowiWifiHalApi = NULL;
 
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
+    }
+
+    /* Route request through LOWI if supported*/
+    lowiWifiHalApi = getLowiCallbackTable(GSCAN_SUPPORTED);
+    if (lowiWifiHalApi == NULL ||
+        lowiWifiHalApi->reset_ssid_hotlist == NULL) {
+        ALOGI("%s: Sending cmd directly to host", __FUNCTION__);
+    } else {
+        ret = lowiWifiHalApi->reset_ssid_hotlist(id, iface);
+        ALOGI("%s: lowi reset_ssid_hotlist "
+            "returned: %d. Exit.", __FUNCTION__, ret);
+        return (wifi_error)ret;
     }
 
     ALOGI("%s: Enter RequestId:%d", __FUNCTION__, id);
