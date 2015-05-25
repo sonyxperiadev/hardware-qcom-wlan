@@ -139,6 +139,14 @@ wifi_interface_handle getIfaceHandle(interface_info *info);
 
 lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities);
 
+wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
+        wifi_interface_handle iface, u8 *ip_packet, u16 ip_packet_len,
+        u8 *src_mac_addr, u8 *dst_mac_addr, u32 period_msec);
+wifi_error wifi_stop_sending_offloaded_packet(wifi_request_id id,
+        wifi_interface_handle iface);
+wifi_error wifi_start_rssi_monitoring(wifi_request_id id, wifi_interface_handle
+        iface, s8 max_rssi, s8 min_rssi, wifi_rssi_event_handler eh);
+wifi_error wifi_stop_rssi_monitoring(wifi_request_id id, wifi_interface_handle iface);
 // some common macros
 
 #define min(x, y)       ((x) < (y) ? (x) : (y))
@@ -148,7 +156,7 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities);
 extern "C"
 {
 #endif /* __cplusplus */
-void hexdump(char *bytes, u16 len);
+void hexdump(void *bytes, u16 len);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
