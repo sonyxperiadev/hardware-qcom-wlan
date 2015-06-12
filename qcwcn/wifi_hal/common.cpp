@@ -267,6 +267,7 @@ void hexdump(void *buf, u16 len)
 
 #ifdef __cplusplus
 }
+#endif /* __cplusplus */
 
 /* Pointer to the table of LOWI callback funcs */
 lowi_cb_table_t *LowiWifiHalApi = NULL;
@@ -390,7 +391,10 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
     int ret = WIFI_SUCCESS;
     bool lowi_get_capabilities_support = false;
 
+    ALOGI("%s: Entry", __FUNCTION__);
     if (LowiWifiHalApi == NULL) {
+        ALOGI("%s: LowiWifiHalApi Null, Initialize Lowi",
+              __FUNCTION__);
         ret = fetchLowiCbTableAndCapabilities(&LowiWifiHalApi,
                                               &lowi_get_capabilities_support);
         if (ret != WIFI_SUCCESS || LowiWifiHalApi == NULL ||
@@ -407,16 +411,11 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
         }
         if (!lowi_get_capabilities_support ||
             LowiWifiHalApi->get_lowi_capabilities == NULL) {
-            if (((ONE_SIDED_RANGING_SUPPORTED|DUAL_SIDED_RANGING_SUPPORED) &
-                requested_lowi_capabilities) != 0) {
                 ALOGI("%s: Allow rtt APIs thru LOWI to proceed even though "
-                      "get_lowi_capabilities() is not supported.");
+                      "get_lowi_capabilities() is not supported. Returning");
                 lowiSupportedCapabilities |=
                     (ONE_SIDED_RANGING_SUPPORTED|DUAL_SIDED_RANGING_SUPPORED);
                 return LowiWifiHalApi;
-            }
-            ALOGI("%s: Capability Not supported, Exit",__FUNCTION__);
-            goto cleanup;
         }
         ret =
             LowiWifiHalApi->get_lowi_capabilities(&lowiSupportedCapabilities);
@@ -428,15 +427,18 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
     }
 
     if ((lowiSupportedCapabilities & requested_lowi_capabilities) == 0) {
-        ALOGE("%s: none of the requested lowi capabilities 0x%08x is"
-            " included in supported capabilities 0x%08x. Return NULL.",
+        ALOGE("%s: requested lowi capabilities: 0x%08x is not "
+            " in supported capabilities: 0x%08x. Return NULL.",
             __FUNCTION__, requested_lowi_capabilities,
             lowiSupportedCapabilities);
-        goto cleanup;
+        return NULL;
     }
+    ALOGI("%s: Returning valid LowiWifiHalApi instance:%p",
+          __FUNCTION__, LowiWifiHalApi);
     return LowiWifiHalApi;
 
 cleanup:
+    ALOGI("%s: Cleaning up Lowi due to failure. Return NULL", __FUNCTION__);
     if (LowiWifiHalApi && LowiWifiHalApi->destroy) {
         ret = LowiWifiHalApi->destroy();
     }
@@ -444,4 +446,4 @@ cleanup:
     lowiSupportedCapabilities = 0;
     return LowiWifiHalApi;
 }
-#endif /* __cplusplus */
+
