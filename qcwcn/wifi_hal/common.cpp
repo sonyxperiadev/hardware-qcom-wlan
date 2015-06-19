@@ -412,7 +412,8 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
         if (!lowi_get_capabilities_support ||
             LowiWifiHalApi->get_lowi_capabilities == NULL) {
                 ALOGI("%s: Allow rtt APIs thru LOWI to proceed even though "
-                      "get_lowi_capabilities() is not supported. Returning");
+                      "get_lowi_capabilities() is not supported. Returning",
+                      __FUNCTION__);
                 lowiSupportedCapabilities |=
                     (ONE_SIDED_RANGING_SUPPORTED|DUAL_SIDED_RANGING_SUPPORED);
                 return LowiWifiHalApi;
@@ -421,7 +422,7 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
             LowiWifiHalApi->get_lowi_capabilities(&lowiSupportedCapabilities);
         if (ret) {
             ALOGI("%s: failed to get lowi supported capabilities."
-                "Returned error:%d. Exit.", ret);
+                "Returned error:%d. Exit.", __FUNCTION__, ret);
             goto cleanup;
         }
     }
