@@ -34,6 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "qmi_client.h"
 #include "device_management_service_v01.h"
 #include <cutils/properties.h>
+#include <string.h>
 
 #define SUCCESS 0
 #define FAILED -1
