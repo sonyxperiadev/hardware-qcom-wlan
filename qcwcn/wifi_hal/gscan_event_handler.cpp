@@ -50,6 +50,26 @@ void GScanCommandEventHandler::set_request_id(int request_id)
     mRequestId = request_id;
 }
 
+void GScanCommandEventHandler::enableEventHandling()
+{
+    mEventHandlingEnabled = true;
+}
+
+void GScanCommandEventHandler::disableEventHandling()
+{
+    mEventHandlingEnabled = false;
+}
+
+bool GScanCommandEventHandler::isEventHandlingEnabled()
+{
+    return mEventHandlingEnabled;
+}
+
+void GScanCommandEventHandler::setCallbackHandler(GScanCallbackHandler handler)
+{
+    mHandler = handler;
+}
+
 GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
                                                 u32 vendor_id,
                                                 u32 subcmd,
@@ -80,6 +100,7 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
     mPasspointAnqp = NULL;
     mPasspointAnqpLen = 0;
     mPasspointNetId = -1;
+    mEventHandlingEnabled = false;
 
     switch(mSubCommandId)
     {
@@ -1080,8 +1101,15 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
     unsigned i=0;
     int ret = WIFI_SUCCESS;
     u32 status;
-    wifi_scan_result *result;
+    wifi_scan_result *result = NULL;
     struct nlattr *tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_MAX + 1];
+
+    if (mEventHandlingEnabled == false)
+    {
+        ALOGD("%s:Discarding event: %d",
+              __FUNCTION__, mSubcmd);
+        return NL_SKIP;
+    }
 
     WifiVendorCommand::handleEvent(event);
 
