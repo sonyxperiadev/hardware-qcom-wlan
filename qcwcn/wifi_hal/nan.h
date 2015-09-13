@@ -55,24 +55,7 @@ typedef int NanVersion;
 #define NAN_MAX_CLUSTER_ATTRIBUTE_LEN           255
 #define NAN_MAX_SUBSCRIBE_MAX_ADDRESS           42
 #define NAN_MAX_FAM_CHANNELS                    32
-
-/*
-  Definition of various NanRequestType
-*/
-typedef enum {
-    NAN_REQUEST_ENABLE                  =0,
-    NAN_REQUEST_DISABLE                 =1,
-    NAN_REQUEST_PUBLISH                 =2,
-    NAN_REQUEST_PUBLISH_CANCEL          =3,
-    NAN_REQUEST_TRANSMIT_FOLLOWUP       =4,
-    NAN_REQUEST_SUBSCRIBE               =5,
-    NAN_REQUEST_SUBSCRIBE_CANCEL        =6,
-    NAN_REQUEST_STATS                   =7,
-    NAN_REQUEST_CONFIG                  =8,
-    NAN_REQUEST_TCA                     =9,
-    NAN_REQUEST_BEACON_SDF_PAYLOAD      =10,
-    NAN_REQUEST_LAST                    =0xFFFF
-} NanRequestType;
+#define NAN_MAX_POSTDISCOVERY_LEN               5
 
 /*
   Definition of various NanResponseType
@@ -97,7 +80,6 @@ typedef enum {
   Definition of various NanIndication(events)
 */
 typedef enum {
-    NAN_INDICATION_PUBLISH_REPLIED         =0,
     NAN_INDICATION_PUBLISH_TERMINATED      =1,
     NAN_INDICATION_MATCH                   =2,
     NAN_INDICATION_UNMATCH                 =3,
@@ -161,51 +143,6 @@ typedef enum
 /*
   Various NAN Protocol Response code
 */
-#ifndef NAN_2_0
-typedef enum
-{
-    /* NAN Protocol Response Codes */
-    NAN_STATUS_SUCCESS = 0,
-    NAN_STATUS_TIMEOUT,
-    NAN_STATUS_DE_FAILURE,
-    NAN_STATUS_INVALID_MSG_VERSION,
-    NAN_STATUS_INVALID_MSG_LEN,
-    NAN_STATUS_INVALID_MSG_ID,
-    NAN_STATUS_INVALID_HANDLE,
-    NAN_STATUS_NO_SPACE_AVAILABLE,
-    NAN_STATUS_INVALID_PUBLISH_TYPE,
-    NAN_STATUS_INVALID_TX_TYPE,
-    NAN_STATUS_INVALID_MATCH_ALGORITHM,
-    NAN_STATUS_DISABLE_IN_PROGRESS,
-    NAN_STATUS_INVALID_TLV_LEN,
-    NAN_STATUS_INVALID_TLV_TYPE,
-    NAN_STATUS_MISSING_TLV_TYPE,
-    NAN_STATUS_INVALID_TOTAL_TLVS_LEN,
-    NAN_STATUS_INVALID_MATCH_HANDLE,
-    NAN_STATUS_INVALID_TLV_VALUE,
-    NAN_STATUS_INVALID_TX_PRIORITY,
-    NAN_STATUS_INVALID_TCA_ID,
-    NAN_STATUS_INVALID_STATS_ID,
-
-    /* NAN Configuration Response codes */
-    NAN_STATUS_INVALID_RSSI_CLOSE_VALUE = 128,
-    NAN_STATUS_INVALID_RSSI_MEDIUM_VALUE,
-    NAN_STATUS_INVALID_HOP_COUNT_LIMIT,
-    NAN_STATUS_INVALID_CLUSTER_JOIN_COUNT,
-    NAN_STATUS_INVALID_MIN_WAKE_DW_DURATION_VALUE,
-    NAN_STATUS_INVALID_OFDM_DATA_RATE_VALUE,
-    NAN_STATUS_INVALID_RANDOM_FACTOR_UPDATE_TIME_VALUE,
-    NAN_STATUS_INVALID_MASTER_PREFERENCE_VALUE,
-    NAN_STATUS_INVALID_EARLY_DW_WAKE_INTERVAL_VALUE,
-    NAN_STATUS_INVALID_LOW_CLUSTER_ID_VALUE,
-    NAN_STATUS_INVALID_HIGH_CLUSTER_ID_VALUE,
-    NAN_STATUS_INVALID_INITIAL_SCAN_PERIOD,
-    NAN_STATUS_INVALID_ONGOING_SCAN_PERIOD,
-    NAN_STATUS_INVALID_RSSI_PROXIMITY_VALUE,
-    NAN_STATUS_INVALID_BACKGROUND_SCAN_PERIOD,
-    NAN_STATUS_INVALID_SCAN_CHANNEL
-} NanStatusType;
-#else /* NAN_2_0 */
 typedef enum
 {
     /* NAN Protocol Response Codes */
@@ -256,7 +193,7 @@ typedef enum
     NAN_STATUS_INVALID_BAND_CONFIG_FLAGS = 4117,
     /* 4118 RESERVED */
 } NanStatusType;
-#endif /* NAN_2_0 */
+
 /*
   Various NAN Terminated Indication Code
 */
@@ -294,7 +231,7 @@ typedef enum
 #define NAN_SRF_INCLUDE_DO_NOT_RESPOND  0
 #define NAN_SRF_INCLUDE_RESPOND         1
 
-/* NAN Match Algorithms */
+/* NAN Match indication type */
 typedef enum
 {
     NAN_MATCH_ALG_FIRST = 0,
@@ -374,15 +311,6 @@ typedef struct {
     u32 attr_len;
     u8 vsa[NAN_MAX_VSA_DATA_LEN];
 } NanReceiveVendorSpecificAttribute;
-
-/* Discovery engine cluster state*/
-typedef enum {
-    NAN_NORMAL_OPERATION = 0,
-    NAN_NON_MASTER_NON_SYNC = 1,
-    NAN_NON_MASTER_SYNC = 2,
-    NAN_MASTER = 3,
-    NAN_ANCHOR_MASTER = 4
-} NanDebugDEClusterState;
 
 /*
    NAN Beacon SDF Payload Received structure
@@ -697,6 +625,10 @@ typedef struct {
        the maximum allow Beacon frame size
     */
     u8 sid_beacon; /* default = 0x01*/
+    /*
+       The rssi values below should be specified without sign.
+       For eg: -70dBm should be specified as 70.
+    */
     u8 rssi_close; /* default = 60 (-60 dBm) */
     u8 rssi_middle; /* default = 70 (-70 dBm) */
     u8 rssi_proximity; /* default = 70 (-70 dBm) */
@@ -728,13 +660,13 @@ typedef struct {
     u8 config_2dot4g_beacons;
     u8 beacon_2dot4g_val;
     /*
-       Defines 2.4G channels will be used for discovery frames
-       0 - 2.4G channels not used for discovery frames
-       1 - 2.4G channels used for discovery frames
+       Defines 2.4G channels will be used for Service Discovery frames
+       0 - 2.4G channels not used for Service Discovery frames
+       1 - 2.4G channels used for Service Discovery frames
        If not configured, default value = 1
     */
-    u8 config_2dot4g_discovery;
-    u8 discovery_2dot4g_val;
+    u8 config_2dot4g_sdf;
+    u8 sdf_2dot4g_val;
     /*
        Defines 5G channels will be used for sync/discovery beacons
        0 - 5G channels not used for beacons
@@ -744,29 +676,36 @@ typedef struct {
     u8 config_5g_beacons;
     u8 beacon_5g_val;
     /*
-       Defines 5G channels will be used for discovery frames
-       0 - 5G channels not used for discovery frames
-       1 - 5G channels used for discovery frames
+       Defines 5G channels will be used for Service Discovery frames
+       0 - 5G channels not used for Service Discovery frames
+       1 - 5G channels used for Service Discovery frames
        If not configured, default value = 0
     */
-    u8 config_5g_discovery;
-    u8 discovery_5g_val;
+    u8 config_5g_sdf;
+    u8 sdf_5g_val;
     /*
-       1 byte signed quantity which defines the RSSI value in
+       1 byte value which defines the RSSI in
        dBm for a close by Peer in 5 Ghz channels.
+       The rssi values should be specified without sign.
+       For eg: -70dBm should be specified as 70.
     */
     u8 config_5g_rssi_close;
     u8 rssi_close_5g_val;
     /*
-       1 byte signed quantity which defines the RSSI value in
+       1 byte value which defines the RSSI value in
        dBm for a close by Peer in 5 Ghz channels.
+       The rssi values should be specified without sign.
+       For eg: -70dBm should be specified as 70.
+
     */
     u8 config_5g_rssi_middle;
     u8 rssi_middle_5g_val;
     /*
-       1 byte signed quantity which defines the RSSI filter
+       1 byte value which defines the RSSI filter
        threshold.  Any Service Descriptors received above this
        value that are configured for RSSI filtering will be dropped.
+       The rssi values should be specified without sign.
+       For eg: -70dBm should be specified as 70.
     */
     u8 config_5g_rssi_close_proximity;
     u8 rssi_close_proximity_5g_val;
@@ -838,20 +777,19 @@ typedef struct {
     NanHeader header;
     u16 ttl; /* how many seconds to run for. 0 means forever until canceled */
     u16 period; /* periodicity of OTA unsolicited publish. Specified in increments of 500 ms */
-    u8 replied_event_flag; /* 1= RepliedEventInd needed, 0 = Not needed */
     NanPublishType publish_type;/* 0= unsolicited, solicited = 1, 2= both */
     NanTxType tx_type; /* 0 = broadcast, 1= unicast  if solicited publish */
     u8 publish_count; /* number of OTA Publish, 0 means forever until canceled */
     u16 service_name_len; /* length of service name */
     u8 service_name[NAN_MAX_SERVICE_NAME_LEN];/* UTF-8 encoded string identifying the service */
     /*
-       Field which allows the matching behavior to be controlled.
-       0 - Match Once
-       1 - Match continuous
-       2 - Match never
+       Field which specifies how the matching indication to host is controlled.
+       0 - Match and Indicate Once
+       1 - Match and Indicate continuous
+       2 - Match and Indicate never. This means don't indicate the match to the host.
        3 - Reserved
     */
-    NanMatchAlg publish_match;
+    NanMatchAlg publish_match_indicator;
 
     /*
        Sequence of values which should be conveyed to the Discovery Engine of a
@@ -950,13 +888,13 @@ typedef struct {
     u8 ssiRequiredForMatchIndication; /* 0=Not needed, 1= Required */
 
     /*
-       Field which allows the matching behavior to be controlled.
-       0 - Match Once
-       1 - Match continuous
-       2 - Match never
+       Field which specifies how the matching indication to host is controlled.
+       0 - Match and Indicate Once
+       1 - Match and Indicate continuous
+       2 - Match and Indicate never. This means don't indicate the match to the host.
        3 - Reserved
     */
-    NanMatchAlg subscribe_match;
+    NanMatchAlg subscribe_match_indicator;
 
     /*
        The number of Subscribe Matches which should occur
@@ -1045,8 +983,8 @@ typedef struct {
 typedef struct {
     NanHeader header;
     /*
-       A 32 bit Handle which is sent to the Application.  This handle will be
-       sent in any subsequent UnmatchInd/FollowupInd messages
+       This match_handle is the handle which is passed as part of earlier
+       MatchInd/FollowupInd message.
     */
     u32 match_handle;
     u8 addr[NAN_MAC_ADDR_LEN]; /* Can be a broadcast/multicast or unicast address */
@@ -1101,9 +1039,11 @@ typedef struct {
     u8 additional_disc_window_slots; /* default = 0.*/
 
     /*
-       1 byte signed quantity which defines the RSSI filter
-       threshold.  Any Service Descriptors received above this
-       value that are configured for RSSI filtering will be dropped.
+       1 byte value which defines the RSSI filter threshold.
+       Any Service Descriptors received above this value
+       that are configured for RSSI filtering will be dropped.
+       The rssi values should be specified without sign.
+       For eg: -70dBm should be specified as 70.
     */
     u8 config_5g_rssi_close_proximity;
     u8 rssi_close_proximity_5g_val;
@@ -1133,7 +1073,8 @@ typedef struct {
     u8 config_scan_params;
     NanSocialChannelScanParams scan_params_val;
     /*
-      Debugging mode for Discovery engine
+      64 bit vendor specific Debugging flag which is used for debugging
+      Discovery engine.
     */
     u8 config_debug_flags;
     u64 debug_flags_val;
@@ -1154,8 +1095,8 @@ typedef struct {
     u8 config_conn_capability;
     NanTransmitPostConnectivityCapability conn_capability_val;
     /* NAN Post Discover Capability */
-    u8 config_discovery_attr;
-    NanTransmitPostDiscovery discovery_attr_val;
+    u8 num_config_discovery_attr;
+    NanTransmitPostDiscovery discovery_attr_val[NAN_MAX_POSTDISCOVERY_LEN];
     /* NAN Further availability Map */
     u8 config_fam;
     NanFurtherAvailabilityMap fam_val;
@@ -1378,42 +1319,6 @@ typedef struct {
     } body;
 } NanResponseMsg;
 
-
-/*
-  Publish Replied Indication
-  The PublishRepliedInd Message is sent by the DE when an Active Subscribe is
-  received over the air and it matches a Solicited PublishServiceReq which had
-  been created with the replied_event_flag set.
-*/
-typedef struct {
-    NanHeader header;
-    u8 addr[NAN_MAC_ADDR_LEN];
-    /*
-       If RSSI filtering was configured in NanPublishRequest then this
-       field will contain the received RSSI value. 0 if not
-    */
-    u8 rssi_value;
-    /*
-       optional attributes. Each optional attribute is associated with a flag
-       which specifies whether the attribute is valid or not
-    */
-    /* NAN Post Connectivity Capability received */
-    u8 is_conn_capability_valid;
-    NanReceivePostConnectivityCapability conn_capability;
-
-    /* NAN Post Discover Capability */
-    u8 is_discovery_attr_valid;
-    NanReceivePostDiscovery discovery_attr;
-
-    /* NAN Further availability Map */
-    u8 is_fam_valid;
-    NanFurtherAvailabilityMap fam;
-
-    /* NAN Cluster Attribute */
-    u8 cluster_attribute_len;
-    u8 cluster_attribute[NAN_MAX_CLUSTER_ATTRIBUTE_LEN];
-} NanPublishRepliedInd;
-
 /*
   Publish Terminated
   The PublishTerminatedInd message is sent by the DE whenever a Publish
@@ -1475,6 +1380,8 @@ typedef struct {
     /*
        If RSSI filtering was configured in NanSubscribeRequest then this
        field will contain the received RSSI value. 0 if not.
+       All rssi values should be specified without sign.
+       For eg: -70dBm should be specified as 70.
     */
     u8 rssi_value;
 
@@ -1487,8 +1394,8 @@ typedef struct {
     NanReceivePostConnectivityCapability conn_capability;
 
     /* NAN Post Discover Capability */
-    u8 is_discovery_attr_valid;
-    NanReceivePostDiscovery discovery_attr;
+    u8 num_rx_discovery_attr;
+    NanReceivePostDiscovery discovery_attr[NAN_MAX_POSTDISCOVERY_LEN];
 
     /* NAN Further availability Map */
     u8 is_fam_valid;
@@ -1534,7 +1441,7 @@ typedef struct {
     NanHeader header;
     /*
        A 32 bit Handle which is sent to the Application.  This handle will be
-       sent in any subsequent UnmatchInd/FollowupInd messages
+       used in subsequent UnmatchInd/FollowupInd messages.
     */
     u32 match_handle;
     u8 addr[NAN_MAC_ADDR_LEN];
@@ -1659,94 +1566,101 @@ typedef struct {
 } NanBeaconSdfPayloadInd;
 
 typedef struct {
+  /* NAN master rank being advertised by DE */
   u64 master_rank;
+  /* NAN master preference being advertised by DE */
   u8 master_pref;
+  /* random value being advertised by DE */
   u8 random_factor;
+  /* hop_count from anchor master */
   u8 hop_count;
   u32 beacon_transmit_time;
 } NanStaParameter;
 
 /* Response and Event Callbacks */
 typedef struct {
+    /*
+       All callbacks will pass back the user context pointer
+       registered by app layer
+    */
+
     /* NotifyResponse invoked to notify the status of the Request */
     void (*NotifyResponse)(NanResponseMsg* rsp_data,
-                           void* userdata);
-    /* Various Events Callback */
-    void (*EventPublishReplied)(NanPublishRepliedInd* event,
-                                void* userdata);
+                           void* user_context);
+    /* Callbacks for various Events */
     void (*EventPublishTerminated)(NanPublishTerminatedInd* event,
-                                   void* userdata);
+                                   void* user_context);
     void (*EventMatch) (NanMatchInd* event,
-                        void* userdata);
+                        void* user_context);
     void (*EventUnMatch) (NanUnmatchInd* event,
-                          void* userdata);
+                          void* user_context);
     void (*EventSubscribeTerminated) (NanSubscribeTerminatedInd* event,
-                                      void* userdata);
+                                      void* user_context);
     void (*EventFollowup) (NanFollowupInd* event,
-                           void* userdata);
+                           void* user_context);
     void (*EventDiscEngEvent) (NanDiscEngEventInd* event,
-                               void* userdata);
+                               void* user_context);
     void (*EventDisabled) (NanDisabledInd* event,
-                           void* userdata);
+                           void* user_context);
     void (*EventTca) (NanTCAInd* event,
-                      void* userdata);
+                      void* user_context);
     void (*EventSdfPayload) (NanBeaconSdfPayloadInd* event,
-                             void* userdata);
+                             void* user_context);
 } NanCallbackHandler;
 
 
-/*  Function to send NAN request to the wifi driver.*/
+/*  Enable NAN functionality.*/
 wifi_error nan_enable_request(wifi_request_id id,
                               wifi_handle handle,
                               NanEnableRequest* msg);
 
-/*  Function to send NAN request to the wifi driver.*/
+/*  Disable NAN functionality.*/
 wifi_error nan_disable_request(wifi_request_id id,
                                wifi_handle handle,
                                NanDisableRequest* msg);
 
-/*  Function to send NAN request to the wifi driver.*/
+/*  Publish request to advertize a service.*/
 wifi_error nan_publish_request(wifi_request_id id,
                                wifi_handle handle,
                                NanPublishRequest* msg);
 
-/*  Function to send NAN request to the wifi driver.*/
+/*  Cancel previous publish requests.*/
 wifi_error nan_publish_cancel_request(wifi_request_id id,
                                       wifi_handle handle,
                                       NanPublishCancelRequest* msg);
 
-/*  Function to send NAN request to the wifi driver.*/
+/*  Subscribe request to search for a service.*/
 wifi_error nan_subscribe_request(wifi_request_id id,
                                  wifi_handle handle,
                                  NanSubscribeRequest* msg);
 
-/*  Function to send NAN request to the wifi driver.*/
+/*  Cancel previous subscribe requests.*/
 wifi_error nan_subscribe_cancel_request(wifi_request_id id,
                                         wifi_handle handle,
                                         NanSubscribeCancelRequest* msg);
 
-/*  Function to send NAN request to the wifi driver.*/
+/*  NAN transmit follow up request.*/
 wifi_error nan_transmit_followup_request(wifi_request_id id,
                                          wifi_handle handle,
                                          NanTransmitFollowupRequest* msg);
 
-/*  Function to send NAN statistics request to the wifi driver.*/
+/*  Request NAN statistics from Discovery Engine.*/
 wifi_error nan_stats_request(wifi_request_id id,
                              wifi_handle handle,
                              NanStatsRequest* msg);
 
-/*  Function to send NAN configuration request to the wifi driver.*/
+/*  NAN configuration request.*/
 wifi_error nan_config_request(wifi_request_id id,
                               wifi_handle handle,
                               NanConfigRequest* msg);
 
-/*  Function to send NAN request to the wifi driver.*/
+/*  Configure the various Threshold crossing alerts */
 wifi_error nan_tca_request(wifi_request_id id,
                            wifi_handle handle,
                            NanTCARequest* msg);
 
 /*
-    Function to send NAN Beacon sdf payload to the wifi driver.
+    Set NAN Beacon sdf payload to discovery engine.
     This instructs the Discovery Engine to begin publishing the
     received payload in any Beacon or Service Discovery Frame
     transmitted
@@ -1762,12 +1676,15 @@ wifi_error nan_get_sta_parameter(wifi_request_id id,
                                  wifi_handle handle,
                                  NanStaParameter* msg);
 
-/*  Function to register NAN callback */
+/*
+    Register NAN callbacks and pass user context to be
+    passed back in the callbacks
+*/
 wifi_error nan_register_handler(wifi_handle handle,
                                 NanCallbackHandler handlers,
-                                void* userdata);
+                                void* user_context);
 
-/*  Function to get version of the NAN HAL */
+/*  Get NAN HAL version*/
 wifi_error nan_get_version(wifi_handle handle,
                            NanVersion* version);
 

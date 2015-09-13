@@ -40,7 +40,7 @@ NanCommand* NanCommand::mNanCommandInstance  = NULL;
 //Implementation of the functions exposed in nan.h
 wifi_error nan_register_handler(wifi_handle handle,
                                 NanCallbackHandler handlers,
-                                void* userdata)
+                                void* user_context)
 {
     // Obtain the singleton instance
     int ret = 0;
@@ -51,7 +51,7 @@ wifi_error nan_register_handler(wifi_handle handle,
         ALOGE("%s: Error NanCommand NULL", __func__);
         return WIFI_ERROR_UNKNOWN;
     }
-    ret = nCommand->setCallbackHandler(handlers, userdata);
+    ret = nCommand->setCallbackHandler(handlers, user_context);
     return (wifi_error)ret;
 }
 
@@ -411,7 +411,7 @@ NanCommand::NanCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
     mNanVendorEvent = NULL;
     mNanDataLen = 0;
     mStaParam = NULL;
-    mUserData = NULL;
+    mUserContext = NULL;
 }
 
 NanCommand* NanCommand::instance(wifi_handle handle)
@@ -458,11 +458,11 @@ int NanCommand::handleResponse(WifiEvent reply){
 }
 
 int NanCommand::setCallbackHandler(NanCallbackHandler nHandler,
-                                   void *pUserData)
+                                   void *pUserContext)
 {
     int res = 0;
     mHandler = nHandler;
-    mUserData = pUserData;
+    mUserContext = pUserContext;
     res = registerVendorHandler(mVendor_id, mSubcmd);
     if (res != 0) {
         //error case should not happen print log

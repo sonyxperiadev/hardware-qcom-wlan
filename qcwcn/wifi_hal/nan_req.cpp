@@ -46,16 +46,16 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
           sizeof(pReq->beacon_2dot4g_val)) : 0 \
         ) + \
         (
-          pReq->config_2dot4g_discovery ? (SIZEOF_TLV_HDR + \
-          sizeof(pReq->discovery_2dot4g_val)) : 0 \
+          pReq->config_2dot4g_sdf ? (SIZEOF_TLV_HDR + \
+          sizeof(pReq->sdf_2dot4g_val)) : 0 \
         ) + \
         (
           pReq->config_5g_beacons ? (SIZEOF_TLV_HDR + \
           sizeof(pReq->beacon_5g_val)) : 0 \
         ) + \
         (
-          pReq->config_5g_discovery ? (SIZEOF_TLV_HDR + \
-          sizeof(pReq->discovery_5g_val)) : 0 \
+          pReq->config_5g_sdf ? (SIZEOF_TLV_HDR + \
+          sizeof(pReq->sdf_5g_val)) : 0 \
         ) + \
         (
           pReq->config_5g_rssi_close ? (SIZEOF_TLV_HDR + \
@@ -157,17 +157,17 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_2DOT4G_BEACONS, sizeof(pReq->beacon_2dot4g_val),
                       (const u8*)&pReq->beacon_2dot4g_val, tlvs);
     }
-    if (pReq->config_2dot4g_discovery) {
-        tlvs = addTlv(NAN_TLV_TYPE_2DOT4G_SDF, sizeof(pReq->discovery_2dot4g_val),
-                      (const u8*)&pReq->discovery_2dot4g_val, tlvs);
+    if (pReq->config_2dot4g_sdf) {
+        tlvs = addTlv(NAN_TLV_TYPE_2DOT4G_SDF, sizeof(pReq->sdf_2dot4g_val),
+                      (const u8*)&pReq->sdf_2dot4g_val, tlvs);
     }
     if (pReq->config_5g_beacons) {
         tlvs = addTlv(NAN_TLV_TYPE_5G_BEACON, sizeof(pReq->beacon_5g_val),
                       (const u8*)&pReq->beacon_5g_val, tlvs);
     }
-    if (pReq->config_5g_discovery) {
-        tlvs = addTlv(NAN_TLV_TYPE_5G_SDF, sizeof(pReq->discovery_5g_val),
-                      (const u8*)&pReq->discovery_5g_val, tlvs);
+    if (pReq->config_5g_sdf) {
+        tlvs = addTlv(NAN_TLV_TYPE_5G_SDF, sizeof(pReq->sdf_5g_val),
+                      (const u8*)&pReq->sdf_5g_val, tlvs);
     }
     if (pReq->rssi_proximity) {
         tlvs = addTlv(NAN_TLV_TYPE_RSSI_CLOSE_PROXIMITY, sizeof(pReq->rssi_proximity),
@@ -270,8 +270,10 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
 {
     ALOGI("NAN_CONFIG");
     size_t message_len = NAN_MAX_CONFIGURATION_REQ_SIZE;
+    int idx = 0;
 
-    if (pReq == NULL) {
+    if (pReq == NULL ||
+        pReq->num_config_discovery_attr > NAN_MAX_POSTDISCOVERY_LEN) {
         return WIFI_ERROR_INVALID_ARGS;
     }
 
@@ -332,11 +334,14 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
          (
            pReq->config_conn_capability ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
-         ) + \
-         (
-           pReq->config_discovery_attr ? (SIZEOF_TLV_HDR + \
-           calcNanTransmitPostDiscoverySize(&pReq->discovery_attr_val)) : 0 \
          );
+
+    if (pReq->num_config_discovery_attr) {
+        for (idx = 0; idx < pReq->num_config_discovery_attr; idx ++) {
+            message_len += SIZEOF_TLV_HDR +\
+                calcNanTransmitPostDiscoverySize(&pReq->discovery_attr_val[idx]);
+        }
+    }
 
     if (pReq->config_fam && \
         calcNanFurtherAvailabilityMapSize(&pReq->fam_val)) {
@@ -438,12 +443,15 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_TRANSMIT,
                       sizeof(val), (const u8*)&val, tlvs);
     }
-    if (pReq->config_discovery_attr) {
-        fillNanTransmitPostDiscoveryVal(&pReq->discovery_attr_val,
-                                        (u8*)(tlvs + SIZEOF_TLV_HDR));
-        tlvs = addTlv(NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_TRANSMIT,
-                      calcNanTransmitPostDiscoverySize(&pReq->discovery_attr_val),
-                      (const u8*)(tlvs + SIZEOF_TLV_HDR), tlvs);
+    if (pReq->num_config_discovery_attr) {
+        for (idx = 0; idx < pReq->num_config_discovery_attr; idx ++) {
+            fillNanTransmitPostDiscoveryVal(&pReq->discovery_attr_val[idx],
+                                            (u8*)(tlvs + SIZEOF_TLV_HDR));
+            tlvs = addTlv(NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_TRANSMIT,
+                          calcNanTransmitPostDiscoverySize(
+                              &pReq->discovery_attr_val[idx]),
+                          (const u8*)(tlvs + SIZEOF_TLV_HDR), tlvs);
+        }
     }
     if (pReq->config_fam && \
         calcNanFurtherAvailabilityMapSize(&pReq->fam_val)) {
@@ -491,15 +499,13 @@ int NanCommand::putNanPublish(const NanPublishRequest *pReq)
 
     pFwReq->publishServiceReqParams.ttl = pReq->ttl;
     pFwReq->publishServiceReqParams.period = pReq->period;
-    pFwReq->publishServiceReqParams.replyIndFlag = pReq->replied_event_flag;
+    pFwReq->publishServiceReqParams.reserved = 0;
     pFwReq->publishServiceReqParams.publishType = pReq->publish_type;
     pFwReq->publishServiceReqParams.txType = pReq->tx_type;
 #ifdef NAN_2_0
-    /* Overwriting replyIndFlag to 0 based on v17 Nan Spec */
-    pFwReq->publishServiceReqParams.replyIndFlag = 0;
     pFwReq->publishServiceReqParams.rssiThresholdFlag = pReq->rssi_threshold_flag;
     pFwReq->publishServiceReqParams.ota_flag = pReq->ota_flag;
-    pFwReq->publishServiceReqParams.matchAlg = pReq->publish_match;
+    pFwReq->publishServiceReqParams.matchAlg = pReq->publish_match_indicator;
 #endif /* NAN_2_0 */
     pFwReq->publishServiceReqParams.count = pReq->publish_count;
 #ifdef NAN_2_0
@@ -600,7 +606,7 @@ int NanCommand::putNanSubscribe(const NanSubscribeRequest *pReq)
     pFwReq->subscribeServiceReqParams.srfInclude = pReq->serviceResponseInclude;
     pFwReq->subscribeServiceReqParams.srfSend = pReq->useServiceResponseFilter;
     pFwReq->subscribeServiceReqParams.ssiRequired = pReq->ssiRequiredForMatchIndication;
-    pFwReq->subscribeServiceReqParams.matchAlg = pReq->subscribe_match;
+    pFwReq->subscribeServiceReqParams.matchAlg = pReq->subscribe_match_indicator;
     pFwReq->subscribeServiceReqParams.count = pReq->subscribe_count;
 #ifdef NAN_2_0
     pFwReq->subscribeServiceReqParams.rssiThresholdFlag = pReq->rssi_threshold_flag;

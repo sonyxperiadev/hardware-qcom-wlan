@@ -261,7 +261,7 @@ typedef struct PACKED
 {
     u16 ttl;
     u16 period;
-    u32 replyIndFlag:1;
+    u32 reserved:1;
     u32 publishType:2;
     u32 txType:1;
 #ifdef NAN_2_0
@@ -316,23 +316,6 @@ typedef struct PACKED
     u16 status;
     u16 value;
 } NanPublishServiceCancelRspMsg, *pNanPublishServiceCancelRspMsg;
-
-/* NAN Publish Replied Ind */
-typedef struct PACKED
-{
-    SirMacAddr macAddr;
-    u16 reserved;
-} NanPublishRepliedIndParams;
-
-typedef struct PACKED
-{
-    NanMsgHeader fwHeader;
-#ifndef NAN_2_0
-    NanPublishRepliedIndParams publishRepliedIndParams;
-#else /* NAN_2_0 */
-    u8 ptlv[];
-#endif /* NAN_2_0 */
-} NanPublishRepliedIndMsg, *pNanPublishRepliedIndMsg;
 
 /* NAN Publish Terminated Ind */
 typedef struct PACKED
