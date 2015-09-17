@@ -771,11 +771,11 @@ typedef struct {
     u8 config_5g_rssi_close_proximity;
     u8 rssi_close_proximity_5g_val;
     /*
-       2 byte quantity which defines the window size over
+       1 byte quantity which defines the window size over
        which the “average RSSI” will be calculated over.
     */
     u8 config_rssi_window_size;
-    u16 rssi_window_size_val;
+    u8 rssi_window_size_val;
     /*
        The 24 bit Organizationally Unique ID + the 8 bit Network Id.
     */

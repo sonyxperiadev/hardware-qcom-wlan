@@ -66,6 +66,10 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
           sizeof(pReq->rssi_middle_5g_val)) : 0 \
         ) + \
         (
+          pReq->rssi_proximity ? (SIZEOF_TLV_HDR + \
+          sizeof(pReq->rssi_proximity)) : 0 \
+        ) + \
+        (
           pReq->config_5g_rssi_close_proximity ? (SIZEOF_TLV_HDR + \
           sizeof(pReq->rssi_close_proximity_5g_val)) : 0 \
         ) + \
@@ -93,7 +97,7 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
           pReq->config_debug_flags ? (SIZEOF_TLV_HDR + \
           sizeof(u64)) : 0 \
         ) + \
-        (
+       (
           pReq->config_random_factor_force ? (SIZEOF_TLV_HDR + \
           sizeof(pReq->random_factor_force_val)) : 0 \
          ) + \
@@ -164,6 +168,10 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
     if (pReq->config_5g_discovery) {
         tlvs = addTlv(NAN_TLV_TYPE_5G_SDF, sizeof(pReq->discovery_5g_val),
                       (const u8*)&pReq->discovery_5g_val, tlvs);
+    }
+    if (pReq->rssi_proximity) {
+        tlvs = addTlv(NAN_TLV_TYPE_RSSI_CLOSE_PROXIMITY, sizeof(pReq->rssi_proximity),
+                      (const u8*)&pReq->rssi_proximity, tlvs);
     }
     /* Add the support of sending 5G RSSI values */
     if (pReq->config_5g_rssi_close) {
@@ -290,6 +298,10 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
            sizeof(pReq->master_pref)) : 0 \
          ) + \
          (
+           pReq->config_rssi_proximity ? (SIZEOF_TLV_HDR + \
+           sizeof(pReq->rssi_proximity)) : 0 \
+         ) + \
+         (
            pReq->config_5g_rssi_close_proximity ? (SIZEOF_TLV_HDR + \
            sizeof(pReq->rssi_close_proximity_5g_val)) : 0 \
          ) + \
@@ -388,6 +400,10 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
     if (pReq->config_rssi_window_size) {
         tlvs = addTlv(NAN_TLV_TYPE_RSSI_AVERAGING_WINDOW_SIZE, sizeof(pReq->rssi_window_size_val),
                       (const u8*)&pReq->rssi_window_size_val, tlvs);
+    }
+    if (pReq->config_rssi_proximity) {
+        tlvs = addTlv(NAN_TLV_TYPE_RSSI_CLOSE_PROXIMITY, sizeof(pReq->rssi_proximity),
+                      (const u8*)&pReq->rssi_proximity, tlvs);
     }
     if (pReq->config_scan_params) {
         u32 socialChannelParamVal[NAN_MAX_SOCIAL_CHANNEL];
