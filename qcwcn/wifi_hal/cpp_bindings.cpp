@@ -991,9 +991,13 @@ wifi_error WifiVendorCommand::get_mac_addr(struct nlattr **tb_vendor,
         return WIFI_ERROR_INVALID_ARGS;
     }
 
+    if (nla_len(tb_vendor[attribute]) != sizeof(mac_addr)) {
+        ALOGE("Invalid mac addr lenght\n");
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
     memcpy(addr, (u8 *)nla_data(tb_vendor[attribute]),
-                 (nla_len(tb_vendor[attribute]) > NAN_MAC_ADDR_LEN ?
-                  NAN_MAC_ADDR_LEN : nla_len(tb_vendor[attribute])));
+                 nla_len(tb_vendor[attribute]));
 
     return WIFI_SUCCESS;
 }
