@@ -874,6 +874,158 @@ typedef struct PACKED
     u8 numChan;
     u8 pFaChan[];
 } NanFurtherAvailabilityMapAttrTlv, *pNanFurtherAvailabilityMapAttrTlv;
+
+/* Publish statistics. */
+typedef struct PACKED
+{
+    u32 validPublishServiceReqMsgs;
+    u32 validPublishServiceRspMsgs;
+    u32 validPublishServiceCancelReqMsgs;
+    u32 validPublishServiceCancelRspMsgs;
+    u32 validPublishRepliedIndMsgs;
+    u32 validPublishTerminatedIndMsgs;
+    u32 validActiveSubscribes;
+    u32 validMatches;
+    u32 validFollowups;
+    u32 invalidPublishServiceReqMsgs;
+    u32 invalidPublishServiceCancelReqMsgs;
+    u32 invalidActiveSubscribes;
+    u32 invalidMatches;
+    u32 invalidFollowups;
+    u32 publishCount;
+} FwNanPublishStats, *pFwNanPublishStats;
+
+/* Subscribe statistics. */
+typedef struct PACKED
+{
+    u32 validSubscribeServiceReqMsgs;
+    u32 validSubscribeServiceRspMsgs;
+    u32 validSubscribeServiceCancelReqMsgs;
+    u32 validSubscribeServiceCancelRspMsgs;
+    u32 validSubscribeTerminatedIndMsgs;
+    u32 validSubscribeMatchIndMsgs;
+    u32 validSubscribeUnmatchIndMsgs;
+    u32 validSolicitedPublishes;
+    u32 validMatches;
+    u32 validFollowups;
+    u32 invalidSubscribeServiceReqMsgs;
+    u32 invalidSubscribeServiceCancelReqMsgs;
+    u32 invalidSubscribeFollowupReqMsgs;
+    u32 invalidSolicitedPublishes;
+    u32 invalidMatches;
+    u32 invalidFollowups;
+    u32 subscribeCount;
+    u32 bloomFilterIndex;
+} FwNanSubscribeStats, *pFwNanSubscribeStats;
+
+/* NAN MAC Statistics. Used for MAC and DW statistics. */
+typedef struct PACKED
+{
+    /* RX stats */
+    u32 validFrames;
+    u32 validActionFrames;
+    u32 validBeaconFrames;
+    u32 ignoredActionFrames;
+    u32 ignoredBeaconFrames;
+    u32 invalidFrames;
+    u32 invalidActionFrames;
+    u32 invalidBeaconFrames;
+    u32 invalidMacHeaders;
+    u32 invalidPafHeaders;
+    u32 nonNanBeaconFrames;
+
+    u32 earlyActionFrames;
+    u32 inDwActionFrames;
+    u32 lateActionFrames;
+
+    /* TX stats */
+    u32 framesQueued;
+    u32 totalTRSpUpdates;
+    u32 completeByTRSp;
+    u32 completeByTp75DW;
+    u32 completeByTendDW;
+    u32 lateActionFramesTx;
+
+    /* Misc stats - ignored for DW. */
+    u32 twIncreases;
+    u32 twDecreases;
+    u32 twChanges;
+    u32 twHighwater;
+    u32 bloomFilterIndex;
+} FwNanMacStats, *pFwNanMacStats;
+
+/* NAN Sync Statistics*/
+typedef struct PACKED
+{
+    u64 currTsf;
+    u64 myRank;
+    u64 currAmRank;
+    u64 lastAmRank;
+    u32 currAmBTT;
+    u32 lastAmBTT;
+    u8  currAmHopCount;
+    u8  currRole;
+    u16 currClusterId;
+    u32 reserved1;
+
+    u64 timeSpentInCurrRole;
+    u64 totalTimeSpentAsMaster;
+    u64 totalTimeSpentAsNonMasterSync;
+    u64 totalTimeSpentAsNonMasterNonSync;
+    u32 transitionsToAnchorMaster;
+    u32 transitionsToMaster;
+    u32 transitionsToNonMasterSync;
+    u32 transitionsToNonMasterNonSync;
+    u32 amrUpdateCount;
+    u32 amrUpdateRankChangedCount;
+    u32 amrUpdateBTTChangedCount;
+    u32 amrUpdateHcChangedCount;
+    u32 amrUpdateNewDeviceCount;
+    u32 amrExpireCount;
+    u32 mergeCount;
+    u32 beaconsAboveHcLimit;
+    u32 beaconsBelowRssiThresh;
+    u32 beaconsIgnoredNoSpace;
+    u32 beaconsForOurCluster;
+    u32 beaconsForOtherCluster;
+    u32 beaconCancelRequests;
+    u32 beaconCancelFailures;
+    u32 beaconUpdateRequests;
+    u32 beaconUpdateFailures;
+    u32 syncBeaconTxAttempts;
+    u32 syncBeaconTxFailures;
+    u32 discBeaconTxAttempts;
+    u32 discBeaconTxFailures;
+    u32 amHopCountExpireCount;
+} FwNanSyncStats, *pFwNanSyncStats;
+
+/* NAN Misc DE Statistics */
+typedef struct PACKED
+{
+    u32 validErrorRspMsgs;
+    u32 validTransmitFollowupReqMsgs;
+    u32 validTransmitFollowupRspMsgs;
+    u32 validFollowupIndMsgs;
+    u32 validConfigurationReqMsgs;
+    u32 validConfigurationRspMsgs;
+    u32 validStatsReqMsgs;
+    u32 validStatsRspMsgs;
+    u32 validEnableReqMsgs;
+    u32 validEnableRspMsgs;
+    u32 validDisableReqMsgs;
+    u32 validDisableRspMsgs;
+    u32 validDisableIndMsgs;
+    u32 validEventIndMsgs;
+    u32 validTcaReqMsgs;
+    u32 validTcaRspMsgs;
+    u32 validTcaIndMsgs;
+    u32 invalidTransmitFollowupReqMsgs;
+    u32 invalidConfigurationReqMsgs;
+    u32 invalidStatsReqMsgs;
+    u32 invalidEnableReqMsgs;
+    u32 invalidDisableReqMsgs;
+    u32 invalidTcaReqMsgs;
+} FwNanDeStats, *pFwNanDeStats;
 #endif /* NAN_2_0 */
 
 #ifdef __cplusplus

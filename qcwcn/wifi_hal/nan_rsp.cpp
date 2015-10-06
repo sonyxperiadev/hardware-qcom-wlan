@@ -159,7 +159,6 @@ int NanCommand::getNanResponse(NanResponseMsg *pRsp)
             u16 readLen = 0;
             int remainingLen = (mNanDataLen -  \
                 (sizeof(NanMsgHeader) + sizeof(NanStatsRspParams)));
-
             if (remainingLen > 0) {
                 readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv);
                 ALOGI("%s: Remaining Len:%d readLen:%d type:%d length:%d",
@@ -167,17 +166,9 @@ int NanCommand::getNanResponse(NanResponseMsg *pRsp)
                       outputTlv.length);
                 if (outputTlv.length <= \
                     sizeof(pRsp->body.stats_response.data)) {
-                    memcpy(&pRsp->body.stats_response.data, outputTlv.value,
-                           outputTlv.length);
-                    hexdump((char*)&pRsp->body.stats_response.data, outputTlv.length);
-                }
-                else {
-                    ALOGE("%s:copying only sizeof(pRsp->body.stats_response.data):%d",
-                          __func__, sizeof(pRsp->body.stats_response.data));
-                    memcpy(&pRsp->body.stats_response.data, outputTlv.value,
-                           sizeof(pRsp->body.stats_response.data));
-                    hexdump((char*)&pRsp->body.stats_response.data,
-                            sizeof(pRsp->body.stats_response.data));
+                    handleNanStatsResponse(pRsp->body.stats_response.stats_id,
+                                           (char *)outputTlv.value,
+                                           &pRsp->body.stats_response);
                 }
             }
             else
@@ -273,4 +264,195 @@ int NanCommand::handleNanResponse()
         (*mHandler.NotifyResponse)(&rsp_data, mUserContext);
     }
     return ret;
+}
+
+void NanCommand::handleNanStatsResponse(NanStatsId stats_id,
+                                       char *rspBuf,
+                                       NanStatsResponse *pRsp)
+{
+    if (stats_id == NAN_STATS_ID_DE_PUBLISH) {
+        NanPublishStats publish_stats;
+        FwNanPublishStats *pPubStats = (FwNanPublishStats *)rspBuf;
+
+        publish_stats.validPublishServiceReqMsgs =
+                                    pPubStats->validPublishServiceReqMsgs;
+        publish_stats.validPublishServiceRspMsgs =
+                                    pPubStats->validPublishServiceRspMsgs;
+        publish_stats.validPublishServiceCancelReqMsgs =
+                                    pPubStats->validPublishServiceCancelReqMsgs;
+        publish_stats.validPublishServiceCancelRspMsgs =
+                                    pPubStats->validPublishServiceCancelRspMsgs;
+        publish_stats.validPublishRepliedIndMsgs =
+                                    pPubStats->validPublishRepliedIndMsgs;
+        publish_stats.validPublishTerminatedIndMsgs =
+                                    pPubStats->validPublishTerminatedIndMsgs;
+        publish_stats.validActiveSubscribes = pPubStats->validActiveSubscribes;
+        publish_stats.validMatches = pPubStats->validMatches;
+        publish_stats.validFollowups = pPubStats->validFollowups;
+        publish_stats.invalidPublishServiceReqMsgs =
+                                    pPubStats->invalidPublishServiceReqMsgs;
+        publish_stats.invalidPublishServiceCancelReqMsgs =
+                                pPubStats->invalidPublishServiceCancelReqMsgs;
+        publish_stats.invalidActiveSubscribes =
+                                pPubStats->invalidActiveSubscribes;
+        publish_stats.invalidMatches = pPubStats->invalidMatches;
+        publish_stats.invalidFollowups = pPubStats->invalidFollowups;
+        publish_stats.publishCount = pPubStats->publishCount;
+        memcpy(&pRsp->data, &publish_stats, sizeof(NanPublishStats));
+    } else if (stats_id == NAN_STATS_ID_DE_SUBSCRIBE) {
+        NanSubscribeStats sub_stats;
+        FwNanSubscribeStats *pSubStats = (FwNanSubscribeStats *)rspBuf;
+
+        sub_stats.validSubscribeServiceReqMsgs =
+                                pSubStats->validSubscribeServiceReqMsgs;
+        sub_stats.validSubscribeServiceRspMsgs =
+                                pSubStats->validSubscribeServiceRspMsgs;
+        sub_stats.validSubscribeServiceCancelReqMsgs =
+                                pSubStats->validSubscribeServiceCancelReqMsgs;
+        sub_stats.validSubscribeServiceCancelRspMsgs =
+                                pSubStats->validSubscribeServiceCancelRspMsgs;
+        sub_stats.validSubscribeTerminatedIndMsgs =
+                                pSubStats->validSubscribeTerminatedIndMsgs;
+        sub_stats.validSubscribeMatchIndMsgs =
+                                pSubStats->validSubscribeMatchIndMsgs;
+        sub_stats.validSubscribeUnmatchIndMsgs =
+                                pSubStats->validSubscribeUnmatchIndMsgs;
+        sub_stats.validSolicitedPublishes =
+                                pSubStats->validSolicitedPublishes;
+        sub_stats.validMatches = pSubStats->validMatches;
+        sub_stats.validFollowups = pSubStats->validFollowups;
+        sub_stats.invalidSubscribeServiceReqMsgs =
+                            pSubStats->invalidSubscribeServiceReqMsgs;
+        sub_stats.invalidSubscribeServiceCancelReqMsgs =
+                            pSubStats->invalidSubscribeServiceCancelReqMsgs;
+        sub_stats.invalidSubscribeFollowupReqMsgs =
+                            pSubStats->invalidSubscribeFollowupReqMsgs;
+        sub_stats.invalidSolicitedPublishes =
+                            pSubStats->invalidSolicitedPublishes;
+        sub_stats.invalidMatches = pSubStats->invalidMatches;
+        sub_stats.invalidFollowups = pSubStats->invalidFollowups;
+        sub_stats.subscribeCount = pSubStats->subscribeCount;
+        sub_stats.bloomFilterIndex = pSubStats->bloomFilterIndex;
+        memcpy(&pRsp->data, &sub_stats, sizeof(NanSubscribeStats));
+    } else if (stats_id == NAN_STATS_ID_DE_MAC) {
+        NanMacStats mac_stats;
+        FwNanMacStats *pMacStats = (FwNanMacStats *)rspBuf;
+
+        mac_stats.validFrames = pMacStats->validFrames;
+        mac_stats.validActionFrames = pMacStats->validActionFrames;
+        mac_stats.validBeaconFrames = pMacStats->validBeaconFrames;
+        mac_stats.ignoredActionFrames = pMacStats->ignoredActionFrames;
+        mac_stats.invalidFrames = pMacStats->invalidFrames;
+        mac_stats.invalidActionFrames = pMacStats->invalidActionFrames;
+        mac_stats.invalidBeaconFrames = pMacStats->invalidBeaconFrames;
+        mac_stats.invalidMacHeaders = pMacStats->invalidMacHeaders;
+        mac_stats.invalidPafHeaders  = pMacStats->invalidPafHeaders;
+        mac_stats.nonNanBeaconFrames = pMacStats->nonNanBeaconFrames;
+        mac_stats.earlyActionFrames = pMacStats->earlyActionFrames;
+        mac_stats.inDwActionFrames = pMacStats->inDwActionFrames;
+        mac_stats.lateActionFrames = pMacStats->lateActionFrames;
+        mac_stats.framesQueued =  pMacStats->framesQueued;
+        mac_stats.totalTRSpUpdates = pMacStats->totalTRSpUpdates;
+        mac_stats.completeByTRSp = pMacStats->completeByTRSp;
+        mac_stats.completeByTp75DW = pMacStats->completeByTp75DW;
+        mac_stats.completeByTendDW = pMacStats->completeByTendDW;
+        mac_stats.lateActionFramesTx = pMacStats->lateActionFramesTx;
+        mac_stats.twIncreases = pMacStats->twIncreases;
+        mac_stats.twDecreases = pMacStats->twDecreases;
+        mac_stats.twChanges = pMacStats->twChanges;
+        mac_stats.twHighwater = pMacStats->twHighwater;
+        mac_stats.bloomFilterIndex = pMacStats->bloomFilterIndex;
+        memcpy(&pRsp->data, &mac_stats, sizeof(NanMacStats));
+    } else if (stats_id == NAN_STATS_ID_DE_TIMING_SYNC) {
+        NanSyncStats sync_stats;
+        FwNanSyncStats *pSyncStats = (FwNanSyncStats *)rspBuf;
+
+        sync_stats.currTsf = pSyncStats->currTsf;
+        sync_stats.myRank = pSyncStats->myRank;
+        sync_stats.currAmRank = pSyncStats->currAmRank;
+        sync_stats.lastAmRank = pSyncStats->lastAmRank;
+        sync_stats.currAmBTT = pSyncStats->currAmBTT;
+        sync_stats.lastAmBTT = pSyncStats->lastAmBTT;
+        sync_stats.currAmHopCount = pSyncStats->currAmHopCount;
+        sync_stats.currRole = pSyncStats->currRole;
+        sync_stats.currClusterId = pSyncStats->currClusterId;
+
+        sync_stats.timeSpentInCurrRole = pSyncStats->timeSpentInCurrRole;
+        sync_stats.totalTimeSpentAsMaster = pSyncStats->totalTimeSpentAsMaster;
+        sync_stats.totalTimeSpentAsNonMasterSync =
+                            pSyncStats->totalTimeSpentAsNonMasterSync;
+        sync_stats.totalTimeSpentAsNonMasterNonSync =
+                            pSyncStats->totalTimeSpentAsNonMasterNonSync;
+        sync_stats.transitionsToAnchorMaster =
+                            pSyncStats->transitionsToAnchorMaster;
+        sync_stats.transitionsToMaster =
+                            pSyncStats->transitionsToMaster;
+        sync_stats.transitionsToNonMasterSync =
+                            pSyncStats->transitionsToNonMasterSync;
+        sync_stats.transitionsToNonMasterNonSync =
+                            pSyncStats->transitionsToNonMasterNonSync;
+        sync_stats.amrUpdateCount = pSyncStats->amrUpdateCount;
+        sync_stats.amrUpdateRankChangedCount =
+                            pSyncStats->amrUpdateRankChangedCount;
+        sync_stats.amrUpdateBTTChangedCount =
+                            pSyncStats->amrUpdateBTTChangedCount;
+        sync_stats.amrUpdateHcChangedCount =
+                            pSyncStats->amrUpdateHcChangedCount;
+        sync_stats.amrUpdateNewDeviceCount =
+                            pSyncStats->amrUpdateNewDeviceCount;
+        sync_stats.amrExpireCount = pSyncStats->amrExpireCount;
+        sync_stats.mergeCount = pSyncStats->mergeCount;
+        sync_stats.beaconsAboveHcLimit = pSyncStats->beaconsAboveHcLimit;
+        sync_stats.beaconsBelowRssiThresh = pSyncStats->beaconsBelowRssiThresh;
+        sync_stats.beaconsIgnoredNoSpace = pSyncStats->beaconsIgnoredNoSpace;
+        sync_stats.beaconsForOurCluster = pSyncStats->beaconsForOtherCluster;
+        sync_stats.beaconsForOtherCluster = pSyncStats->beaconsForOtherCluster;
+        sync_stats.beaconCancelRequests = pSyncStats->beaconCancelRequests;
+        sync_stats.beaconCancelFailures = pSyncStats->beaconCancelFailures;
+        sync_stats.beaconUpdateRequests = pSyncStats->beaconUpdateRequests;
+        sync_stats.beaconUpdateFailures = pSyncStats->beaconUpdateFailures;
+        sync_stats.syncBeaconTxAttempts = pSyncStats->syncBeaconTxAttempts;
+        sync_stats.syncBeaconTxFailures = pSyncStats->syncBeaconTxFailures;
+        sync_stats.discBeaconTxAttempts = pSyncStats->discBeaconTxAttempts;
+        sync_stats.discBeaconTxFailures = pSyncStats->discBeaconTxFailures;
+        sync_stats.amHopCountExpireCount = pSyncStats->amHopCountExpireCount;
+        memcpy(&pRsp->data, &sync_stats, sizeof(NanSyncStats));
+    } else if (stats_id == NAN_STATS_ID_DE_DW || stats_id == NAN_STATS_ID_DE) {
+        NanDeStats de_stats;
+        FwNanDeStats *pDeStats = (FwNanDeStats *)rspBuf;
+
+        de_stats.validErrorRspMsgs = pDeStats->validErrorRspMsgs;
+        de_stats.validTransmitFollowupReqMsgs =
+                        pDeStats->validTransmitFollowupReqMsgs;
+        de_stats.validTransmitFollowupRspMsgs =
+                        pDeStats->validTransmitFollowupRspMsgs;
+        de_stats.validFollowupIndMsgs =
+                        pDeStats->validFollowupIndMsgs;
+        de_stats.validConfigurationReqMsgs =
+                        pDeStats->validConfigurationReqMsgs;
+        de_stats.validConfigurationRspMsgs =
+                        pDeStats->validConfigurationRspMsgs;
+        de_stats.validStatsReqMsgs = pDeStats->validStatsReqMsgs;
+        de_stats.validStatsRspMsgs = pDeStats->validStatsRspMsgs;
+        de_stats.validEnableReqMsgs = pDeStats->validEnableReqMsgs;
+        de_stats.validEnableRspMsgs = pDeStats->validEnableRspMsgs;
+        de_stats.validDisableReqMsgs = pDeStats->validDisableReqMsgs;
+        de_stats.validDisableRspMsgs = pDeStats->validDisableRspMsgs;
+        de_stats.validDisableIndMsgs = pDeStats->validDisableIndMsgs;
+        de_stats.validEventIndMsgs = pDeStats->validEventIndMsgs;
+        de_stats.validTcaReqMsgs = pDeStats->validTcaReqMsgs;
+        de_stats.validTcaRspMsgs = pDeStats->validTcaRspMsgs;
+        de_stats.validTcaIndMsgs = pDeStats->validTcaIndMsgs;
+        de_stats.invalidTransmitFollowupReqMsgs =
+                            pDeStats->invalidTransmitFollowupReqMsgs;
+        de_stats.invalidConfigurationReqMsgs =
+                            pDeStats->invalidConfigurationReqMsgs;
+        de_stats.invalidStatsReqMsgs = pDeStats->invalidStatsReqMsgs;
+        de_stats.invalidEnableReqMsgs = pDeStats->invalidEnableReqMsgs;
+        de_stats.invalidDisableReqMsgs = pDeStats->invalidDisableReqMsgs;
+        de_stats.invalidTcaReqMsgs = pDeStats->invalidTcaReqMsgs;
+        memcpy(&pRsp->data, &de_stats, sizeof(NanDeStats));
+    } else {
+        ALOGE("Unknown stats_id:%d\n", stats_id);
+    }
 }

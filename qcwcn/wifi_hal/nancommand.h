@@ -87,6 +87,9 @@ private:
     int getNanFurtherAvailabilityMap(const u8 *pInValue,
                                      u32 length,
                                      NanFurtherAvailabilityMap *pFam);
+    void handleNanStatsResponse(NanStatsId stats_id,
+                                char* rspBuf,
+                                NanStatsResponse *pRsp);
 
 public:
     static NanCommand* instance(wifi_handle handle);

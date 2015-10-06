@@ -28,10 +28,6 @@ extern "C"
  * Neighbour Aware Network Service Structures and Functions
  *****************************************************************************/
 
-#ifndef PACKED
-#define PACKED  __attribute__((packed))
-#endif
-
 /*
   Definitions
   All multi-byte fields within all NAN protocol stack messages are assumed to be in Little Endian order.
@@ -1140,7 +1136,7 @@ typedef struct {
 } NanBeaconSdfPayloadRequest;
 
 /* Publish statistics. */
-typedef struct PACKED
+typedef struct
 {
     u32 validPublishServiceReqMsgs;
     u32 validPublishServiceRspMsgs;
@@ -1160,7 +1156,7 @@ typedef struct PACKED
 } NanPublishStats;
 
 /* Subscribe statistics. */
-typedef struct PACKED
+typedef struct
 {
     u32 validSubscribeServiceReqMsgs;
     u32 validSubscribeServiceRspMsgs;
@@ -1183,7 +1179,7 @@ typedef struct PACKED
 } NanSubscribeStats;
 
 /* NAN MAC Statistics. Used for MAC and DW statistics. */
-typedef struct PACKED
+typedef struct
 {
     /* RX stats */
     u32 validFrames;
@@ -1219,7 +1215,7 @@ typedef struct PACKED
 } NanMacStats;
 
 /* NAN Sync Statistics*/
-typedef struct PACKED
+typedef struct
 {
     u64 currTsf;
     u64 myRank;
@@ -1230,7 +1226,6 @@ typedef struct PACKED
     u8  currAmHopCount;
     u8  currRole;
     u16 currClusterId;
-    u32 reserved1;
 
     u64 timeSpentInCurrRole;
     u64 totalTimeSpentAsMaster;
@@ -1264,7 +1259,7 @@ typedef struct PACKED
 } NanSyncStats;
 
 /* NAN Misc DE Statistics */
-typedef struct PACKED
+typedef struct
 {
     u32 validErrorRspMsgs;
     u32 validTransmitFollowupReqMsgs;
