@@ -629,9 +629,7 @@ typedef struct {
     u8 rssi_middle; /* default = 70 (-70 dBm) */
     u8 rssi_proximity; /* default = 70 (-70 dBm) */
     u8 hop_count_limit; /* default = 2 */
-    u8 random_time; /* default  = 120 (DWs) */
     u8 master_pref; /* default = 0 */
-    u8 periodic_scan_interval; /* default = 20 seconds */
     /* TBD: Google specific IE */
 
     /*
@@ -1018,22 +1016,8 @@ typedef struct {
     u8 sid_beacon; /* default = 0x01 */
     u8 config_rssi_proximity;
     u8 rssi_proximity; /* default = 70 (-70 dBm) */
-    u8 config_random_time;
-    u8 random_time; /* default  = 120 (DWs) */
     u8 config_master_pref;
     u8 master_pref; /* default = 0 */
-    u8 config_periodic_scan_interval;
-    u8 periodic_scan_interval; /* default = 20 seconds */
-    /*
-       The number of Additional Discovery Window slots in
-       increments of 16 ms.  Since each DW is 512 TUs apart
-       and the DW takes up 1 slot, the maximum number of additional
-       slots which can be specified is 31.  This is a hint to the
-       scheduler and there is no guarantee that all 31 slots will
-       be available because of MCC and BT Coexistence channel usage
-    */
-    u8 additional_disc_window_slots; /* default = 0.*/
-
     /*
        1 byte value which defines the RSSI filter threshold.
        Any Service Descriptors received above this value
@@ -1119,7 +1103,6 @@ typedef struct {
     /* 32 bit value which represents the threshold to be used.*/
     u32 threshold;
 } NanTCARequest;
-
 
 /*
   Beacon Sdf Payload Structure

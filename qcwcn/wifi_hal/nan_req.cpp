@@ -30,7 +30,6 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
         return WIFI_ERROR_INVALID_ARGS;
     }
 
-#ifdef NAN_2_0
     /* Removing the unsupported ones */
     message_len -= \
         (SIZEOF_TLV_HDR + sizeof(u8)  /* Random Time   */ + \
@@ -105,7 +104,6 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
           pReq->config_hop_count_force ? (SIZEOF_TLV_HDR + \
           sizeof(pReq->hop_count_force_val)) : 0 \
         );
-#endif /* NAN_2_0 */
 
     pNanEnableReqMsg pFwReq = (pNanEnableReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -131,34 +129,26 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
                   (const u8*)&pReq->cluster_high, tlvs);
     tlvs = addTlv(NAN_TLV_TYPE_SID_BEACON, sizeof(pReq->sid_beacon),
                   (const u8*)&pReq->sid_beacon, tlvs);
-    tlvs = addTlv(NAN_TLV_TYPE_RSSI_CLOSE, sizeof(pReq->rssi_close),
+    tlvs = addTlv(NAN_TLV_TYPE_24G_RSSI_CLOSE, sizeof(pReq->rssi_close),
                   (const u8*)&pReq->rssi_close, tlvs);
-    tlvs = addTlv(NAN_TLV_TYPE_RSSI_MEDIUM, sizeof(pReq->rssi_middle),
+    tlvs = addTlv(NAN_TLV_TYPE_24G_RSSI_MIDDLE, sizeof(pReq->rssi_middle),
                   (const u8*)&pReq->rssi_middle, tlvs);
     tlvs = addTlv(NAN_TLV_TYPE_HOP_COUNT_LIMIT, sizeof(pReq->hop_count_limit),
                   (const u8*)&pReq->hop_count_limit, tlvs);
-#ifndef NAN_2_0
-    tlvs = addTlv(NAN_TLV_TYPE_RANDOM_UPDATE_TIME, sizeof(pReq->random_time),
-                  (const u8*)&pReq->random_time, tlvs);
-#endif /* NAN_2_0 */
+
     tlvs = addTlv(NAN_TLV_TYPE_MASTER_PREFERENCE, sizeof(pReq->master_pref),
                   (const u8*)&pReq->master_pref, tlvs);
-#ifndef NAN_2_0
-    tlvs = addTlv(NAN_TLV_TYPE_PERIODIC_SCAN_INTERVAL, sizeof(pReq->periodic_scan_interval),
-                  (const u8*)&pReq->periodic_scan_interval, tlvs);
-#endif /* NAN_2_0 */
 
-#ifdef NAN_2_0
     if (pReq->config_2dot4g_support) {
-        tlvs = addTlv(NAN_TLV_TYPE_2DOT4G_SUPPORT, sizeof(pReq->support_2dot4g_val),
+        tlvs = addTlv(NAN_TLV_TYPE_24G_SUPPORT, sizeof(pReq->support_2dot4g_val),
                       (const u8*)&pReq->support_2dot4g_val, tlvs);
     }
     if (pReq->config_2dot4g_beacons) {
-        tlvs = addTlv(NAN_TLV_TYPE_2DOT4G_BEACONS, sizeof(pReq->beacon_2dot4g_val),
+        tlvs = addTlv(NAN_TLV_TYPE_24G_BEACON, sizeof(pReq->beacon_2dot4g_val),
                       (const u8*)&pReq->beacon_2dot4g_val, tlvs);
     }
     if (pReq->config_2dot4g_sdf) {
-        tlvs = addTlv(NAN_TLV_TYPE_2DOT4G_SDF, sizeof(pReq->sdf_2dot4g_val),
+        tlvs = addTlv(NAN_TLV_TYPE_24G_SDF, sizeof(pReq->sdf_2dot4g_val),
                       (const u8*)&pReq->sdf_2dot4g_val, tlvs);
     }
     if (pReq->config_5g_beacons) {
@@ -170,7 +160,7 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
                       (const u8*)&pReq->sdf_5g_val, tlvs);
     }
     if (pReq->rssi_proximity) {
-        tlvs = addTlv(NAN_TLV_TYPE_RSSI_CLOSE_PROXIMITY, sizeof(pReq->rssi_proximity),
+        tlvs = addTlv(NAN_TLV_TYPE_24G_RSSI_CLOSE_PROXIMITY, sizeof(pReq->rssi_proximity),
                       (const u8*)&pReq->rssi_proximity, tlvs);
     }
     /* Add the support of sending 5G RSSI values */
@@ -179,7 +169,7 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
                       (const u8*)&pReq->rssi_close_5g_val, tlvs);
     }
     if (pReq->config_5g_rssi_middle) {
-        tlvs = addTlv(NAN_TLV_TYPE_5G_RSSI_MEDIUM, sizeof(pReq->rssi_middle_5g_val),
+        tlvs = addTlv(NAN_TLV_TYPE_5G_RSSI_MIDDLE, sizeof(pReq->rssi_middle_5g_val),
                       (const u8*)&pReq->rssi_middle_5g_val, tlvs);
     }
     if (pReq->config_5g_rssi_close_proximity) {
@@ -210,7 +200,7 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
                                      socialChannelParamVal);
         int i;
         for (i = 0; i < NAN_MAX_SOCIAL_CHANNEL; i++) {
-            tlvs = addTlv(NAN_TLV_TYPE_SOCIAL_CHANNEL_SCAN_PARAMETERS,
+            tlvs = addTlv(NAN_TLV_TYPE_SOCIAL_CHANNEL_SCAN_PARAMS,
                           sizeof(socialChannelParamVal[i]),
                           (const u8*)&socialChannelParamVal[i], tlvs);
         }
@@ -230,7 +220,6 @@ int NanCommand::putNanEnable(const NanEnableRequest *pReq)
                       sizeof(pReq->hop_count_force_val),
                       (const u8*)&pReq->hop_count_force_val, tlvs);
     }
-#endif /* NAN_2_0 */
 
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
@@ -277,17 +266,6 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
         return WIFI_ERROR_INVALID_ARGS;
     }
 
-#ifndef NAN_2_0
-    // Add additional message size for transmitting
-    // further availability attribute if
-    // additional_disc_window_slots is Non-zero value.
-    if (pReq->additional_disc_window_slots != 0) {
-        message_len += (SIZEOF_TLV_HDR + \
-                        sizeof(pReq->additional_disc_window_slots));
-    }
-#endif /* NAN_2_0 */
-
-#ifdef NAN_2_0
     message_len = sizeof(NanMsgHeader);
 
     message_len += \
@@ -348,7 +326,6 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
         message_len += (SIZEOF_TLV_HDR + \
            calcNanFurtherAvailabilityMapSize(&pReq->fam_val));
     }
-#endif /* NAN_2_0 */
 
     pNanConfigurationReqMsg pFwReq = (pNanConfigurationReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -368,46 +345,17 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_SID_BEACON, sizeof(pReq->sid_beacon),
                       (const u8*)&pReq->sid_beacon, tlvs);
     }
-#ifndef NAN_2_0
-    tlvs = addTlv(NAN_TLV_TYPE_RANDOM_UPDATE_TIME, sizeof(pReq->random_time),
-                  (const u8*)&pReq->random_time, tlvs);
-#endif /* NAN_2_0 */
     if (pReq->config_master_pref) {
         tlvs = addTlv(NAN_TLV_TYPE_MASTER_PREFERENCE, sizeof(pReq->master_pref),
                       (const u8*)&pReq->master_pref, tlvs);
     }
-#ifndef NAN_2_0
-    tlvs = addTlv(NAN_TLV_TYPE_PERIODIC_SCAN_INTERVAL, sizeof(pReq->periodic_scan_interval),
-                  (const u8*)&pReq->periodic_scan_interval, tlvs);
-#endif /* NAN_2_0 */
 
-/* In 2.0 Version of NAN this parameter does not have any significance */
-#ifndef NAN_2_0
-    if (pReq->additional_disc_window_slots != 0) {
-        /*
-        Construct the value in this manner
-        Bit0 ==> 1/0 Enable/Disable FAW
-        Bit1-2 ==>  reserved
-        Bit3-7 ==>  FAW Slot Value.
-        */
-        u8 faw_value = 0x01;  /* Enable the first bit */
-        /* Shifting the disc_window_slots by 3 and masking it with 0xf8
-           so that the Bit 3 to 7 are updated
-        */
-        faw_value |= ((pReq->additional_disc_window_slots << 3) & (0xf8));
-        tlvs = addTlv(NAN_TLV_TYPE_FURTHER_AVAILABILITY,
-                      sizeof(faw_value),
-                      (const u8*)&faw_value, tlvs);
-    }
-#endif /* NAN_2_0 */
-
-#ifdef NAN_2_0
     if (pReq->config_rssi_window_size) {
         tlvs = addTlv(NAN_TLV_TYPE_RSSI_AVERAGING_WINDOW_SIZE, sizeof(pReq->rssi_window_size_val),
                       (const u8*)&pReq->rssi_window_size_val, tlvs);
     }
     if (pReq->config_rssi_proximity) {
-        tlvs = addTlv(NAN_TLV_TYPE_RSSI_CLOSE_PROXIMITY, sizeof(pReq->rssi_proximity),
+        tlvs = addTlv(NAN_TLV_TYPE_24G_RSSI_CLOSE_PROXIMITY, sizeof(pReq->rssi_proximity),
                       (const u8*)&pReq->rssi_proximity, tlvs);
     }
     if (pReq->config_scan_params) {
@@ -417,7 +365,7 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
                                  socialChannelParamVal);
         int i;
         for (i = 0; i < NAN_MAX_SOCIAL_CHANNEL; i++) {
-            tlvs = addTlv(NAN_TLV_TYPE_SOCIAL_CHANNEL_SCAN_PARAMETERS,
+            tlvs = addTlv(NAN_TLV_TYPE_SOCIAL_CHANNEL_SCAN_PARAMS,
                           sizeof(socialChannelParamVal[i]),
                           (const u8*)&socialChannelParamVal[i], tlvs);
         }
@@ -461,7 +409,6 @@ int NanCommand::putNanConfig(const NanConfigRequest *pReq)
                       calcNanFurtherAvailabilityMapSize(&pReq->fam_val),
                       (const u8*)(tlvs + SIZEOF_TLV_HDR), tlvs);
     }
-#endif /* NAN_2_0 */
 
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
@@ -502,15 +449,12 @@ int NanCommand::putNanPublish(const NanPublishRequest *pReq)
     pFwReq->publishServiceReqParams.reserved = 0;
     pFwReq->publishServiceReqParams.publishType = pReq->publish_type;
     pFwReq->publishServiceReqParams.txType = pReq->tx_type;
-#ifdef NAN_2_0
+
     pFwReq->publishServiceReqParams.rssiThresholdFlag = pReq->rssi_threshold_flag;
     pFwReq->publishServiceReqParams.ota_flag = pReq->ota_flag;
     pFwReq->publishServiceReqParams.matchAlg = pReq->publish_match_indicator;
-#endif /* NAN_2_0 */
     pFwReq->publishServiceReqParams.count = pReq->publish_count;
-#ifdef NAN_2_0
     pFwReq->publishServiceReqParams.connmap = pReq->connmap;
-#endif /* NAN_2_0 */
     pFwReq->publishServiceReqParams.reserved2 = 0;
 
     u8* tlvs = pFwReq->ptlv;
@@ -580,10 +524,8 @@ int NanCommand::putNanSubscribe(const NanSubscribeRequest *pReq)
         (pReq->rx_match_filter_len ? SIZEOF_TLV_HDR + pReq->rx_match_filter_len : 0) +
         (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0);
 
-#ifdef NAN_2_0
     message_len += \
         (pReq->num_intf_addr_present * (SIZEOF_TLV_HDR + NAN_MAC_ADDR_LEN));
-#endif /* NAN_2_0 */
 
     pNanSubscribeServiceReqMsg pFwReq = (pNanSubscribeServiceReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -608,11 +550,9 @@ int NanCommand::putNanSubscribe(const NanSubscribeRequest *pReq)
     pFwReq->subscribeServiceReqParams.ssiRequired = pReq->ssiRequiredForMatchIndication;
     pFwReq->subscribeServiceReqParams.matchAlg = pReq->subscribe_match_indicator;
     pFwReq->subscribeServiceReqParams.count = pReq->subscribe_count;
-#ifdef NAN_2_0
     pFwReq->subscribeServiceReqParams.rssiThresholdFlag = pReq->rssi_threshold_flag;
     pFwReq->subscribeServiceReqParams.ota_flag = pReq->ota_flag;
     pFwReq->subscribeServiceReqParams.connmap = pReq->connmap;
-#endif /* NAN_2_0 */
     pFwReq->subscribeServiceReqParams.reserved = 0;
 
     u8* tlvs = pFwReq->ptlv;
@@ -633,7 +573,6 @@ int NanCommand::putNanSubscribe(const NanSubscribeRequest *pReq)
                       (const u8*)&pReq->tx_match_filter[0], tlvs);
     }
 
-#ifdef NAN_2_0
     int i = 0;
     for (i = 0; i < pReq->num_intf_addr_present; i++)
     {
@@ -641,7 +580,6 @@ int NanCommand::putNanSubscribe(const NanSubscribeRequest *pReq)
                       NAN_MAC_ADDR_LEN,
                       (const u8*)&pReq->intf_addr[i][0], tlvs);
     }
-#endif /* NAN_2_0 */
 
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
@@ -690,10 +628,8 @@ int NanCommand::putNanTransmitFollowup(const NanTransmitFollowupRequest *pReq)
         (pReq->service_specific_info_len ? SIZEOF_TLV_HDR +
          pReq->service_specific_info_len : 0);
 
-#ifdef NAN_2_0
     /* Mac address needs to be added in TLV */
     message_len += (SIZEOF_TLV_HDR + sizeof(pReq->addr));
-#endif
 
     pNanTransmitFollowupReqMsg pFwReq = (pNanTransmitFollowupReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -708,28 +644,17 @@ int NanCommand::putNanTransmitFollowup(const NanTransmitFollowupRequest *pReq)
     pFwReq->fwHeader.handle = pReq->header.handle;
     pFwReq->fwHeader.transactionId = pReq->header.transaction_id;
 
-
-#ifndef NAN_2_0
-    memcpy(pFwReq->transmitFollowupReqParams.macAddr, pReq->addr,
-           sizeof(pFwReq->transmitFollowupReqParams.macAddr));
-#else /* NAN_2_0 */
     pFwReq->transmitFollowupReqParams.matchHandle = pReq->match_handle;
-#endif /* NAN_2_0 */
     pFwReq->transmitFollowupReqParams.priority = pReq->priority;
     pFwReq->transmitFollowupReqParams.window = pReq->dw_or_faw;
     pFwReq->transmitFollowupReqParams.reserved = 0;
 
     u8* tlvs = pFwReq->ptlv;
 
-#ifdef NAN_2_0
     /* Mac address needs to be added in TLV */
     tlvs = addTlv(NAN_TLV_TYPE_MAC_ADDRESS, sizeof(pReq->addr),
                   (const u8*)&pReq->addr[0], tlvs);
     u16 tlv_type = NAN_TLV_TYPE_SERVICE_SPECIFIC_INFO;
-#else /* NAN_2_0 */
-    u16 tlv_type = (pReq->dw_or_faw == 0)? NAN_TLV_TYPE_SERVICE_SPECIFIC_INFO :
-        NAN_TLV_TYPE_EXT_SERVICE_SPECIFIC_INFO;
-#endif /* NAN_2_0 */
 
     if (pReq->service_specific_info_len) {
         tlvs = addTlv(tlv_type, pReq->service_specific_info_len,
@@ -782,10 +707,7 @@ int NanCommand::putNanTCA(const NanTCARequest *pReq)
     }
     size_t message_len = sizeof(NanTcaReqMsg);
 
-#ifdef NAN_2_0
     message_len += (SIZEOF_TLV_HDR + 2 * sizeof(u32));
-#endif
-
     pNanTcaReqMsg pFwReq =
         (pNanTcaReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
@@ -800,14 +722,6 @@ int NanCommand::putNanTCA(const NanTCARequest *pReq)
     pFwReq->fwHeader.handle = pReq->header.handle;
     pFwReq->fwHeader.transactionId = pReq->header.transaction_id;
 
-#ifndef NAN_2_0
-    pFwReq->tcaReqParams.tcaId = pReq->tca_id;
-    pFwReq->tcaReqParams.rising = pReq->rising_direction_evt_flag;
-    pFwReq->tcaReqParams.falling = pReq->falling_direction_evt_flag;
-    pFwReq->tcaReqParams.clear = pReq->clear;
-    pFwReq->tcaReqParams.reserved = 0;
-    pFwReq->tcaReqParams.threshold = pReq->threshold;
-#else /* NAN_2_0 */
     u32 tcaReqParams[2];
     memset (tcaReqParams, 0, sizeof(tcaReqParams));
     tcaReqParams[0] = (pReq->rising_direction_evt_flag & 0x01);
@@ -819,7 +733,6 @@ int NanCommand::putNanTCA(const NanTCARequest *pReq)
 
     tlvs = addTlv(NAN_TLV_TYPE_TCA_CLUSTER_SIZE_REQ, sizeof(tcaReqParams),
                   (const u8*)&tcaReqParams[0], tlvs);
-#endif
 
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
@@ -830,7 +743,7 @@ int NanCommand::putNanTCA(const NanTCARequest *pReq)
 int NanCommand::putNanBeaconSdfPayload(const NanBeaconSdfPayloadRequest *pReq)
 {
     int ret = WIFI_ERROR_NOT_SUPPORTED;
-#ifdef NAN_2_0
+
     ALOGI("NAN_BEACON_SDF_PAYLAOD");
     if (pReq == NULL) {
         return WIFI_ERROR_INVALID_ARGS;
@@ -882,7 +795,7 @@ int NanCommand::putNanBeaconSdfPayload(const NanBeaconSdfPayloadRequest *pReq)
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
     ret = WIFI_SUCCESS;
-#endif /* NAN_2_0 */
+
     return ret;
 }
 //callback handlers registered for nl message send
@@ -1036,7 +949,7 @@ void NanCommand::fillNanTransmitPostDiscoveryVal(
     const NanTransmitPostDiscovery *pTxDisc,
     u8 *pOutValue)
 {
-#ifdef NAN_2_0
+
     if (pTxDisc && pOutValue) {
         u8 *tlvs = &pOutValue[8];
         pOutValue[0] = pTxDisc->type;
@@ -1056,7 +969,7 @@ void NanCommand::fillNanTransmitPostDiscoveryVal(
                         tlvs);
         }
         if (pTxDisc->type == NAN_CONN_WLAN_INFRA) {
-            tlvs = addTlv(NAN_TLV_TYPE_FW_WLAN_INFRASTRUCTURE_SSID,
+            tlvs = addTlv(NAN_TLV_TYPE_WLAN_INFRASTRUCTURE_SSID,
                         pTxDisc->infrastructure_ssid_len,
                         (const u8*)&pTxDisc->infrastructure_ssid_val[0],
                         tlvs);
@@ -1064,7 +977,7 @@ void NanCommand::fillNanTransmitPostDiscoveryVal(
         ALOGI("%s: Filled TransmitPostDiscoveryVal", __func__);
         hexdump((char*)pOutValue, calcNanTransmitPostDiscoverySize(pTxDisc));
     }
-#endif /* NAN_2_0 */
+
     return;
 }
 

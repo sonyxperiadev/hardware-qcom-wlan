@@ -21,7 +21,7 @@ include $(CLEAR_VARS)
 LOCAL_REQUIRED_MODULES :=
 
 LOCAL_CFLAGS += -Wno-unused-parameter -Wno-int-to-pointer-cast
-LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses -DNAN_2_0
+LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses
 LOCAL_CPPFLAGS += -Wno-conversion-null
 
 LOCAL_C_INCLUDES += \
@@ -72,7 +72,7 @@ include $(CLEAR_VARS)
 LOCAL_REQUIRED_MODULES :=
 
 LOCAL_CFLAGS += -Wno-unused-parameter -Wno-int-to-pointer-cast
-LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses -DNAN_2_0
+LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses
 LOCAL_CPPFLAGS += -Wno-conversion-null
 
 LOCAL_C_INCLUDES += \

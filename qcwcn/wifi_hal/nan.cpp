@@ -351,7 +351,7 @@ wifi_error nan_beacon_sdf_payload_request(wifi_request_id id,
                                          NanBeaconSdfPayloadRequest* msg)
 {
     int ret = WIFI_ERROR_NOT_SUPPORTED;
-#ifdef NAN_2_0
+
     NanCommand *nCommand;
 
     nCommand = NanCommand::instance(handle);
@@ -370,7 +370,7 @@ wifi_error nan_beacon_sdf_payload_request(wifi_request_id id,
     if (ret != 0) {
         ALOGE("%s: requestEvent Error:%d",__func__, ret);
     }
-#endif /* NAN_2_0 */
+
 cleanup:
     return (wifi_error)ret;
 }
@@ -380,7 +380,7 @@ wifi_error nan_get_sta_parameter(wifi_request_id id,
                                  NanStaParameter* msg)
 {
     int ret = WIFI_ERROR_NOT_SUPPORTED;
-#ifdef NAN_2_0
+
     NanCommand *nCommand;
 
     nCommand = NanCommand::instance(handle);
@@ -395,7 +395,7 @@ wifi_error nan_get_sta_parameter(wifi_request_id id,
         ALOGE("%s: getNanStaParameter Error:%d",__func__, ret);
         goto cleanup;
     }
-#endif /* NAN_2_0 */
+
 cleanup:
     return (wifi_error)ret;
 }
@@ -553,7 +553,6 @@ u16 NANTLV_WriteTlv(pNanTlv pInTlv, u8 *pOutTlv)
 u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv)
 {
     u16 readLen = 0;
-    u16 tmp = 0;
 
     if (!pInTlv)
     {
@@ -590,13 +589,6 @@ u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv)
     }
 
     ALOGV("READ TLV value %u, readLen %u", pOutTlv->value, readLen);
-
-    /* Map the right TLV value based on NAN version in Firmware
-       which the framework can understand*/
-    tmp = pOutTlv->type;
-    pOutTlv->type = getNanTlvtypeFromFWTlvtype(pOutTlv->type);
-    ALOGI("%s: FWTlvtype:%d NanTlvtype:%d", __func__,
-          tmp, pOutTlv->type);
     return readLen;
 }
 
@@ -604,13 +596,6 @@ u8* addTlv(u16 type, u16 length, const u8* value, u8* pOutTlv)
 {
    NanTlv nanTlv;
    u16 len;
-   u16 tmp =0;
-
-   /* Set the right TLV based on NAN version in Firmware */
-   tmp = type;
-   type = getFWTlvtypeFromNanTlvtype(type);
-   ALOGI("%s: NanTlvtype:%d FWTlvtype:%d", __func__,
-         tmp, type);
 
    nanTlv.type = type;
    nanTlv.length = length;
@@ -623,261 +608,4 @@ u8* addTlv(u16 type, u16 length, const u8* value, u8* pOutTlv)
 void NanCommand::setId(int nId)
 {
     mId = nId;
-}
-
-u16 getNanTlvtypeFromFWTlvtype(u16 fwTlvtype)
-{
-#ifndef NAN_2_0
-    /* In case of Pronto no mapping required */
-    return fwTlvtype;
-#else /* NAN_2_0 */
-    if (fwTlvtype <= NAN_TLV_TYPE_FW_SERVICE_SPECIFIC_INFO) {
-        /* return the TLV value as is */
-        return fwTlvtype;
-    }
-    if (fwTlvtype >= NAN_TLV_TYPE_FW_TCA_LAST) {
-        return fwTlvtype;
-    }
-    /* Other FW TLV values and Config types map it
-       appropriately
-    */
-    switch (fwTlvtype) {
-    case NAN_TLV_TYPE_FW_EXT_SERVICE_SPECIFIC_INFO:
-        return NAN_TLV_TYPE_EXT_SERVICE_SPECIFIC_INFO;
-    case NAN_TLV_TYPE_FW_VENDOR_SPECIFIC_ATTRIBUTE_TRANSMIT:
-        return NAN_TLV_TYPE_VENDOR_SPECIFIC_ATTRIBUTE_TRANSMIT;
-    case NAN_TLV_TYPE_FW_VENDOR_SPECIFIC_ATTRIBUTE_RECEIVE:
-        return NAN_TLV_TYPE_VENDOR_SPECIFIC_ATTRIBUTE_RECEIVE;
-    case NAN_TLV_TYPE_FW_POST_NAN_CONNECTIVITY_CAPABILITIES_RECEIVE:
-        return NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_RECEIVE;
-    case NAN_TLV_TYPE_FW_POST_NAN_DISCOVERY_ATTRIBUTE_RECEIVE:
-        return NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_RECEIVE;
-    case NAN_TLV_TYPE_FW_BEACON_SDF_PAYLOAD_RECEIVE:
-        return NAN_TLV_TYPE_BEACON_SDF_PAYLOAD_RECEIVE;
-
-    case NAN_TLV_TYPE_FW_24G_SUPPORT:
-        return NAN_TLV_TYPE_2DOT4G_SUPPORT;
-    case NAN_TLV_TYPE_FW_24G_BEACON:
-            return NAN_TLV_TYPE_2DOT4G_BEACONS;
-    case NAN_TLV_TYPE_FW_24G_SDF:
-        return NAN_TLV_TYPE_2DOT4G_SDF;
-    case NAN_TLV_TYPE_FW_24G_RSSI_CLOSE:
-        return NAN_TLV_TYPE_RSSI_CLOSE;
-    case NAN_TLV_TYPE_FW_24G_RSSI_MIDDLE:
-        return NAN_TLV_TYPE_RSSI_MEDIUM;
-    case NAN_TLV_TYPE_FW_24G_RSSI_CLOSE_PROXIMITY:
-        return NAN_TLV_TYPE_RSSI_CLOSE_PROXIMITY;
-    case NAN_TLV_TYPE_FW_5G_SUPPORT:
-        return NAN_TLV_TYPE_5G_SUPPORT;
-    case NAN_TLV_TYPE_FW_5G_BEACON:
-        return NAN_TLV_TYPE_5G_BEACON;
-    case NAN_TLV_TYPE_FW_5G_SDF:
-            return NAN_TLV_TYPE_5G_SDF;
-    case NAN_TLV_TYPE_FW_5G_RSSI_CLOSE:
-            return NAN_TLV_TYPE_5G_RSSI_CLOSE;
-    case NAN_TLV_TYPE_FW_5G_RSSI_MIDDLE:
-        return NAN_TLV_TYPE_5G_RSSI_MEDIUM;
-    case NAN_TLV_TYPE_FW_5G_RSSI_CLOSE_PROXIMITY:
-        return NAN_TLV_TYPE_5G_RSSI_CLOSE_PROXIMITY;
-    case NAN_TLV_TYPE_FW_SID_BEACON:
-        return NAN_TLV_TYPE_SID_BEACON;
-    case NAN_TLV_TYPE_FW_HOP_COUNT_LIMIT:
-        return NAN_TLV_TYPE_HOP_COUNT_LIMIT;
-    case NAN_TLV_TYPE_FW_MASTER_PREFERENCE:
-        return NAN_TLV_TYPE_MASTER_PREFERENCE;
-    case NAN_TLV_TYPE_FW_CLUSTER_ID_LOW:
-        return NAN_TLV_TYPE_CLUSTER_ID_LOW;
-    case NAN_TLV_TYPE_FW_CLUSTER_ID_HIGH:
-        return NAN_TLV_TYPE_CLUSTER_ID_HIGH;
-    case NAN_TLV_TYPE_FW_RSSI_AVERAGING_WINDOW_SIZE:
-            return NAN_TLV_TYPE_RSSI_AVERAGING_WINDOW_SIZE;
-    case NAN_TLV_TYPE_FW_CLUSTER_OUI_NETWORK_ID:
-        return NAN_TLV_TYPE_CLUSTER_OUI_NETWORK_ID;
-    case NAN_TLV_TYPE_FW_SOURCE_MAC_ADDRESS:
-            return NAN_TLV_TYPE_SOURCE_MAC_ADDRESS;
-    case NAN_TLV_TYPE_FW_CLUSTER_ATTRIBUTE_IN_SDF:
-        return NAN_TLV_TYPE_CLUSTER_ATTRIBUTE_IN_SDF;
-    case NAN_TLV_TYPE_FW_SOCIAL_CHANNEL_SCAN_PARAMS:
-        return NAN_TLV_TYPE_SOCIAL_CHANNEL_SCAN_PARAMETERS;
-    case NAN_TLV_TYPE_FW_DEBUGGING_FLAGS:
-        return NAN_TLV_TYPE_DEBUGGING_FLAGS;
-    case NAN_TLV_TYPE_FW_POST_NAN_CONNECTIVITY_CAPABILITIES_TRANSMIT:
-        return NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_TRANSMIT;
-    case NAN_TLV_TYPE_FW_POST_NAN_DISCOVERY_ATTRIBUTE_TRANSMIT:
-        return NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_TRANSMIT;
-    case NAN_TLV_TYPE_FW_FURTHER_AVAILABILITY_MAP:
-        return NAN_TLV_TYPE_FURTHER_AVAILABILITY_MAP;
-    case NAN_TLV_TYPE_FW_HOP_COUNT_FORCE:
-        return NAN_TLV_TYPE_HOP_COUNT_FORCE;
-    case NAN_TLV_TYPE_FW_RANDOM_FACTOR_FORCE:
-        return NAN_TLV_TYPE_RANDOM_FACTOR_FORCE;
-
-    /* Attrib types */
-    /* Unmapped attrib types */
-    case NAN_TLV_TYPE_FW_AVAILABILITY_INTERVALS_MAP:
-        break;
-    case NAN_TLV_TYPE_FW_WLAN_MESH_ID:
-        return NAN_TLV_TYPE_WLAN_MESH_ID;
-    case NAN_TLV_TYPE_FW_MAC_ADDRESS:
-        return NAN_TLV_TYPE_MAC_ADDRESS;
-    case NAN_TLV_TYPE_FW_RECEIVED_RSSI_VALUE:
-        return NAN_TLV_TYPE_RECEIVED_RSSI_VALUE;
-    case NAN_TLV_TYPE_FW_CLUSTER_ATTRIBUTE:
-        return NAN_TLV_TYPE_CLUSTER_ATTIBUTE;
-    case NAN_TLV_TYPE_FW_WLAN_INFRASTRUCTURE_SSID:
-        return NAN_TLV_TYPE_WLAN_INFRASTRUCTURE_SSID;
-
-    /* Events Type */
-    case NAN_TLV_TYPE_FW_EVENT_SELF_STATION_MAC_ADDRESS:
-        return NAN_EVENT_ID_STA_MAC_ADDR;
-    case NAN_TLV_TYPE_FW_EVENT_STARTED_CLUSTER:
-        return NAN_EVENT_ID_STARTED_CLUSTER;
-    case NAN_TLV_TYPE_FW_EVENT_JOINED_CLUSTER:
-        return NAN_EVENT_ID_JOINED_CLUSTER;
-    /* unmapped Event Type */
-    case NAN_TLV_TYPE_FW_EVENT_CLUSTER_SCAN_RESULTS:
-        break;
-
-    case NAN_TLV_TYPE_FW_TCA_CLUSTER_SIZE_REQ:
-    case NAN_TLV_TYPE_FW_TCA_CLUSTER_SIZE_RSP:
-        return NAN_TCA_ID_CLUSTER_SIZE;
-
-    default:
-        break;
-    }
-    ALOGE("%s: Unhandled FW TLV value:%d", __func__, fwTlvtype);
-    return 0xFFFF;
-#endif /*NAN_2_0*/
-}
-
-u16 getFWTlvtypeFromNanTlvtype(u16 nanTlvtype)
-{
-#ifndef NAN_2_0
-    /* In case of Pronto no mapping required */
-    return nanTlvtype;
-#else /* NAN_2_0 */
-    if (nanTlvtype <= NAN_TLV_TYPE_SERVICE_SPECIFIC_INFO) {
-        /* return the TLV value as is */
-        return nanTlvtype;
-    }
-    if (nanTlvtype >= NAN_TLV_TYPE_STATS_FIRST &&
-        nanTlvtype <= NAN_TLV_TYPE_STATS_LAST) {
-        return nanTlvtype;
-    }
-    /* Other NAN TLV values and Config types map it
-       appropriately
-    */
-    switch (nanTlvtype) {
-    case NAN_TLV_TYPE_EXT_SERVICE_SPECIFIC_INFO:
-        return NAN_TLV_TYPE_FW_EXT_SERVICE_SPECIFIC_INFO;
-    case NAN_TLV_TYPE_SDF_LAST:
-        return NAN_TLV_TYPE_FW_SDF_LAST;
-
-    /* Configuration types */
-    case NAN_TLV_TYPE_5G_SUPPORT:
-        return NAN_TLV_TYPE_FW_5G_SUPPORT;
-    case NAN_TLV_TYPE_SID_BEACON:
-        return NAN_TLV_TYPE_FW_SID_BEACON;
-    case NAN_TLV_TYPE_5G_SYNC_DISC:
-        break;
-    case NAN_TLV_TYPE_RSSI_CLOSE:
-        return NAN_TLV_TYPE_FW_24G_RSSI_CLOSE;
-    case NAN_TLV_TYPE_RSSI_MEDIUM:
-        return NAN_TLV_TYPE_FW_24G_RSSI_MIDDLE;
-    case NAN_TLV_TYPE_HOP_COUNT_LIMIT:
-        return NAN_TLV_TYPE_FW_HOP_COUNT_LIMIT;
-    /* unmapped */
-    case NAN_TLV_TYPE_RANDOM_UPDATE_TIME:
-        break;
-    case NAN_TLV_TYPE_MASTER_PREFERENCE:
-        return NAN_TLV_TYPE_FW_MASTER_PREFERENCE;
-    /* unmapped */
-    case NAN_TLV_TYPE_EARLY_WAKEUP:
-        break;
-    case NAN_TLV_TYPE_PERIODIC_SCAN_INTERVAL:
-        break;
-    case NAN_TLV_TYPE_CLUSTER_ID_LOW:
-        return NAN_TLV_TYPE_FW_CLUSTER_ID_LOW;
-    case NAN_TLV_TYPE_CLUSTER_ID_HIGH:
-        return NAN_TLV_TYPE_FW_CLUSTER_ID_HIGH;
-    case NAN_TLV_TYPE_RSSI_CLOSE_PROXIMITY:
-        return NAN_TLV_TYPE_FW_24G_RSSI_CLOSE_PROXIMITY;
-    case NAN_TLV_TYPE_CONFIG_LAST:
-        return NAN_TLV_TYPE_FW_CONFIG_LAST;
-    case NAN_TLV_TYPE_FURTHER_AVAILABILITY:
-        break;
-
-    /* All Stats type are unmapped as of now */
-
-    /* Attributes types */
-    case NAN_TLV_TYPE_WLAN_MESH_ID:
-        return NAN_TLV_TYPE_FW_WLAN_MESH_ID;
-    case NAN_TLV_TYPE_MAC_ADDRESS:
-        return NAN_TLV_TYPE_FW_MAC_ADDRESS;
-    case NAN_TLV_TYPE_RECEIVED_RSSI_VALUE:
-        return NAN_TLV_TYPE_FW_RECEIVED_RSSI_VALUE;
-    case NAN_TLV_TYPE_TCA_CLUSTER_SIZE_REQ:
-        return NAN_TLV_TYPE_FW_TCA_CLUSTER_SIZE_REQ;
-    case NAN_TLV_TYPE_ATTRS_LAST:
-        return NAN_TLV_TYPE_FW_ATTRS_LAST;
-
-    case NAN_TLV_TYPE_VENDOR_SPECIFIC_ATTRIBUTE_TRANSMIT:
-        return NAN_TLV_TYPE_FW_VENDOR_SPECIFIC_ATTRIBUTE_TRANSMIT;
-    case NAN_TLV_TYPE_VENDOR_SPECIFIC_ATTRIBUTE_RECEIVE:
-        return NAN_TLV_TYPE_FW_VENDOR_SPECIFIC_ATTRIBUTE_RECEIVE;
-    case NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_TRANSMIT:
-        return NAN_TLV_TYPE_FW_POST_NAN_CONNECTIVITY_CAPABILITIES_TRANSMIT;
-    case NAN_TLV_TYPE_POST_NAN_CONNECTIVITY_CAPABILITIES_RECEIVE:
-        return NAN_TLV_TYPE_FW_POST_NAN_CONNECTIVITY_CAPABILITIES_RECEIVE;
-    case NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_TRANSMIT:
-        return NAN_TLV_TYPE_FW_POST_NAN_DISCOVERY_ATTRIBUTE_TRANSMIT;
-    case NAN_TLV_TYPE_POST_NAN_DISCOVERY_ATTRIBUTE_RECEIVE:
-        return NAN_TLV_TYPE_FW_POST_NAN_DISCOVERY_ATTRIBUTE_RECEIVE;
-    case NAN_TLV_TYPE_FURTHER_AVAILABILITY_MAP:
-        return NAN_TLV_TYPE_FW_FURTHER_AVAILABILITY_MAP;
-    case NAN_TLV_TYPE_BEACON_SDF_PAYLOAD_RECEIVE:
-        return NAN_TLV_TYPE_FW_BEACON_SDF_PAYLOAD_RECEIVE;
-
-    case NAN_TLV_TYPE_2DOT4G_SUPPORT:
-        return NAN_TLV_TYPE_FW_24G_SUPPORT;
-    case NAN_TLV_TYPE_2DOT4G_BEACONS:
-        return NAN_TLV_TYPE_FW_24G_BEACON;
-    case NAN_TLV_TYPE_2DOT4G_SDF:
-        return NAN_TLV_TYPE_FW_24G_SDF;
-    case NAN_TLV_TYPE_5G_BEACON:
-        return NAN_TLV_TYPE_FW_5G_BEACON;
-    case NAN_TLV_TYPE_5G_SDF:
-        return NAN_TLV_TYPE_FW_5G_SDF;
-    case NAN_TLV_TYPE_5G_RSSI_CLOSE:
-        return NAN_TLV_TYPE_FW_5G_RSSI_CLOSE;
-    case NAN_TLV_TYPE_5G_RSSI_MEDIUM:
-        return NAN_TLV_TYPE_FW_5G_RSSI_MIDDLE;
-    case NAN_TLV_TYPE_5G_RSSI_CLOSE_PROXIMITY:
-        return NAN_TLV_TYPE_FW_5G_RSSI_CLOSE_PROXIMITY;
-    case NAN_TLV_TYPE_RSSI_AVERAGING_WINDOW_SIZE:
-        return NAN_TLV_TYPE_FW_RSSI_AVERAGING_WINDOW_SIZE;
-    case NAN_TLV_TYPE_CLUSTER_OUI_NETWORK_ID:
-        return NAN_TLV_TYPE_FW_CLUSTER_OUI_NETWORK_ID;
-    case NAN_TLV_TYPE_SOURCE_MAC_ADDRESS:
-        return NAN_TLV_TYPE_FW_SOURCE_MAC_ADDRESS;
-    case NAN_TLV_TYPE_CLUSTER_ATTRIBUTE_IN_SDF:
-        return NAN_TLV_TYPE_FW_CLUSTER_ATTRIBUTE_IN_SDF;
-    case NAN_TLV_TYPE_SOCIAL_CHANNEL_SCAN_PARAMETERS:
-        return NAN_TLV_TYPE_FW_SOCIAL_CHANNEL_SCAN_PARAMS;
-    case NAN_TLV_TYPE_DEBUGGING_FLAGS:
-        return NAN_TLV_TYPE_FW_DEBUGGING_FLAGS;
-    case NAN_TLV_TYPE_WLAN_INFRASTRUCTURE_SSID:
-        return NAN_TLV_TYPE_FW_WLAN_INFRASTRUCTURE_SSID;
-    case NAN_TLV_TYPE_RANDOM_FACTOR_FORCE:
-        return NAN_TLV_TYPE_FW_RANDOM_FACTOR_FORCE;
-    case NAN_TLV_TYPE_HOP_COUNT_FORCE:
-        return NAN_TLV_TYPE_FW_HOP_COUNT_FORCE;
-
-
-    default:
-        break;
-    }
-    ALOGE("%s: Unhandled NAN TLV value:%d", __func__, nanTlvtype);
-    return 0xFFFF;
-#endif /* NAN_2_0 */
 }

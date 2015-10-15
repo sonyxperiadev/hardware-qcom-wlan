@@ -43,9 +43,7 @@ int NanCommand::isNanResponse()
     case NAN_MSG_ID_ENABLE_RSP:
     case NAN_MSG_ID_DISABLE_RSP:
     case NAN_MSG_ID_TCA_RSP:
-#ifdef NAN_2_0
     case NAN_MSG_ID_BEACON_SDF_RSP:
-#endif /* NAN_2_0 */
         return 1;
     default:
         return 0;
@@ -208,7 +206,6 @@ int NanCommand::getNanResponse(NanResponseMsg *pRsp)
             pRsp->response_type = NAN_RESPONSE_TCA;
             break;
         }
-#ifdef NAN_2_0
         case NAN_MSG_ID_BEACON_SDF_RSP:
         {
             pNanBeaconSdfPayloadRspMsg pFwRsp = \
@@ -220,7 +217,6 @@ int NanCommand::getNanResponse(NanResponseMsg *pRsp)
             pRsp->response_type = NAN_RESPONSE_BEACON_SDF_PAYLOAD;
             break;
         }
-#endif /* NAN_2_0 */
         default:
             return  -1;
     }
