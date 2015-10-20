@@ -38,6 +38,9 @@ typedef struct gscan_event_handlers_s {
     GScanCommandEventHandler *gScanPnoSetPasspointListCmdEventHandler;
 } gscan_event_handlers;
 
+wifi_gscan_capabilities Capabilities;
+bool CapabilitiesUpdated;
+
 wifi_error initializeGscanHandlers(hal_info *info)
 {
     info->gscan_handlers = (gscan_event_handlers *)malloc(sizeof(gscan_event_handlers));
@@ -263,6 +266,8 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
 
     gScanCommand->getGetCapabilitiesRspParams(capabilities);
 
+    memcpy(&Capabilities, capabilities, sizeof(wifi_gscan_capabilities));
+    CapabilitiesUpdated = true;
 cleanup:
     gScanCommand->freeRspParams(eGScanGetCapabilitiesRspParams);
     delete gScanCommand;
@@ -326,6 +331,10 @@ wifi_error wifi_start_gscan(wifi_request_id id,
         ALOGE("%s: Error GScanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
+
+    ret = gScanCommand->validateGscanConfig(params);
+    if (ret < 0)
+        goto cleanup;
 
     /* Create the NL message. */
     ret = gScanCommand->create();
@@ -863,6 +872,38 @@ cleanup:
     return (wifi_error)ret;
 }
 
+wifi_error GScanCommand::validateSignificantChangeParams(
+    wifi_significant_change_params params)
+{
+    if (!CapabilitiesUpdated)
+    {
+        ALOGE("Capabilities aren't obtained yet to validate"
+                " the input parameters");
+        return WIFI_SUCCESS;
+    }
+
+    if (params.rssi_sample_size < RSSI_SAMPLE_SIZE_MIN
+            || params.rssi_sample_size > Capabilities.max_rssi_sample_size) {
+        ALOGE("%s: rssi_sample_size is out of valid range : %d", __func__,
+                 params.rssi_sample_size);
+        ALOGI("Valid Range : Minimum : %d", RSSI_SAMPLE_SIZE_MIN);
+        ALOGI("            : Maximum : %d",
+                Capabilities.max_rssi_sample_size);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+    if (params.lost_ap_sample_size < LOSTAP_SAMPLE_SIZE_MIN
+            || params.lost_ap_sample_size >
+            Capabilities.max_bssid_history_entries) {
+        ALOGE("%s: lost_ap_sample_size is out of valid range : %d", __func__,
+                 params.lost_ap_sample_size);
+        ALOGI("Valid Range : Minimum : %d", LOSTAP_SAMPLE_SIZE_MIN);
+        ALOGI("            : Maximum : %d",
+                Capabilities.max_bssid_history_entries);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+    return WIFI_SUCCESS;
+}
+
 /* Set the GSCAN Significant AP Change list. */
 wifi_error wifi_set_significant_change_handler(wifi_request_id id,
                                             wifi_interface_handle iface,
@@ -924,6 +965,10 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
         ALOGE("%s: Error GScanCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
+
+    ret = gScanCommand->validateSignificantChangeParams(params);
+    if (ret < 0)
+        goto cleanup;
 
     /* Create the NL message. */
     ret = gScanCommand->create();
@@ -1197,8 +1242,9 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
         return (wifi_error)ret;
     }
 
-    /* No request id from caller, so generate one and pass it on to the driver. */
-    /* Generate it randomly */
+    /* No request id from caller, so generate one randomly and pass it on
+     * to the driver
+     */
     requestId = get_requestid();
     ALOGI("%s: RequestId:%d", __FUNCTION__, requestId);
 
@@ -2104,6 +2150,113 @@ int GScanCommand::gscan_parse_capabilities(struct nlattr **tbVendor)
             = nla_get_u32(tbVendor[
         QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX_NUM_WHITELISTED_SSID
         ]);
+    }
+    return WIFI_SUCCESS;
+}
+
+wifi_error GScanCommand::validateGscanConfig(wifi_scan_cmd_params params)
+{
+    if (!CapabilitiesUpdated)
+    {
+        ALOGE("Capabilities aren't obtained yet to validate"
+                " the input parameters");
+        return WIFI_SUCCESS;
+    }
+
+    if (params.base_period < GSCAN_BASE_PERIOD_MIN) {
+        ALOGE("%s: Base period out of valid range : %d", __func__,
+                 params.base_period);
+        ALOGI("Valid Range : Minimum : %d", GSCAN_BASE_PERIOD_MIN);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+    if (params.max_ap_per_scan < GSCAN_MAX_AP_PER_SCAN_MIN
+            || params.max_ap_per_scan > Capabilities.max_ap_cache_per_scan) {
+        ALOGE("%s: max_ap_per_scan out of valid range : %d", __func__,
+                 params.max_ap_per_scan);
+        ALOGI("Valid Range : Minimum : %d", GSCAN_MAX_AP_PER_SCAN_MIN);
+        ALOGI("            : Maximum : %d", Capabilities.max_ap_cache_per_scan);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+    if (params.num_buckets < GSCAN_NUM_BUCKETS_MIN
+            || params.num_buckets > Capabilities.max_scan_buckets) {
+        ALOGE("%s: num_buckets out of valid range : %d", __func__,
+                 params.num_buckets);
+        ALOGI("Valid Range : Minimum : %d", GSCAN_NUM_BUCKETS_MIN);
+        ALOGI("            : Maximum : %d", Capabilities.max_scan_buckets);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    for(int i=0; i<params.num_buckets; i++)
+    {
+        if (params.buckets[i].bucket < GSCAN_BUCKET_INDEX_MIN) {
+            ALOGE("%s: buckets[%d].bucket out of valid range : %d", __func__,
+                    i, params.buckets[i].bucket);
+            ALOGI("Valid Range : Minimum : %d", GSCAN_BUCKET_INDEX_MIN);
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        switch(params.buckets[i].band)
+        {
+            case WIFI_BAND_UNSPECIFIED:
+            case WIFI_BAND_BG:
+            case WIFI_BAND_A:
+            case WIFI_BAND_A_DFS:
+            case WIFI_BAND_A_WITH_DFS:
+            case WIFI_BAND_ABG:
+            case WIFI_BAND_ABG_WITH_DFS:
+                break;
+            default:
+                ALOGE("%s: buckets[%d].band out of valid range : %d", __func__,
+                        i, params.buckets[i].band);
+                ALOGI("Supported bands : ");
+                ALOGI("WIFI_BAND_UNSPECIFIED  value: %d", WIFI_BAND_UNSPECIFIED);
+                ALOGI("WIFI_BAND_BG           value: %d", WIFI_BAND_BG);
+                ALOGI("WIFI_BAND_A            value: %d", WIFI_BAND_A);
+                ALOGI("WIFI_BAND_ABG          value: %d", WIFI_BAND_ABG);
+                ALOGI("WIFI_BAND_A_DFS        value: %d", WIFI_BAND_A_DFS);
+                ALOGI("WIFI_BAND_A_WITH_DFS   value: %d", WIFI_BAND_A_WITH_DFS);
+                ALOGI("WIFI_BAND_ABG_WITH_DFS value: %d", WIFI_BAND_ABG_WITH_DFS);
+                return WIFI_ERROR_INVALID_ARGS;
+        }
+        if (params.buckets[i].period < params.base_period) {
+            ALOGE("%s: buckets[%d].period out of valid range : %d", __func__,
+                    i, params.buckets[i].period);
+            ALOGI("Valid Range : Minimum : %d", params.base_period);
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        if (params.buckets[i].report_events > 3) {
+            ALOGE("%s: buckets[%d].report_events is out of valid range : %d",
+                   __func__, i, params.buckets[i].report_events);
+            ALOGI("Valid Report events: %d, %d, %d", GSCAN_REPORT_EVENT0,
+                    GSCAN_REPORT_EVENT1, GSCAN_REPORT_EVENT2);
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        if (params.buckets[i].num_channels < GSCAN_MIN_CHANNELS
+                || params.buckets[i].num_channels > (int)MAX_CHANNELS) {
+            ALOGE("%s: buckets[%d].num_channels is out of valid range : %d",
+                     __func__, i, params.buckets[i].num_channels);
+            ALOGI("Valid Range : Minimum channels : %d", GSCAN_MIN_CHANNELS);
+            ALOGI("            : Maximum channels : %d", (int)MAX_CHANNELS);
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        for(int j=0; j<params.buckets[i].num_channels; j++)
+        {
+            if (params.buckets[i].channels[j].passive != GSCAN_ACTIVE_SCAN &&
+                params.buckets[i].channels[j].passive != GSCAN_PASSIVE_SCAN) {
+                ALOGE("%s: params.buckets[%d].channels[%d].channel "
+                        " : %d", __func__, i, j,
+                        params.buckets[i].channels[j].channel);
+                ALOGE("%s: params.buckets[%d].channels[%d].dwellTimeMs"
+                        " : %d", __func__, i, j,
+                    params.buckets[i].channels[j].dwellTimeMs);
+                ALOGE("%s: params.buckets[%d].channels[%d].passive is out of"
+                      " valid range : %d", __func__, i, j,
+                      params.buckets[i].num_channels);
+                ALOGI("Valid Values :Active scan : %d", GSCAN_ACTIVE_SCAN);
+                ALOGI("             :Passive scan : %d", GSCAN_PASSIVE_SCAN);
+                return WIFI_ERROR_INVALID_ARGS;
+            }
+        }
     }
     return WIFI_SUCCESS;
 }
