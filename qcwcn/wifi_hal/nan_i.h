@@ -464,7 +464,7 @@ typedef struct PACKED
 /* NAN Statistics Req */
 typedef struct PACKED
 {
-    u32 statsId:8;
+    u32 statsType:8;
     u32 clear:1;
     u32 reserved:23;
 } NanStatsReqParams, *pNanStatsReqParams;
@@ -481,7 +481,7 @@ typedef struct PACKED
     /* status of the request */
     u16 status;
     u16 value;
-    u8 statsId;
+    u8 statsType;
     u8 reserved;
 } NanStatsRspParams, *pNanStatsRspParams;
 
@@ -541,16 +541,9 @@ typedef struct PACKED
 #define NAN_MAX_ENABLE_REQ_SIZE                                 \
     (                                                           \
         sizeof(NanMsgHeader)                                +   \
-        SIZEOF_TLV_HDR + sizeof(u8)  /* 5G            */    +   \
         SIZEOF_TLV_HDR + sizeof(u16) /* Cluster Low   */    +   \
         SIZEOF_TLV_HDR + sizeof(u16) /* Cluster High  */    +   \
-        SIZEOF_TLV_HDR + sizeof(u8)  /* SID Beacon    */    +   \
-        SIZEOF_TLV_HDR + sizeof(u8)  /* RSSI Close    */    +   \
-        SIZEOF_TLV_HDR + sizeof(u8)  /* RSSI Medium   */    +   \
-        SIZEOF_TLV_HDR + sizeof(u8)  /* HC Limit      */    +   \
-        SIZEOF_TLV_HDR + sizeof(u8)  /* Random Time   */    +   \
-        SIZEOF_TLV_HDR + sizeof(u8)  /* Master Pref   */    +   \
-        SIZEOF_TLV_HDR + sizeof(u8)  /* Full Scan Int */        \
+        SIZEOF_TLV_HDR + sizeof(u8)  /* Master Pref   */        \
     )
 
 /* NAN Enable Req */
@@ -784,7 +777,7 @@ typedef struct PACKED
     u32 bloomFilterIndex;
 } FwNanMacStats, *pFwNanMacStats;
 
-/* NAN Sync Statistics*/
+/* NAN Sync and DW Statistics*/
 typedef struct PACKED
 {
     u64 currTsf;
@@ -856,6 +849,42 @@ typedef struct PACKED
     u32 invalidDisableReqMsgs;
     u32 invalidTcaReqMsgs;
 } FwNanDeStats, *pFwNanDeStats;
+
+/*
+  Definition of various NanIndication(events)
+*/
+typedef enum {
+    NAN_INDICATION_PUBLISH_TERMINATED      =1,
+    NAN_INDICATION_MATCH                   =2,
+    NAN_INDICATION_UNMATCH                 =3,
+    NAN_INDICATION_SUBSCRIBE_TERMINATED    =4,
+    NAN_INDICATION_DE_EVENT                =5,
+    NAN_INDICATION_FOLLOWUP                =6,
+    NAN_INDICATION_DISABLED                =7,
+    NAN_INDICATION_TCA                     =8,
+    NAN_INDICATION_BEACON_SDF_PAYLOAD      =9,
+    NAN_INDICATION_UNKNOWN                 =0xFFFF
+} NanIndicationType;
+
+typedef struct {
+  /* NAN master rank being advertised by DE */
+  u64 master_rank;
+  /* NAN master preference being advertised by DE */
+  u8 master_pref;
+  /* random value being advertised by DE */
+  u8 random_factor;
+  /* hop_count from anchor master */
+  u8 hop_count;
+  u32 beacon_transmit_time;
+} NanStaParameter;
+
+/*
+    Function to get the sta_parameter expected by Sigma
+    as per CAPI spec.
+*/
+wifi_error nan_get_sta_parameter(wifi_request_id id,
+                                 wifi_interface_handle iface,
+                                 NanStaParameter* msg);
 
 #ifdef __cplusplus
 }
