@@ -21,7 +21,7 @@
 #include "nan_i.h"
 #include "nancommand.h"
 
-int NanCommand::putNanEnable(wifi_request_id id, const NanEnableRequest *pReq)
+int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
 {
     ALOGI("NAN_ENABLE");
     size_t message_len = NAN_MAX_ENABLE_REQ_SIZE;
@@ -255,7 +255,7 @@ int NanCommand::putNanEnable(wifi_request_id id, const NanEnableRequest *pReq)
     return ret;
 }
 
-int NanCommand::putNanDisable(wifi_request_id id)
+int NanCommand::putNanDisable(transaction_id id)
 {
     ALOGI("NAN_DISABLE");
     size_t message_len = sizeof(NanDisableReqMsg);
@@ -286,7 +286,7 @@ int NanCommand::putNanDisable(wifi_request_id id)
     return ret;
 }
 
-int NanCommand::putNanConfig(wifi_request_id id, const NanConfigRequest *pReq)
+int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
 {
     ALOGI("NAN_CONFIG");
     size_t message_len = NAN_MAX_CONFIGURATION_REQ_SIZE;
@@ -447,7 +447,7 @@ int NanCommand::putNanConfig(wifi_request_id id, const NanConfigRequest *pReq)
 }
 
 
-int NanCommand::putNanPublish(wifi_request_id id, const NanPublishRequest *pReq)
+int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
 {
     ALOGI("NAN_PUBLISH");
     if (pReq == NULL) {
@@ -523,7 +523,7 @@ int NanCommand::putNanPublish(wifi_request_id id, const NanPublishRequest *pReq)
     return ret;
 }
 
-int NanCommand::putNanPublishCancel(wifi_request_id id, const NanPublishCancelRequest *pReq)
+int NanCommand::putNanPublishCancel(transaction_id id, const NanPublishCancelRequest *pReq)
 {
     ALOGI("NAN_PUBLISH_CANCEL");
     if (pReq == NULL) {
@@ -560,7 +560,7 @@ int NanCommand::putNanPublishCancel(wifi_request_id id, const NanPublishCancelRe
     return ret;
 }
 
-int NanCommand::putNanSubscribe(wifi_request_id id,
+int NanCommand::putNanSubscribe(transaction_id id,
                                 const NanSubscribeRequest *pReq)
 {
 
@@ -649,7 +649,7 @@ int NanCommand::putNanSubscribe(wifi_request_id id,
     return ret;
 }
 
-int NanCommand::putNanSubscribeCancel(wifi_request_id id,
+int NanCommand::putNanSubscribeCancel(transaction_id id,
                                       const NanSubscribeCancelRequest *pReq)
 {
     ALOGI("NAN_SUBSCRIBE_CANCEL");
@@ -687,7 +687,7 @@ int NanCommand::putNanSubscribeCancel(wifi_request_id id,
 }
 
 
-int NanCommand::putNanTransmitFollowup(wifi_request_id id,
+int NanCommand::putNanTransmitFollowup(transaction_id id,
                                        const NanTransmitFollowupRequest *pReq)
 {
     ALOGI("TRANSMIT_FOLLOWUP");
@@ -752,7 +752,7 @@ int NanCommand::putNanTransmitFollowup(wifi_request_id id,
     return ret;
 }
 
-int NanCommand::putNanStats(wifi_request_id id, const NanStatsRequest *pReq)
+int NanCommand::putNanStats(transaction_id id, const NanStatsRequest *pReq)
 {
     ALOGI("NAN_STATS");
     if (pReq == NULL) {
@@ -792,7 +792,7 @@ int NanCommand::putNanStats(wifi_request_id id, const NanStatsRequest *pReq)
     return ret;
 }
 
-int NanCommand::putNanTCA(wifi_request_id id, const NanTCARequest *pReq)
+int NanCommand::putNanTCA(transaction_id id, const NanTCARequest *pReq)
 {
     ALOGI("NAN_TCA");
     if (pReq == NULL) {
@@ -826,7 +826,7 @@ int NanCommand::putNanTCA(wifi_request_id id, const NanTCARequest *pReq)
     u8* tlvs = pFwReq->ptlv;
 
     if (pReq->tca_type == NAN_TCA_ID_CLUSTER_SIZE) {
-        tlvs = addTlv(NAN_TLV_TYPE_TCA_CLUSTER_SIZE_REQ, sizeof(tcaReqParams),
+        tlvs = addTlv(NAN_TLV_TYPE_CLUSTER_SIZE_REQ, sizeof(tcaReqParams),
                       (const u8*)&tcaReqParams[0], tlvs);
     }
     else {
@@ -848,7 +848,7 @@ int NanCommand::putNanTCA(wifi_request_id id, const NanTCARequest *pReq)
     return ret;
 }
 
-int NanCommand::putNanBeaconSdfPayload(wifi_request_id id,
+int NanCommand::putNanBeaconSdfPayload(transaction_id id,
                                        const NanBeaconSdfPayloadRequest *pReq)
 {
     ALOGI("NAN_BEACON_SDF_PAYLAOD");
@@ -1080,7 +1080,7 @@ void NanCommand::fillNanTransmitPostDiscoveryVal(
                         tlvs);
         }
         if (pTxDisc->type == NAN_CONN_WLAN_INFRA) {
-            tlvs = addTlv(NAN_TLV_TYPE_WLAN_INFRASTRUCTURE_SSID,
+            tlvs = addTlv(NAN_TLV_TYPE_WLAN_INFRA_SSID,
                         pTxDisc->infrastructure_ssid_len,
                         (const u8*)&pTxDisc->infrastructure_ssid_val[0],
                         tlvs);

@@ -36,7 +36,7 @@ private:
     int handleNanResponse();
     //Function which will parse the mVendorData and gets
     // the rsp_data appropriately.
-    int getNanResponse(wifi_request_id *id, NanResponseMsg *pRsp);
+    int getNanResponse(transaction_id *id, NanResponseMsg *pRsp);
     //Function which will return the Nan Indication type based on
     //the initial few bytes of mVendorData
     NanIndicationType getIndicationType();
@@ -106,17 +106,17 @@ public:
 
 
     //Functions to fill the vendor data appropriately
-    int putNanEnable(wifi_request_id id, const NanEnableRequest *pReq);
-    int putNanDisable(wifi_request_id id);
-    int putNanPublish(wifi_request_id id, const NanPublishRequest *pReq);
-    int putNanPublishCancel(wifi_request_id id, const NanPublishCancelRequest *pReq);
-    int putNanSubscribe(wifi_request_id id, const NanSubscribeRequest *pReq);
-    int putNanSubscribeCancel(wifi_request_id id, const NanSubscribeCancelRequest *pReq);
-    int putNanTransmitFollowup(wifi_request_id id, const NanTransmitFollowupRequest *pReq);
-    int putNanStats(wifi_request_id id, const NanStatsRequest *pReq);
-    int putNanConfig(wifi_request_id id, const NanConfigRequest *pReq);
-    int putNanTCA(wifi_request_id id, const NanTCARequest *pReq);
-    int putNanBeaconSdfPayload(wifi_request_id id, const NanBeaconSdfPayloadRequest *pReq);
+    int putNanEnable(transaction_id id, const NanEnableRequest *pReq);
+    int putNanDisable(transaction_id id);
+    int putNanPublish(transaction_id id, const NanPublishRequest *pReq);
+    int putNanPublishCancel(transaction_id id, const NanPublishCancelRequest *pReq);
+    int putNanSubscribe(transaction_id id, const NanSubscribeRequest *pReq);
+    int putNanSubscribeCancel(transaction_id id, const NanSubscribeCancelRequest *pReq);
+    int putNanTransmitFollowup(transaction_id id, const NanTransmitFollowupRequest *pReq);
+    int putNanStats(transaction_id id, const NanStatsRequest *pReq);
+    int putNanConfig(transaction_id id, const NanConfigRequest *pReq);
+    int putNanTCA(transaction_id id, const NanTCARequest *pReq);
+    int putNanBeaconSdfPayload(transaction_id id, const NanBeaconSdfPayloadRequest *pReq);
     int getNanStaParameter(wifi_interface_handle iface, NanStaParameter *pRsp);
 };
 #endif /* __WIFH_HAL_NAN_COMMAND_H__ */

@@ -498,7 +498,7 @@ int NanCommand::getNanTca(NanTCAInd *event)
               __func__, remainingLen, readLen, outputTlv.type,
               outputTlv.length);
         switch (outputTlv.type) {
-        case NAN_TLV_TYPE_TCA_CLUSTER_SIZE_RSP:
+        case NAN_TLV_TYPE_CLUSTER_SIZE_RSP:
             if (outputTlv.length != 2 * sizeof(u32)) {
                 ALOGE("%s: Wrong length %d in Tca Indication expecting %d bytes",
                       __func__, outputTlv.length, 2 * sizeof(u32));
@@ -668,7 +668,7 @@ int NanCommand::getNanReceivePostDiscoveryVal(const u8 *pInValue,
             memcpy(pRxDisc->mesh_id, outputTlv.value, outputTlv.length);
             pRxDisc->mesh_id_len = outputTlv.length;
             break;
-        case NAN_TLV_TYPE_WLAN_INFRASTRUCTURE_SSID:
+        case NAN_TLV_TYPE_WLAN_INFRA_SSID:
             if (outputTlv.length > sizeof(pRxDisc->infrastructure_ssid_val)) {
                 outputTlv.length = sizeof(pRxDisc->infrastructure_ssid_val);
             }

@@ -34,6 +34,7 @@ extern "C"
 */
 
 typedef int NanVersion;
+typedef u16 transaction_id;
 
 #define NAN_MAC_ADDR_LEN                6
 #define NAN_MAJOR_VERSION               2
@@ -132,8 +133,12 @@ typedef enum {
     NAN_STATUS_INVALID_TLV_VALUE = 17,
     NAN_STATUS_INVALID_TX_PRIORITY = 18,
     NAN_STATUS_INVALID_CONNECTION_MAP = 19,
-    /* 20-4095 Reserved */
-
+    NAN_STATUS_INVALID_TCA_ID = 20,
+    NAN_STATUS_INVALID_STATS_ID = 21,
+    NAN_STATUS_NAN_NOT_ALLOWED = 22,
+    NAN_STATUS_NO_OTA_ACK = 23,
+    NAN_STATUS_TX_FAIL = 24,
+    /* 25-4095 Reserved */
     /* NAN Configuration Response codes */
     NAN_STATUS_INVALID_RSSI_CLOSE_VALUE = 4096,
     NAN_STATUS_INVALID_RSSI_MIDDLE_VALUE = 4097,
@@ -157,7 +162,11 @@ typedef enum {
     NAN_STATUS_INVALID_POST_NAN_DISCOVERY_BITMAP_VALUE = 4115,
     NAN_STATUS_MISSING_FUTHER_AVAILABILITY_MAP = 4116,
     NAN_STATUS_INVALID_BAND_CONFIG_FLAGS = 4117,
-    /* 4118-8191 RESERVED */
+    NAN_STATUS_INVALID_RANDOM_FACTOR_UPDATE_TIME_VALUE = 4118,
+    NAN_STATUS_INVALID_ONGOING_SCAN_PERIOD = 4119,
+    NAN_STATUS_INVALID_DW_INTERVAL_VALUE = 4120,
+    NAN_STATUS_INVALID_DB_INTERVAL_VALUE = 4121,
+    /* 4122-8191 RESERVED */
     NAN_TERMINATED_REASON_INVALID = 8192,
     NAN_TERMINATED_REASON_TIMEOUT = 8193,
     NAN_TERMINATED_REASON_USER_REQUEST = 8194,
@@ -1053,6 +1062,8 @@ typedef struct
     u32 invalidMatches;
     u32 invalidFollowups;
     u32 publishCount;
+    u32 publishNewMatchCount;
+    u32 pubsubGlobalNewMatchCount;
 } NanPublishStats;
 
 /* Subscribe statistics. */
@@ -1076,6 +1087,8 @@ typedef struct
     u32 invalidFollowups;
     u32 subscribeCount;
     u32 bloomFilterIndex;
+    u32 subscribeNewMatchCount;
+    u32 pubsubGlobalNewMatchCount;
 } NanSubscribeStats;
 
 /* NAN DW Statistics*/
@@ -1503,7 +1516,7 @@ typedef struct {
 /* Response and Event Callbacks */
 typedef struct {
     /* NotifyResponse invoked to notify the status of the Request */
-    void (*NotifyResponse)(wifi_request_id id, NanResponseMsg* rsp_data);
+    void (*NotifyResponse)(transaction_id id, NanResponseMsg* rsp_data);
     /* Callbacks for various Events */
     void (*EventPublishTerminated)(NanPublishTerminatedInd* event);
     void (*EventMatch) (NanMatchInd* event);
@@ -1518,51 +1531,51 @@ typedef struct {
 
 
 /*  Enable NAN functionality.*/
-wifi_error nan_enable_request(wifi_request_id id,
+wifi_error nan_enable_request(transaction_id id,
                               wifi_interface_handle iface,
                               NanEnableRequest* msg);
 
 /*  Disable NAN functionality.*/
-wifi_error nan_disable_request(wifi_request_id id,
+wifi_error nan_disable_request(transaction_id id,
                                wifi_interface_handle iface);
 
 /*  Publish request to advertize a service.*/
-wifi_error nan_publish_request(wifi_request_id id,
+wifi_error nan_publish_request(transaction_id id,
                                wifi_interface_handle iface,
                                NanPublishRequest* msg);
 
 /*  Cancel previous publish requests.*/
-wifi_error nan_publish_cancel_request(wifi_request_id id,
+wifi_error nan_publish_cancel_request(transaction_id id,
                                       wifi_interface_handle iface,
                                       NanPublishCancelRequest* msg);
 
 /*  Subscribe request to search for a service.*/
-wifi_error nan_subscribe_request(wifi_request_id id,
+wifi_error nan_subscribe_request(transaction_id id,
                                  wifi_interface_handle iface,
                                  NanSubscribeRequest* msg);
 
 /*  Cancel previous subscribe requests.*/
-wifi_error nan_subscribe_cancel_request(wifi_request_id id,
+wifi_error nan_subscribe_cancel_request(transaction_id id,
                                         wifi_interface_handle iface,
                                         NanSubscribeCancelRequest* msg);
 
 /*  NAN transmit follow up request.*/
-wifi_error nan_transmit_followup_request(wifi_request_id id,
+wifi_error nan_transmit_followup_request(transaction_id id,
                                          wifi_interface_handle iface,
                                          NanTransmitFollowupRequest* msg);
 
 /*  Request NAN statistics from Discovery Engine.*/
-wifi_error nan_stats_request(wifi_request_id id,
+wifi_error nan_stats_request(transaction_id id,
                              wifi_interface_handle iface,
                              NanStatsRequest* msg);
 
 /*  NAN configuration request.*/
-wifi_error nan_config_request(wifi_request_id id,
+wifi_error nan_config_request(transaction_id id,
                               wifi_interface_handle iface,
                               NanConfigRequest* msg);
 
 /*  Configure the various Threshold crossing alerts */
-wifi_error nan_tca_request(wifi_request_id id,
+wifi_error nan_tca_request(transaction_id id,
                            wifi_interface_handle iface,
                            NanTCARequest* msg);
 
@@ -1572,7 +1585,7 @@ wifi_error nan_tca_request(wifi_request_id id,
     received payload in any Beacon or Service Discovery Frame
     transmitted
 */
-wifi_error nan_beacon_sdf_payload_request(wifi_request_id id,
+wifi_error nan_beacon_sdf_payload_request(transaction_id id,
                                          wifi_interface_handle iface,
                                          NanBeaconSdfPayloadRequest* msg);
 
@@ -1582,7 +1595,7 @@ wifi_error nan_beacon_sdf_payload_request(wifi_request_id id,
 wifi_error nan_register_handler(wifi_interface_handle iface,
                                 NanCallbackHandler handlers);
 
-/*  Get NAN HAL version*/
+/*  Get NAN HAL version */
 wifi_error nan_get_version(wifi_handle handle,
                            NanVersion* version);
 

@@ -126,6 +126,12 @@ typedef enum
     NAN_TLV_TYPE_FURTHER_AVAILABILITY_MAP,
     NAN_TLV_TYPE_HOP_COUNT_FORCE,
     NAN_TLV_TYPE_RANDOM_FACTOR_FORCE,
+    NAN_TLV_TYPE_RANDOM_UPDATE_TIME = 4124,
+    NAN_TLV_TYPE_EARLY_WAKEUP,
+    NAN_TLV_TYPE_PERIODIC_SCAN_INTERVAL,
+    NAN_TLV_TYPE_DW_INTERVAL = 4128,
+    NAN_TLV_TYPE_DB_INTERVAL,
+    NAN_TLV_TYPE_FURTHER_AVAILABILITY,
     NAN_TLV_TYPE_CONFIG_LAST = 8191,
 
     /* Attributes types */
@@ -135,7 +141,7 @@ typedef enum
     NAN_TLV_TYPE_MAC_ADDRESS,
     NAN_TLV_TYPE_RECEIVED_RSSI_VALUE,
     NAN_TLV_TYPE_CLUSTER_ATTRIBUTE,
-    NAN_TLV_TYPE_WLAN_INFRASTRUCTURE_SSID,
+    NAN_TLV_TYPE_WLAN_INFRA_SSID,
     NAN_TLV_TYPE_ATTRS_LAST = 12287,
 
     /* Events Type */
@@ -144,15 +150,24 @@ typedef enum
     NAN_TLV_TYPE_EVENT_STARTED_CLUSTER,
     NAN_TLV_TYPE_EVENT_JOINED_CLUSTER,
     NAN_TLV_TYPE_EVENT_CLUSTER_SCAN_RESULTS,
+    NAN_TLV_TYPE_FAW_MEM_AVAIL,
     NAN_TLV_TYPE_EVENTS_LAST = 16383,
 
-    /* TCA Type */
+    /* TCA types */
     NAN_TLV_TYPE_TCA_FIRST = 16384,
-    NAN_TLV_TYPE_TCA_CLUSTER_SIZE_REQ = NAN_TLV_TYPE_TCA_FIRST,
-    NAN_TLV_TYPE_TCA_CLUSTER_SIZE_RSP,
-    NAN_TLV_TYPE_TCA_LAST = 16385,
-    /* Reserved 16386 - 20479*/
-    /* Reserved 20480 - 65535*/
+    NAN_TLV_TYPE_CLUSTER_SIZE_REQ = NAN_TLV_TYPE_TCA_FIRST,
+    NAN_TLV_TYPE_CLUSTER_SIZE_RSP,
+    NAN_TLV_TYPE_TCA_LAST = 32767,
+
+    /* Statistics types */
+    NAN_TLV_TYPE_STATS_FIRST = 32768,
+    NAN_TLV_TYPE_DE_PUBLISH_STATS = NAN_TLV_TYPE_STATS_FIRST,
+    NAN_TLV_TYPE_DE_SUBSCRIBE_STATS,
+    NAN_TLV_TYPE_DE_MAC_STATS,
+    NAN_TLV_TYPE_DE_TIMING_SYNC_STATS,
+    NAN_TLV_TYPE_DE_DW_STATS,
+    NAN_TLV_TYPE_DE_STATS,
+    NAN_TLV_TYPE_STATS_LAST = 36863,
 
     NAN_TLV_TYPE_LAST = 65535
 } NanTlvType;
@@ -716,6 +731,8 @@ typedef struct PACKED
     u32 invalidMatches;
     u32 invalidFollowups;
     u32 publishCount;
+    u32 publishNewMatchCount;
+    u32 pubsubGlobalNewMatchCount;
 } FwNanPublishStats, *pFwNanPublishStats;
 
 /* Subscribe statistics. */
@@ -739,6 +756,8 @@ typedef struct PACKED
     u32 invalidFollowups;
     u32 subscribeCount;
     u32 bloomFilterIndex;
+    u32 subscribeNewMatchCount;
+    u32 pubsubGlobalNewMatchCount;
 } FwNanSubscribeStats, *pFwNanSubscribeStats;
 
 /* NAN MAC Statistics. Used for MAC and DW statistics. */

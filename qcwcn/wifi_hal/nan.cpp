@@ -68,7 +68,7 @@ wifi_error nan_get_version(wifi_handle handle,
 }
 
 /*  Function to send enable request to the wifi driver.*/
-wifi_error nan_enable_request(wifi_request_id id,
+wifi_error nan_enable_request(transaction_id id,
                               wifi_interface_handle iface,
                               NanEnableRequest* msg)
 {
@@ -106,7 +106,7 @@ cleanup:
 }
 
 /*  Function to send disable request to the wifi driver.*/
-wifi_error nan_disable_request(wifi_request_id id,
+wifi_error nan_disable_request(transaction_id id,
                                wifi_interface_handle iface)
 {
     int ret = 0;
@@ -143,7 +143,7 @@ cleanup:
 }
 
 /*  Function to send publish request to the wifi driver.*/
-wifi_error nan_publish_request(wifi_request_id id,
+wifi_error nan_publish_request(transaction_id id,
                                wifi_interface_handle iface,
                                NanPublishRequest* msg)
 {
@@ -181,7 +181,7 @@ cleanup:
 }
 
 /*  Function to send publish cancel to the wifi driver.*/
-wifi_error nan_publish_cancel_request(wifi_request_id id,
+wifi_error nan_publish_cancel_request(transaction_id id,
                                       wifi_interface_handle iface,
                                       NanPublishCancelRequest* msg)
 {
@@ -219,7 +219,7 @@ cleanup:
 }
 
 /*  Function to send Subscribe request to the wifi driver.*/
-wifi_error nan_subscribe_request(wifi_request_id id,
+wifi_error nan_subscribe_request(transaction_id id,
                                  wifi_interface_handle iface,
                                  NanSubscribeRequest* msg)
 {
@@ -257,7 +257,7 @@ cleanup:
 }
 
 /*  Function to cancel subscribe to the wifi driver.*/
-wifi_error nan_subscribe_cancel_request(wifi_request_id id,
+wifi_error nan_subscribe_cancel_request(transaction_id id,
                                         wifi_interface_handle iface,
                                         NanSubscribeCancelRequest* msg)
 {
@@ -295,7 +295,7 @@ cleanup:
 }
 
 /*  Function to send NAN follow up request to the wifi driver.*/
-wifi_error nan_transmit_followup_request(wifi_request_id id,
+wifi_error nan_transmit_followup_request(transaction_id id,
                                          wifi_interface_handle iface,
                                          NanTransmitFollowupRequest* msg)
 {
@@ -333,7 +333,7 @@ cleanup:
 }
 
 /*  Function to send NAN statistics request to the wifi driver.*/
-wifi_error nan_stats_request(wifi_request_id id,
+wifi_error nan_stats_request(transaction_id id,
                              wifi_interface_handle iface,
                              NanStatsRequest* msg)
 {
@@ -371,7 +371,7 @@ cleanup:
 }
 
 /*  Function to send NAN configuration request to the wifi driver.*/
-wifi_error nan_config_request(wifi_request_id id,
+wifi_error nan_config_request(transaction_id id,
                               wifi_interface_handle iface,
                               NanConfigRequest* msg)
 {
@@ -409,7 +409,7 @@ cleanup:
 }
 
 /*  Function to send NAN request to the wifi driver.*/
-wifi_error nan_tca_request(wifi_request_id id,
+wifi_error nan_tca_request(transaction_id id,
                            wifi_interface_handle iface,
                            NanTCARequest* msg)
 {
@@ -450,7 +450,7 @@ cleanup:
     This instructs the Discovery Engine to begin publishing the
     received payload in any Beacon or Service Discovery Frame
     transmitted*/
-wifi_error nan_beacon_sdf_payload_request(wifi_request_id id,
+wifi_error nan_beacon_sdf_payload_request(transaction_id id,
                                          wifi_interface_handle iface,
                                          NanBeaconSdfPayloadRequest* msg)
 {
@@ -488,7 +488,7 @@ cleanup:
     return (wifi_error)ret;
 }
 
-wifi_error nan_get_sta_parameter(wifi_request_id id,
+wifi_error nan_get_sta_parameter(transaction_id id,
                                  wifi_interface_handle iface,
                                  NanStaParameter* msg)
 {
