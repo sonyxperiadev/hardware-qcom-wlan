@@ -21,6 +21,7 @@
 #include "wifi_hal.h"
 #include "nan_i.h"
 #include "nancommand.h"
+#include "qca-vendor.h"
 #include <errno.h>
 
 //Function which calls the necessaryIndication callback
@@ -736,22 +737,22 @@ int NanCommand::getNanStaParameter(wifi_interface_handle iface,
     int ret = WIFI_ERROR_NONE;
     int res = -1;
     int id = 1;
-    NanCommand *nCommand;
+    NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
 
-    nCommand = NanCommand::instance(wifiHandle);
-    if (nCommand == NULL) {
+    nanCommand = NanCommand::instance(wifiHandle);
+    if (nanCommand == NULL) {
         ALOGE("%s: Error NanCommand NULL", __func__);
         return WIFI_ERROR_UNKNOWN;
     }
 
-    ret = nCommand->create();
+    ret = nanCommand->create();
     if (ret < 0)
         goto cleanup;
 
     /* Set the interface Id of the message. */
-    ret = nCommand->set_iface_id(ifaceInfo->name);
+    ret = nanCommand->set_iface_id(ifaceInfo->name);
     if (ret < 0)
         goto cleanup;
 

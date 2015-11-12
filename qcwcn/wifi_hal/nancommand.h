@@ -56,9 +56,6 @@ private:
     //Internal cleanup function
     void cleanup();
 
-    //Making the constructor private since this class is a singleton
-    NanCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
-
     static NanCommand *mNanCommandInstance;
 
     // Other private helper functions
@@ -93,6 +90,7 @@ private:
                                 NanStatsResponse *pRsp);
 
 public:
+    NanCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
     static NanCommand* instance(wifi_handle handle);
     virtual ~NanCommand();
 
