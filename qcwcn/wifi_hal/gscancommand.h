@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2014-2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ typedef struct{
 
 typedef struct{
     wifi_gscan_capabilities capabilities;
+    bool CapabilitiesUpdated;
 } GScanGetCapabilitiesRspParams;
 
 typedef struct{
@@ -133,8 +134,8 @@ public:
                                              wifi_cached_scan_results *cached_results);
     virtual int gscan_get_cached_results(wifi_cached_scan_results *results,
                                          struct nlattr **tb_vendor);
-    wifi_error validateGscanConfig(wifi_scan_cmd_params params);
-    wifi_error validateSignificantChangeParams(
+    wifi_error validateGscanConfig(hal_info *, wifi_scan_cmd_params params);
+    wifi_error validateSignificantChangeParams(hal_info *,
             wifi_significant_change_params params);
     virtual int allocCachedResultsTemp(int max,
                                        wifi_cached_scan_results *results);
