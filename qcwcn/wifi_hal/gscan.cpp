@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016 The Android Open Source Project
+ * Copyright (C) 2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,9 @@ typedef struct gscan_event_handlers_s {
     GScanCommandEventHandler *gScanSetPnoListCmdEventHandler;
     GScanCommandEventHandler *gScanPnoSetPasspointListCmdEventHandler;
 } gscan_event_handlers;
+
+wifi_gscan_capabilities Capabilities;
+bool CapabilitiesUpdated;
 
 wifi_error initializeGscanHandlers(hal_info *info)
 {
@@ -262,8 +265,9 @@ wifi_error wifi_get_gscan_capabilities(wifi_interface_handle handle,
     }
 
     gScanCommand->getGetCapabilitiesRspParams(capabilities);
-    memcpy(&info->capabilities, capabilities, sizeof(wifi_gscan_capabilities));
-    info->CapabilitiesUpdated = true;
+
+    memcpy(&Capabilities, capabilities, sizeof(wifi_gscan_capabilities));
+    CapabilitiesUpdated = true;
 cleanup:
     gScanCommand->freeRspParams(eGScanGetCapabilitiesRspParams);
     delete gScanCommand;
@@ -328,7 +332,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
         return WIFI_ERROR_UNKNOWN;
     }
 
-    ret = gScanCommand->validateGscanConfig(info, params);
+    ret = gScanCommand->validateGscanConfig(params);
     if (ret < 0)
         goto cleanup;
 
@@ -868,33 +872,33 @@ cleanup:
     return (wifi_error)ret;
 }
 
-wifi_error GScanCommand::validateSignificantChangeParams(hal_info *info,
+wifi_error GScanCommand::validateSignificantChangeParams(
     wifi_significant_change_params params)
 {
-    if (!info->CapabilitiesUpdated)
+    if (!CapabilitiesUpdated)
     {
-        ALOGI("Capabilities aren't obtained yet to validate"
+        ALOGE("Capabilities aren't obtained yet to validate"
                 " the input parameters");
         return WIFI_SUCCESS;
     }
 
     if (params.rssi_sample_size < RSSI_SAMPLE_SIZE_MIN
-            || params.rssi_sample_size > info->capabilities.max_rssi_sample_size) {
+            || params.rssi_sample_size > Capabilities.max_rssi_sample_size) {
         ALOGE("%s: rssi_sample_size is out of valid range : %d", __func__,
                  params.rssi_sample_size);
         ALOGI("Valid Range : Minimum : %d", RSSI_SAMPLE_SIZE_MIN);
         ALOGI("            : Maximum : %d",
-                info->capabilities.max_rssi_sample_size);
+                Capabilities.max_rssi_sample_size);
         return WIFI_ERROR_INVALID_ARGS;
     }
     if (params.lost_ap_sample_size < LOSTAP_SAMPLE_SIZE_MIN
             || params.lost_ap_sample_size >
-            info->capabilities.max_bssid_history_entries) {
+            Capabilities.max_bssid_history_entries) {
         ALOGE("%s: lost_ap_sample_size is out of valid range : %d", __func__,
                  params.lost_ap_sample_size);
         ALOGI("Valid Range : Minimum : %d", LOSTAP_SAMPLE_SIZE_MIN);
         ALOGI("            : Maximum : %d",
-                info->capabilities.max_bssid_history_entries);
+                Capabilities.max_bssid_history_entries);
         return WIFI_ERROR_INVALID_ARGS;
     }
     return WIFI_SUCCESS;
@@ -962,7 +966,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
         return WIFI_ERROR_UNKNOWN;
     }
 
-    ret = gScanCommand->validateSignificantChangeParams(info, params);
+    ret = gScanCommand->validateSignificantChangeParams(params);
     if (ret < 0)
         goto cleanup;
 
@@ -2150,11 +2154,11 @@ int GScanCommand::gscan_parse_capabilities(struct nlattr **tbVendor)
     return WIFI_SUCCESS;
 }
 
-wifi_error GScanCommand::validateGscanConfig(hal_info *info, wifi_scan_cmd_params params)
+wifi_error GScanCommand::validateGscanConfig(wifi_scan_cmd_params params)
 {
-    if (!info->CapabilitiesUpdated)
+    if (!CapabilitiesUpdated)
     {
-        ALOGI("Capabilities aren't obtained yet to validate"
+        ALOGE("Capabilities aren't obtained yet to validate"
                 " the input parameters");
         return WIFI_SUCCESS;
     }
@@ -2166,19 +2170,19 @@ wifi_error GScanCommand::validateGscanConfig(hal_info *info, wifi_scan_cmd_param
         return WIFI_ERROR_INVALID_ARGS;
     }
     if (params.max_ap_per_scan < GSCAN_MAX_AP_PER_SCAN_MIN
-            || params.max_ap_per_scan > info->capabilities.max_ap_cache_per_scan) {
+            || params.max_ap_per_scan > Capabilities.max_ap_cache_per_scan) {
         ALOGE("%s: max_ap_per_scan out of valid range : %d", __func__,
                  params.max_ap_per_scan);
         ALOGI("Valid Range : Minimum : %d", GSCAN_MAX_AP_PER_SCAN_MIN);
-        ALOGI("            : Maximum : %d", info->capabilities.max_ap_cache_per_scan);
+        ALOGI("            : Maximum : %d", Capabilities.max_ap_cache_per_scan);
         return WIFI_ERROR_INVALID_ARGS;
     }
     if (params.num_buckets < GSCAN_NUM_BUCKETS_MIN
-            || params.num_buckets > info->capabilities.max_scan_buckets) {
+            || params.num_buckets > Capabilities.max_scan_buckets) {
         ALOGE("%s: num_buckets out of valid range : %d", __func__,
                  params.num_buckets);
         ALOGI("Valid Range : Minimum : %d", GSCAN_NUM_BUCKETS_MIN);
-        ALOGI("            : Maximum : %d", info->capabilities.max_scan_buckets);
+        ALOGI("            : Maximum : %d", Capabilities.max_scan_buckets);
         return WIFI_ERROR_INVALID_ARGS;
     }
 
