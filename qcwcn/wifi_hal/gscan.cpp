@@ -2230,14 +2230,14 @@ wifi_error GScanCommand::validateGscanConfig(wifi_scan_cmd_params params)
                     GSCAN_REPORT_EVENT1, GSCAN_REPORT_EVENT2);
             return WIFI_ERROR_INVALID_ARGS;
         }
-        if (params.buckets[i].num_channels < GSCAN_MIN_CHANNELS) {
-            ALOGI("Number of channels :%d is less than Minimum channels : %d",
-                   params.buckets[i].num_channels, GSCAN_MIN_CHANNELS);
+        if (params.buckets[i].num_channels < GSCAN_MIN_CHANNELS
+                || params.buckets[i].num_channels > (int)MAX_CHANNELS) {
+            ALOGE("%s: buckets[%d].num_channels is out of valid range : %d",
+                     __func__, i, params.buckets[i].num_channels);
+            ALOGI("Valid Range : Minimum channels : %d", GSCAN_MIN_CHANNELS);
+            ALOGI("            : Maximum channels : %d", (int)MAX_CHANNELS);
             return WIFI_ERROR_INVALID_ARGS;
         }
-        if (params.buckets[i].num_channels > (int)MAX_CHANNELS)
-            ALOGI("Number of channels :%d is more than Maximum channels : %d",
-                  params.buckets[i].num_channels, (int)MAX_CHANNELS);
 
         for(int j=0; j<params.buckets[i].num_channels; j++)
         {
