@@ -96,6 +96,8 @@
 #define QCA_NL80211_VENDOR_SUBCMD_MONITOR_RSSI 80
 /* Nan Data Path */
 #define QCA_NL80211_VENDOR_SUBCMD_NDP 81
+/* Neighbour Discovery offload */
+#define QCA_NL80211_VENDOR_SUBCMD_ND_OFFLOAD 82
 /* Set packet filter for BPF*/
 #define QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER 83
 /* Get Driver-firmware interface maximum supported size*/
@@ -1294,6 +1296,19 @@ enum qca_wlan_vendor_attr_packet_filter
     QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX =
         QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_AFTER_LAST - 1,
+
+};
+
+enum qca_wlan_vendor_attr_nd_offload
+{
+    QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_INVALID = 0,
+
+    QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_FLAG,
+
+    /* keep last */
+    QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_MAX =
+        QCA_WLAN_VENDOR_ATTR_ND_OFFLOAD_AFTER_LAST - 1,
 
 };
 #endif
