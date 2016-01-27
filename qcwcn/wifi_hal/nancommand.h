@@ -19,7 +19,7 @@
 
 #include "common.h"
 #include "cpp_bindings.h"
-#include "nan.h"
+#include "wifi_hal.h"
 
 class NanCommand : public WifiVendorCommand
 {

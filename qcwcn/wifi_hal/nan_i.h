@@ -19,7 +19,6 @@
 
 #include "common.h"
 #include "cpp_bindings.h"
-#include "nan.h"
 #include "wifi_hal.h"
 
 #ifdef __cplusplus
