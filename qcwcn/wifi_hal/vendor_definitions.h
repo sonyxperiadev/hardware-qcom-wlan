@@ -930,6 +930,8 @@ enum qca_wlan_vendor_attr_wifi_config {
     QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_STATS_AVG_FACTOR = 2,
     /* Unsigned 32-bit value */
     QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_GUARD_TIME = 3,
+    /* Unsigned 32-bit value */
+    QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_FINE_TIME_MEASUREMENT = 4,
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_MAX =
