@@ -92,6 +92,32 @@ unsigned char wlan_nv_mac_addr[WLAN_ADDR_SIZE];
 #define WLAN_MAC_ADDR_STRING 18
 #endif
 
+#define MAX_SOC_INFO_NAME_LEN (15)
+#define MAX_DATA_NVBIN_PATH_LEN (64)
+#define QRD_DYNAMIC_NV_PROP  "persist.sys.dynamic.nv"
+#define QRD_HW_PLATFORM  "QRD"
+#define QRD_PLATFORM_SUBTYPE_ID  0
+#define PERSIST_NVFILE    "/persist/WCNSS_qcom_wlan_nv.bin"
+#define DATA_NVFILE_DIR   "/data/misc/wifi/nvbin/"
+#define SYSFS_SOCID_PATH1   "/sys/devices/soc0/soc_id"
+#define SYSFS_SOCID_PATH2   "/sys/devices/system/soc/soc0/id"
+#define SYSFS_HW_PLATFORM_PATH1  "/sys/devices/soc0/hw_platform"
+#define SYSFS_HW_PLATFORM_PATH2   "/sys/devices/system/soc/soc0/hw_platform"
+#define SYSFS_PLATFORM_SUBTYPE_PATH1   "/sys/devices/soc0/platform_subtype_id"
+#define SYSFS_PLATFORM_SUBTYPE_PATH2    "/sys/devices/system/soc/soc0/platform_subtype_id"
+#define SYSFS_PLATFORM_VERSION_PATH1  "/sys/devices/soc0/platform_version"
+#define SYSFS_PLATFORM_VERSION_PATH2   "/sys/devices/system/soc/soc0/platform_version"
+#define SOCINFO_HWVER_MAJOR(ver) (((ver) & 0x00ff0000) >> 16)
+#define SOCINFO_HWVER_MINOR(ver) ((ver) & 0x000000ff)
+#define GET_SOC_INFO(buf, soc_node_path1, soc_node_path2, info_got) \
+		{  if (get_soc_info(buf, soc_node_path1, soc_node_path2) < 0) \
+		    { \
+		        ALOGE("get_soc_info failed!\n"); \
+		        return FAILED; \
+		    } \
+		    info_got = atoi(buf); \
+		}
+
 int wcnss_write_cal_data(int fd_dev)
 {
 	int rcount = 0;
@@ -502,6 +528,198 @@ int check_modem_compatability(struct dev_info *mdm_detect_info)
 }
 #endif
 
+static int read_line_from_file(const char *path, char *buf, size_t count)
+{
+	char * fgets_ret;
+	FILE * fd;
+	int rv;
+
+	fd = fopen(path, "r");
+	if (fd == NULL)
+	return -1;
+
+	fgets_ret = fgets(buf, (int)count, fd);
+	if (NULL != fgets_ret) {
+	    rv = (int)strlen(buf);
+	} else {
+	    rv = ferror(fd);
+	}
+
+	fclose(fd);
+
+	return rv;
+}
+
+static int get_soc_info(char *buf, char *soc_node_path1,
+			char *soc_node_path2)
+{
+	int ret = 0;
+
+	ret = read_line_from_file(soc_node_path1, buf,
+					MAX_SOC_INFO_NAME_LEN);
+	if (ret < 0) {
+		ret = read_line_from_file(soc_node_path2, buf,
+					MAX_SOC_INFO_NAME_LEN);
+		if (ret < 0) {
+		    ALOGE("getting socinfo(%s, %d) failed.\n",
+					soc_node_path1, ret);
+		    return ret;
+		}
+	}
+	if (ret && buf[ret - 1] == '\n')
+		buf[ret - 1] = '\0';
+
+	return ret;
+}
+
+static int get_data_nvfile_path(char *data_nvfile_path,
+	struct stat *pdata_nvfile_stat)
+{
+	char target_board_platform[PROP_VALUE_MAX] = {'\0'};
+	char buf[MAX_SOC_INFO_NAME_LEN] = {'\0'};
+	int  soc_id, platform_subtype_id, platform_version;
+	int  major_hwver, minor_hwver;
+	int  rc;
+
+	rc = property_get("ro.board.platform", target_board_platform, "");
+	if (!rc)
+	{
+		ALOGE("get ro.board.platform fail, rc=%d(%s)\n",
+				rc, strerror(errno));
+		return FAILED;
+	}
+
+	GET_SOC_INFO(buf, SYSFS_SOCID_PATH1, SYSFS_SOCID_PATH2, soc_id);
+	GET_SOC_INFO(buf, SYSFS_PLATFORM_SUBTYPE_PATH1,
+			SYSFS_PLATFORM_SUBTYPE_PATH2, platform_subtype_id);
+	GET_SOC_INFO(buf, SYSFS_PLATFORM_VERSION_PATH1,
+			SYSFS_PLATFORM_VERSION_PATH2, platform_version);
+
+	major_hwver = SOCINFO_HWVER_MAJOR(platform_version);
+	minor_hwver = SOCINFO_HWVER_MINOR(platform_version);
+
+	snprintf(data_nvfile_path, MAX_DATA_NVBIN_PATH_LEN,
+		"%s%s_%d_0x%02x_0x%02x_0x%02x_nv.bin", DATA_NVFILE_DIR,
+		target_board_platform, soc_id, platform_subtype_id&0xff,
+		major_hwver&0xff, minor_hwver&0xff);
+	ALOGI("data_nvfile_path %s\n",
+			data_nvfile_path);
+
+	if (stat(data_nvfile_path, pdata_nvfile_stat) != 0)
+	{
+		ALOGE("source file do not exist %s\n",
+				data_nvfile_path);
+		return FAILED;
+	}
+
+	return SUCCESS;
+}
+
+static int nvbin_sendfile(const char *dst, const char *src,
+	struct stat *src_stat)
+{
+	struct utimbuf new_time;
+	int fp_src, fp_dst;
+	int rc;
+	if ((fp_src = open(src, O_RDONLY)) < 0)
+	{
+		ALOGE("open %s failed(%s).\n",
+				src, strerror(errno));
+		return FAILED;
+	}
+
+	if ((fp_dst = open(dst, O_WRONLY |O_TRUNC)) < 0)
+	{
+		close(fp_src);
+		ALOGE("open %s failed(%s).\n",
+				dst, strerror(errno));
+		return FAILED;
+	}
+
+	if (sendfile(fp_dst, fp_src, 0, src_stat->st_size) == -1)
+	{
+		ALOGE("dynamic nv sendfile failed: (%s).\n",
+				strerror(errno));
+		rc = FAILED;
+		goto exit;
+	}
+
+	new_time.actime  = src_stat->st_atime;
+	new_time.modtime = src_stat->st_mtime;
+	if (utime(dst, &new_time) != 0)
+	{
+		ALOGE("could not preserve the timestamp %s",
+				strerror(errno));
+		rc = FAILED;
+		goto exit;
+	}
+
+	rc = SUCCESS;
+exit:
+	close(fp_dst);
+	close(fp_src);
+	return rc;
+}
+void dynamic_nv_replace()
+{
+	char data_nvfile_path[MAX_DATA_NVBIN_PATH_LEN] = {'\0'};
+	char property_nv_replaced_status [PROPERTY_VALUE_MAX] = { '\0' };
+	char buf[MAX_SOC_INFO_NAME_LEN] = {'\0'};
+	struct stat  data_nvfile_stat;
+	int rc;
+
+	if (property_get(QRD_DYNAMIC_NV_PROP, property_nv_replaced_status, NULL)
+		&& strcmp(property_nv_replaced_status, "done") == 0) {
+		ALOGI("dynamic nv have been replaced. leave\n");
+		return;
+	}
+
+	rc = get_soc_info(buf, SYSFS_HW_PLATFORM_PATH1, SYSFS_HW_PLATFORM_PATH2);
+	if (rc < 0)
+	{
+		ALOGE("get_soc_info(HW_PLATFORM) fail!\n");
+		return;
+	} else {
+		if( 0 != strncmp(buf, QRD_HW_PLATFORM, MAX_SOC_INFO_NAME_LEN))
+		{
+			ALOGI("dynamic nv only for QRD platform, current platform:%s.\n",
+					buf);
+			return;
+		}
+	}
+
+	rc = get_data_nvfile_path(data_nvfile_path, &data_nvfile_stat);
+	if (rc != SUCCESS)
+	{
+		ALOGE("Get source file path fail !\n");
+		return;
+	}
+
+	if (property_set(QRD_DYNAMIC_NV_PROP, "replacing") < 0)
+	{
+		ALOGE("set %s to replacing failed (%s).\n",
+				QRD_DYNAMIC_NV_PROP, strerror(errno));
+		return;
+	}
+
+	rc = nvbin_sendfile(PERSIST_NVFILE, data_nvfile_path, &data_nvfile_stat);
+	if ( rc != SUCCESS)
+	{
+		ALOGE("nvbin_sendfile failed.\n");
+		return;
+	}
+
+	if (property_set(QRD_DYNAMIC_NV_PROP, "done") < 0)
+	{
+		ALOGE("set %s to done failed(%s).\n",
+				QRD_DYNAMIC_NV_PROP, strerror(errno));
+		return;
+	}
+
+	ALOGI("dynamic nv replace sucessfully!\n");
+
+}
+
 int main(int argc, char *argv[])
 {
 	UNUSED(argc), UNUSED(argv);
@@ -558,6 +776,8 @@ int main(int argc, char *argv[])
 
 nomodem:
 #endif
+
+	dynamic_nv_replace();
 
 #ifdef WCNSS_QMI
 	setup_wcnss_parameters(&ret_cal, nv_mac_addr);
