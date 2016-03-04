@@ -1142,8 +1142,10 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 nla_get_u32(
                 tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH]);
+#ifdef QC_HAL_DEBUG
             ALOGD("%s: RESULTS_SCAN_RESULT_IE_LENGTH =%d",
                 __FUNCTION__, lengthOfInfoElements);
+#endif
             resultsBufSize =
                 lengthOfInfoElements + sizeof(wifi_scan_result);
             result = (wifi_scan_result *) malloc (resultsBufSize);
@@ -1345,6 +1347,36 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 free(result);
                 result = NULL;
             }
+        }
+        break;
+
+        case QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE:
+        {
+            wifi_request_id id;
+
+            ALOGD("Event "
+                    "QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_RESULTS_AVAILABLE "
+                    "received.");
+
+            if (!tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]) {
+                ALOGE("%s: QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID"
+                        "not found. Exit", __FUNCTION__);
+                ret = WIFI_ERROR_INVALID_ARGS;
+                break;
+            }
+            id = nla_get_u32(
+                    tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID]
+                             );
+            /* If this is not for us, then ignore it. */
+            if (id != mRequestId) {
+                ALOGE("%s: Event has Req. ID:%d <> ours:%d",
+                        __FUNCTION__, id, mRequestId);
+                break;
+            }
+
+            /* Invoke the callback func to report the number of results. */
+            ALOGD("%s: Calling on_scan_event handler", __FUNCTION__);
+            (*mHandler.on_scan_event)(id, WIFI_SCAN_THRESHOLD_NUM_SCANS);
         }
         break;
 
@@ -1736,9 +1768,10 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             u32 scanEventStatus = 0;
             wifi_request_id reqId;
 
+#ifdef QC_HAL_DEBUG
             ALOGD("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_SCAN_EVENT "
                 "received.");
-
+#endif
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
             {

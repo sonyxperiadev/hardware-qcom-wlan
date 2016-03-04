@@ -18,11 +18,10 @@ LOCAL_PATH := $(call my-dir)
 # ============================================================
 include $(CLEAR_VARS)
 
-LOCAL_REQUIRED_MODULES :=
+LOCAL_CFLAGS := -Wno-unused-parameter
 
-LOCAL_CFLAGS += -Wno-unused-parameter -Wno-int-to-pointer-cast
-LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses
-LOCAL_CPPFLAGS += -Wno-conversion-null
+# gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'
+LOCAL_CLANG_CFLAGS := -Wno-pointer-bool-conversion
 
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
@@ -56,7 +55,6 @@ LOCAL_SRC_FILES := \
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_CLANG := true
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
-LOCAL_SHARED_LIBRARIES += libdl
 
 ifneq ($(wildcard external/libnl),)
 LOCAL_SHARED_LIBRARIES += libnl
@@ -72,9 +70,11 @@ include $(CLEAR_VARS)
 
 LOCAL_REQUIRED_MODULES :=
 
-LOCAL_CFLAGS += -Wno-unused-parameter -Wno-int-to-pointer-cast
-LOCAL_CFLAGS += -Wno-maybe-uninitialized -Wno-parentheses
+LOCAL_CFLAGS += -Wno-unused-parameter
 LOCAL_CPPFLAGS += -Wno-conversion-null
+
+# gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'
+LOCAL_CLANG_CFLAGS := -Wno-pointer-bool-conversion
 
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \

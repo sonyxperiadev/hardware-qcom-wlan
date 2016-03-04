@@ -46,8 +46,6 @@ wifi_error wifi_get_rtt_capabilities(wifi_interface_handle iface,
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
 
-    ALOGD("wifi_get_rtt_capabilities: Entry");
-
     if (iface == NULL) {
         ALOGE("wifi_get_rtt_capabilities: NULL iface pointer provided."
             " Exit.");
@@ -97,8 +95,6 @@ wifi_error wifi_rtt_range_request(wifi_request_id id,
 {
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
-
-    ALOGD("wifi_rtt_range_request: Entry");
 
     if (iface == NULL) {
         ALOGE("wifi_rtt_range_request: NULL iface pointer provided."
@@ -165,8 +161,6 @@ wifi_error wifi_rtt_range_cancel(wifi_request_id id,
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
 
-    ALOGD("wifi_rtt_range_cancel: Entry");
-
     if (iface == NULL) {
         ALOGE("wifi_rtt_range_cancel: NULL iface pointer provided."
             " Exit.");
@@ -220,8 +214,6 @@ wifi_error wifi_set_lci(wifi_request_id id, wifi_interface_handle iface,
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
 
-    ALOGD("%s: Entry", __FUNCTION__);
-
     if (iface == NULL) {
         ALOGE("%s: NULL iface pointer provided."
             " Exit.", __FUNCTION__);
@@ -269,8 +261,6 @@ wifi_error wifi_set_lcr(wifi_request_id id, wifi_interface_handle iface,
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
 
-    ALOGD("%s: Entry", __FUNCTION__);
-
     if (iface == NULL) {
         ALOGE("%s: NULL iface pointer provided."
             " Exit.", __FUNCTION__);
@@ -314,13 +304,11 @@ cleanup:
 /**
  * Get available WiFi channel to enable RTT responder on.
  */
-wifi_error wifi_rtt_get_available_channnel(wifi_interface_handle iface,
+wifi_error wifi_rtt_get_available_channel(wifi_interface_handle iface,
                                            wifi_channel_info* channel)
 {
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
-
-    ALOGD("%s: Entry", __FUNCTION__);
 
     if (iface == NULL || channel == NULL) {
         ALOGE("%s: iface : %p channel : %p", __FUNCTION__, iface, channel);
@@ -366,8 +354,6 @@ wifi_error wifi_enable_responder(wifi_request_id id,
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
 
-    ALOGD("%s: Entry", __FUNCTION__);
-
     if (iface == NULL || channel_used == NULL) {
         ALOGE("%s: iface : %p channel : %p", __FUNCTION__, iface, channel_used);
         return WIFI_ERROR_INVALID_ARGS;
@@ -407,7 +393,6 @@ wifi_error wifi_disable_responder(wifi_request_id id,
 {
     int ret = WIFI_SUCCESS;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
-    ALOGD("%s: Entry", __FUNCTION__);
 
     if (iface == NULL) {
         ALOGE("%s: iface : %p", __FUNCTION__, iface);
