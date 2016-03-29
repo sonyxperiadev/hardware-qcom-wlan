@@ -17,7 +17,7 @@
 #ifndef __VENDOR_DEFINITIONS_H__
 #define __VENDOR_DEFINITIONS_H__
 
-#include "qca-vendor.h"
+#include "qca-vendor_copy.h"
 
 #define WIFI_SCANNING_MAC_OUI_LENGTH 3
 #define WIFI_MAC_ADDR_LENGTH 6
