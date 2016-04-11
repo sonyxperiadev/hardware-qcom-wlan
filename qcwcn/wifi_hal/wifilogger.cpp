@@ -612,7 +612,7 @@ wifi_error wifi_start_pkt_fate_monitoring(wifi_interface_handle iface)
     hal_info *info = getHalInfo(wifiHandle);
 
     if (info->fate_monitoring_enabled == true) {
-        ALOGD("Packet monitoring is already enabled");
+        ALOGV("Packet monitoring is already enabled");
         return WIFI_SUCCESS;
     }
 
@@ -766,7 +766,6 @@ wifi_error wifi_get_rx_pkt_fates(wifi_interface_handle iface,
 WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
         : WifiVendorCommand(handle, id, vendor_id, subcmd)
 {
-    ALOGV("WifiLoggerCommand %p constructed", this);
     mVersion = NULL;
     mVersionLen = 0;
     mRequestId = id;
@@ -778,7 +777,6 @@ WifiLoggerCommand::WifiLoggerCommand(wifi_handle handle, int id, u32 vendor_id, 
 
 WifiLoggerCommand::~WifiLoggerCommand()
 {
-    ALOGV("WifiLoggerCommand %p destructor", this);
     unregisterVendorHandler(mVendor_id, mSubcmd);
 }
 
@@ -1019,8 +1017,7 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
                    string terminated with '\0' */
                 len = (len > mVersionLen)? (mVersionLen - 1) : len;
                 memcpy(mVersion, nla_data(tb_vendor[version]), len);
-                ALOGD("%s: WLAN version len : %d", __FUNCTION__, len);
-                ALOGD("%s: WLAN %s version : %s ", __FUNCTION__,
+                ALOGV("%s: WLAN %s version : %s ", __FUNCTION__,
                       version_type, mVersion);
             }
         }
@@ -1035,8 +1032,10 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
             if (tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]) {
                 *mSupportedSet =
                 nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]);
-                ALOGD("%s: Supported Feature Set : val 0x%x",
+#ifdef QC_HAL_DEBUG
+                ALOGV("%s: Supported Feature Set : val 0x%x",
                       __FUNCTION__, *mSupportedSet);
+#endif
             }
         }
         break;

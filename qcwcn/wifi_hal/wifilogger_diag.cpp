@@ -1954,14 +1954,12 @@ static wifi_error parse_stats_record(hal_info *info,
         else
             status = WIFI_SUCCESS;
     } else if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_DUMP) {
-        if (info->fate_monitoring_enabled) {
+        if (info->fate_monitoring_enabled)
             status = parse_pkt_fate_stats(info,
                                           (u8 *)(pkt_stats_header + 1),
                                           pkt_stats_header->size);
-        } else {
-            ALOGD("Packet fate monitoring is not enabled");
+        else
             status = WIFI_SUCCESS;
-        }
     } else {
         status = parse_tx_stats(info,
                                 (u8 *)(pkt_stats_header + 1),
@@ -2057,14 +2055,17 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
 
             buf = (uint8_t *)(wnl + 1);
             diag_host_type = *(uint32_t *)(buf);
+#ifdef QC_HAL_DEBUG
             ALOGV("diag type = %d", diag_host_type);
-
+#endif
             buf +=  sizeof(uint32_t); //diag_type
             if (diag_host_type == DIAG_TYPE_HOST_EVENTS) {
                 host_event_hdr_t *event_hdr =
                               (host_event_hdr_t *)(buf);
+#ifdef QC_HAL_DEBUG
                 ALOGV("diag event_id = %x length %d",
                       event_hdr->event_id, event_hdr->length);
+#endif
                 buf += sizeof(host_event_hdr_t);
                 switch (event_hdr->event_id) {
                     case EVENT_WLAN_WAKE_LOCK:
@@ -2087,8 +2088,10 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                 }
             } else if (diag_host_type == DIAG_TYPE_HOST_LOG_MSGS) {
                 drv_msg_t *drv_msg = (drv_msg_t *) (buf);
+#ifdef QC_HAL_DEBUG
                 ALOGV("diag event_type = %0x length = %d",
                       drv_msg->event_type, drv_msg->length);
+#endif
                 if (drv_msg->event_type == WLAN_PKT_LOG_STATS) {
                     if ((info->prev_seq_no + 1) !=
                             drv_msg->u.pkt_stats_event.msg_seq_no) {

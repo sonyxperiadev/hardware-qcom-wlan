@@ -158,7 +158,7 @@ int error_handler(struct sockaddr_nl *nla,
     int *ret = (int *)arg;
     *ret = err->error;
 
-    ALOGD("%s invoked with error: %d", __func__, err->error);
+    ALOGV("%s invoked with error: %d", __func__, err->error);
     return NL_SKIP;
 }
 static int no_seq_check(struct nl_msg *msg, void *arg)
@@ -247,7 +247,7 @@ static wifi_error wifi_init_user_sock(hal_info *info)
         /* continue anyway with the default (smaller) buffer */
     }
     else {
-        ALOGI("nl_socket_set_buffer_size successful for user_sock");
+        ALOGV("nl_socket_set_buffer_size successful for user_sock");
     }
 
     struct nl_cb *cb = nl_socket_get_cb(user_sock);
@@ -272,7 +272,7 @@ static wifi_error wifi_init_user_sock(hal_info *info)
     }
 
     info->user_sock = user_sock;
-    ALOGI("Initiialized diag sock successfully");
+    ALOGV("Initiialized diag sock successfully");
     return WIFI_SUCCESS;
 }
 
@@ -487,12 +487,12 @@ wifi_error wifi_initialize(wifi_handle *handle)
 
     ret = wifi_init_interfaces(*handle);
     if (ret != WIFI_SUCCESS) {
-        ALOGI("Failed to init interfaces");
+        ALOGE("Failed to init interfaces");
         goto unload;
     }
 
     if (info->num_interfaces == 0) {
-        ALOGI("No interfaces found");
+        ALOGE("No interfaces found");
         ret = WIFI_ERROR_UNINITIALIZED;
         goto unload;
     }
@@ -562,14 +562,14 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
-    ALOGI("Initializing Gscan Event Handlers");
+    ALOGV("Initializing Gscan Event Handlers");
     ret = initializeGscanHandlers(info);
     if (ret != WIFI_SUCCESS) {
         ALOGE("Initializing Gscan Event Handlers Failed");
         goto unload;
     }
 
-    ALOGI("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
+    ALOGV("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
 
 unload:
@@ -634,7 +634,6 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     if (info->rx_aggr_pkts)
         free(info->rx_aggr_pkts);
     wifi_logger_ring_buffers_deinit(info);
-    ALOGI("Cleanup Gscan Event Handlers");
     cleanupGscanHandlers(info);
 
     if (info->exit_sockets[0] >= 0) {
@@ -655,8 +654,6 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     (*cleaned_up_handler)(handle);
     pthread_mutex_destroy(&info->cb_lock);
     free(info);
-
-    ALOGI("Internal cleanup completed");
 }
 
 void wifi_cleanup(wifi_handle handle, wifi_cleaned_up_handler handler)
@@ -744,9 +741,6 @@ void wifi_event_loop(wifi_handle handle)
         }
         rb_timerhandler(info);
     } while (!info->clean_up);
-
-
-    ALOGI("Cleaning up");
     internal_cleaned_up_handler(handle);
 }
 
@@ -1028,10 +1022,10 @@ wifi_error wifi_get_supported_feature_set(wifi_interface_handle iface,
     ret = acquire_supported_features(iface, set);
     if (ret != WIFI_SUCCESS) {
         *set = info->supported_feature_set;
-        ALOGI("Supported feature set acquired at initialization : %x", *set);
+        ALOGV("Supported feature set acquired at initialization : %x", *set);
     } else {
         info->supported_feature_set = *set;
-        ALOGI("Supported feature set acquired : %x", *set);
+        ALOGV("Supported feature set acquired : %x", *set);
     }
     return WIFI_SUCCESS;
 }
@@ -1166,9 +1160,9 @@ wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
         return (wifi_error)ret;
     }
 
-    ALOGI("ip packet length : %u\nIP Packet:", ip_packet_len);
+    ALOGV("ip packet length : %u\nIP Packet:", ip_packet_len);
     hexdump(ip_packet, ip_packet_len);
-    ALOGI("Src Mac Address: " MAC_ADDR_STR "\nDst Mac Address: " MAC_ADDR_STR
+    ALOGV("Src Mac Address: " MAC_ADDR_STR "\nDst Mac Address: " MAC_ADDR_STR
           "\nPeriod in msec : %u", MAC_ADDR_ARRAY(src_mac_addr),
           MAC_ADDR_ARRAY(dst_mac_addr), period_msec);
 
@@ -1413,7 +1407,7 @@ static wifi_error wifi_configure_nd_offload(wifi_interface_handle iface,
         return (wifi_error)ret;
     }
 
-    ALOGI("ND offload : %s", enable?"Enable":"Disable");
+    ALOGV("ND offload : %s", enable?"Enable":"Disable");
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
