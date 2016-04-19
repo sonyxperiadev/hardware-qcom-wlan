@@ -1954,12 +1954,14 @@ static wifi_error parse_stats_record(hal_info *info,
         else
             status = WIFI_SUCCESS;
     } else if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_DUMP) {
-        if (info->fate_monitoring_enabled)
+        pthread_mutex_lock(&info->pkt_fate_stats_lock);
+        if (info->fate_monitoring_enabled) {
             status = parse_pkt_fate_stats(info,
                                           (u8 *)(pkt_stats_header + 1),
                                           pkt_stats_header->size);
-        else
+        } else
             status = WIFI_SUCCESS;
+        pthread_mutex_unlock(&info->pkt_fate_stats_lock);
     } else {
         status = parse_tx_stats(info,
                                 (u8 *)(pkt_stats_header + 1),
