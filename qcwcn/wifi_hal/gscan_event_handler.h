@@ -61,6 +61,7 @@ private:
      */
     u32 mSubCommandId;
     bool mEventHandlingEnabled;
+    u32 mPnoObtainedResultsSize;
 
 public:
     GScanCommandEventHandler(wifi_handle handle, int id, u32 vendor_id,
@@ -91,6 +92,11 @@ public:
             wifi_scan_result *mPnoNetworkFoundResults,
             u32 startingIndex,
             struct nlattr **tbVendor);
+    wifi_error getVariableLenDataSize(struct nlattr **tb_vendor,
+                                      int nest_attr_id,
+                                      int variable_len_attr_id,
+                                      int attr_max,
+                                      u32 *total_size);
 };
 
 #ifdef __cplusplus
