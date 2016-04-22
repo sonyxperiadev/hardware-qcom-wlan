@@ -22,7 +22,7 @@
 #include "cpp_bindings.h"
 #include <utils/Log.h>
 #include "nancommand.h"
-
+#include "vendor_definitions.h"
 #ifdef __GNUC__
 #define PRINTF_FORMAT(a,b) __attribute__ ((format (printf, (a), (b))))
 #define STRUCT_PACKED __attribute__ ((packed))
@@ -30,8 +30,6 @@
 #define PRINTF_FORMAT(a,b)
 #define STRUCT_PACKED
 #endif
-
-#include "qca-vendor.h"
 
 //Singleton Static Instance
 NanCommand* NanCommand::mNanCommandInstance  = NULL;
