@@ -448,8 +448,10 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
             results[i]->channel, results[i]->num_rssi);
 
         rem_size = sizeof(rssi_buf);
-        for (j = 0; j < results[i]->num_rssi; j++) {
-            len = snprintf(rssi_buf, rem_size, "rssi[%d]:%d, ", j, results[i]->rssi[j]);
+        char *dst = rssi_buf;
+        for (j = 0; j < results[i]->num_rssi && rem_size > 0; j++) {
+            len = snprintf(dst, rem_size, "rssi[%d]:%d, ", j, results[i]->rssi[j]);
+            dst += len;
             rem_size -= len;
         }
         ALOGV("RSSI LIST: %s", rssi_buf);

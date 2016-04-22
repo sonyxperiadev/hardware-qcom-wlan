@@ -1386,4 +1386,3 @@ cleanup:
     delete LLCommand;
     return (wifi_error)ret;
 }
-

@@ -1475,8 +1475,8 @@ int GScanCommand::handleResponse(WifiEvent &reply) {
                     sizeof(wifi_channel) * (*mNumChannelsPtr));
             }
             char buf[100];
-            int len = 0;
-            for (i = 0; i < *mNumChannelsPtr; i++) {
+            size_t len = 0;
+            for (i = 0; i < *mNumChannelsPtr && len < sizeof(buf); i++) {
                  len +=  snprintf(buf + len, sizeof(buf)-len, "%u ",
                                   *(mChannels + i));
             }
