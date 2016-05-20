@@ -25,6 +25,7 @@
 #ifdef ANDROID
 #include "android_drv.h"
 #endif
+#include "driver_cmd_nl80211_extn.h"
 
 #define WPA_PS_ENABLED		0
 #define WPA_PS_DISABLED		1
