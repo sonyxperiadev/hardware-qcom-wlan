@@ -36,7 +36,8 @@ WPA_SUPPL_DIR_INCLUDE = $(WPA_SUPPL_DIR)/src \
 
 ifdef CONFIG_DRIVER_NL80211
 WPA_SUPPL_DIR_INCLUDE += external/libnl/include
-WPA_SRC_FILE += driver_cmd_nl80211.c
+WPA_SRC_FILE += driver_cmd_nl80211_extn.c \
+		driver_cmd_nl80211.c
 endif
 
 ifeq ($(TARGET_ARCH),arm)
@@ -57,6 +58,10 @@ endif
 include $(CLEAR_VARS)
 LOCAL_MODULE := lib_driver_cmd_qcwcn
 LOCAL_SHARED_LIBRARIES := libc libcutils
+ifneq ($(wildcard external/libnl),)
+LOCAL_SHARED_LIBRARIES += libnl
+endif
+LOCAL_SHARED_LIBRARIES += libdl
 LOCAL_CFLAGS := $(L_CFLAGS)
 LOCAL_SRC_FILES := $(WPA_SRC_FILE)
 LOCAL_C_INCLUDES := $(WPA_SUPPL_DIR_INCLUDE)
