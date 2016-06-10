@@ -1095,9 +1095,13 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                         }
 
                         memset(pIfaceStat, 0, resultsBufSize);
-                        if(mResultsParams.iface_stat)
+                        if(mResultsParams.iface_stat) {
                             memcpy ( pIfaceStat, mResultsParams.iface_stat,
                                 sizeof(wifi_iface_stat));
+                            free(mResultsParams.iface_stat);
+                        }
+                        mResultsParams.iface_stat = pIfaceStat;
+
                         wifi_peer_info *pPeerStats;
                         pIfaceStat->num_peers = numPeers;
 
@@ -1129,9 +1133,6 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                                 goto cleanup;
                             }
                         }
-                        if(mResultsParams.iface_stat)
-                            free (mResultsParams.iface_stat);
-                        mResultsParams.iface_stat = pIfaceStat;
                     }
 
                     // Number of Radios are 1 for now
