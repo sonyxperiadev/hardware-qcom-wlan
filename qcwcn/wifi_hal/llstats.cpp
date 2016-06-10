@@ -1017,6 +1017,11 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                                     mResultsParams.radio_stat);
                             if(mResultsParams.radio_stat)
                             {
+                                if (mResultsParams.radio_stat->tx_time_per_levels)
+                                {
+                                    free(mResultsParams.radio_stat->tx_time_per_levels);
+                                    mResultsParams.radio_stat->tx_time_per_levels = NULL;
+                                }
                                 free(mResultsParams.radio_stat);
                                 mResultsParams.radio_stat = NULL;
                             }
@@ -1141,6 +1146,11 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                             mResultsParams.radio_stat);
                     if(mResultsParams.radio_stat)
                     {
+                        if (mResultsParams.radio_stat->tx_time_per_levels)
+                        {
+                            free(mResultsParams.radio_stat->tx_time_per_levels);
+                            mResultsParams.radio_stat->tx_time_per_levels = NULL;
+                        }
                         free(mResultsParams.radio_stat);
                         mResultsParams.radio_stat = NULL;
                     }
@@ -1205,6 +1215,11 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
 cleanup:
     if(mResultsParams.radio_stat)
     {
+        if (mResultsParams.radio_stat->tx_time_per_levels)
+        {
+            free(mResultsParams.radio_stat->tx_time_per_levels);
+            mResultsParams.radio_stat->tx_time_per_levels = NULL;
+        }
         free(mResultsParams.radio_stat);
         mResultsParams.radio_stat = NULL;
     }
