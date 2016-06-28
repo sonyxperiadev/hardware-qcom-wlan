@@ -50,6 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BYTE_1  8
 #define BYTE_2  16
 #define BYTE_3  24
+#define UNUSED(x)	(void)(x)
 
 #define MAX_FILE_LENGTH    (1024)
 #define WCNSS_MAX_CMD_LEN  (128)
@@ -340,9 +341,9 @@ out_nocopy:
 }
 unsigned int convert_string_to_hex(char* string)
 {
-	int idx = 0;
+	int idx;
 	unsigned long int hex_num = 0;
-	for(idx; string[idx] != '\0'; idx++){
+	for(idx = 0; string[idx] != '\0'; idx++){
 		if(isalpha(string[idx])) {
 			if(string[idx] >='a' && string[idx] <='f') {
 				hex_num = hex_num * HEX_BASE + ((int)string[idx]
@@ -361,7 +362,11 @@ unsigned int convert_string_to_hex(char* string)
 }
 
 
+#ifdef WCNSS_QMI
 void setup_wcnss_parameters(int *cal, int nv_mac_addr)
+#else
+void setup_wcnss_parameters(int *cal)
+#endif
 {
 	char msg[WCNSS_MAX_CMD_LEN];
 	char serial[PROPERTY_VALUE_MAX];
@@ -498,10 +503,11 @@ int check_modem_compatability(struct dev_info *mdm_detect_info)
 
 int main(int argc, char *argv[])
 {
+	UNUSED(argc), UNUSED(argv);
 	int rc;
 	int fd_dev, ret_cal;
-	int nv_mac_addr = FAILED;
 #ifdef WCNSS_QMI
+	int nv_mac_addr = FAILED;
 	struct dev_info mdm_detect_info;
 	int nom = 0;
 #endif
@@ -551,7 +557,12 @@ int main(int argc, char *argv[])
 
 nomodem:
 #endif
+
+#ifdef WCNSS_QMI
 	setup_wcnss_parameters(&ret_cal, nv_mac_addr);
+#else
+	setup_wcnss_parameters(&ret_cal);
+#endif
 
 	fd_dev = open(WCNSS_DEVICE, O_RDWR);
 	if (fd_dev < 0) {
