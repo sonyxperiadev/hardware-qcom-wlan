@@ -85,11 +85,6 @@ enum wlan_diag_frame_type {
      WLAN_DIAG_TYPE_LEGACY_MSG,
 };
 
-static uint32_t get_le32(const uint8_t *pos)
-{
-    return pos[0] | (pos[1] << 8) | (pos[2] << 16) | (pos[3] << 24);
-}
-
 typedef struct event_remap {
     int q_event;
     int g_event;
