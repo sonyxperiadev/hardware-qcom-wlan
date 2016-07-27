@@ -67,8 +67,7 @@ static char *dms_find_modem_port( char *prop_value_ptr)
 
 	/* Sanity check */
 	if (prop_value_ptr == NULL) {
-		ALOGE("%s", "NULL prop_value_ptr, using default port",
-			__func__);
+		ALOGE("%s: NULL prop_value_ptr, using default port", __func__);
 		return qmi_modem_port_ptr;
 	}
 
