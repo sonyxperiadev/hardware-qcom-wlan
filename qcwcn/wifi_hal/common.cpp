@@ -243,6 +243,8 @@ void hexdump(void *buf, u16 len)
 {
     int i=0;
     char *bytes = (char *)buf;
+    if (len == 0)
+        return;
     ALOGV("******HexDump len:%d*********", len);
     for (i = 0; ((i + 7) < len); i+=8) {
         ALOGV("%02x %02x %02x %02x   %02x %02x %02x %02x",
