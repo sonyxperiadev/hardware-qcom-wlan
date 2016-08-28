@@ -49,8 +49,6 @@ int wpa_driver_oem_initialize(wpa_driver_oem_cb_table_t *oem_cb_table)
 	void* oem_handle = dlopen("/vendor/lib/libwpa_drv_oem.so", RTLD_NOW);
 #endif
 	if (!oem_handle) {
-		wpa_printf(MSG_ERROR, "%s: NULL oem_handle , err: %s",
-			   __FUNCTION__, dlerror());
 		return WPA_DRIVER_OEM_STATUS_FAILURE;
 	}
 
