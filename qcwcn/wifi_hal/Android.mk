@@ -30,6 +30,7 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
 	external/libnl/include \
 	$(call include-path-for, libhardware_legacy)/hardware_legacy \
+	frameworks/opt/net/wifi/libwifi_hal/include \
 	external/wpa_supplicant_8/src/drivers \
 	$(TARGET_OUT_HEADERS)/libwpa_client \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
@@ -88,6 +89,7 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
 	external/libnl/include \
 	$(call include-path-for, libhardware_legacy)/hardware_legacy \
+	frameworks/opt/net/wifi/libwifi_hal/include \
 	external/wpa_supplicant_8/src/drivers \
 	$(TARGET_OUT_HEADERS)/libwpa_client \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
