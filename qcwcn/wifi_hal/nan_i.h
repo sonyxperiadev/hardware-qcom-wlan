@@ -350,6 +350,27 @@ typedef struct PACKED
     u16 value;
 } NanPublishServiceCancelRspMsg, *pNanPublishServiceCancelRspMsg;
 
+/* Params for NAN Publish Replied Ind */
+typedef struct PACKED
+{
+  u32  matchHandle;
+} NanPublishRepliedIndParams;
+
+/* NAN Publish Replied Ind */
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+    NanPublishRepliedIndParams publishRepliedIndParams;
+    /*
+     * Excludes TLVs
+     *
+     * Required: MAC Address
+     * Optional: Received RSSI Value
+     *
+     */
+    u8 ptlv[];
+} NanPublishRepliedIndMsg, *pNanPublishRepliedIndMsg;
+
 /* NAN Publish Terminated Ind */
 typedef struct PACKED
 {
@@ -916,6 +937,7 @@ typedef struct PACKED
   Definition of various NanIndication(events)
 */
 typedef enum {
+    NAN_INDICATION_PUBLISH_REPLIED         =0,
     NAN_INDICATION_PUBLISH_TERMINATED      =1,
     NAN_INDICATION_MATCH                   =2,
     NAN_INDICATION_MATCH_EXPIRED           =3,
@@ -928,18 +950,6 @@ typedef enum {
     NAN_INDICATION_SELF_TRANSMIT_FOLLOWUP  =10,
     NAN_INDICATION_UNKNOWN                 =0xFFFF
 } NanIndicationType;
-
-typedef struct {
-  /* NAN master rank being advertised by DE */
-  u64 master_rank;
-  /* NAN master preference being advertised by DE */
-  u8 master_pref;
-  /* random value being advertised by DE */
-  u8 random_factor;
-  /* hop_count from anchor master */
-  u8 hop_count;
-  u32 beacon_transmit_time;
-} NanStaParameter;
 
 /* NAN Capabilities Req */
 typedef struct PACKED
@@ -975,14 +985,6 @@ typedef struct PACKED
     NanMsgHeader fwHeader;
     u32 reason;
 } NanSelfTransmitFollowupIndMsg, *pNanSelfTransmitFollowupIndMsg;
-
-/*
-    Function to get the sta_parameter expected by Sigma
-    as per CAPI spec.
-*/
-wifi_error nan_get_sta_parameter(wifi_request_id id,
-                                 wifi_interface_handle iface,
-                                 NanStaParameter* msg);
 
 #ifdef __cplusplus
 }
