@@ -22,6 +22,7 @@
 #include "wifi_hal.h"
 #include "qca-vendor.h"
 #include "vendor_definitions.h"
+#include "nan_cert.h"
 
 class NanCommand : public WifiVendorCommand
 {
@@ -46,6 +47,7 @@ private:
     //based on the indication type
     int handleNanIndication();
     //Various Functions to get the appropriate indications
+    int getNanPublishReplied(NanPublishRepliedInd *event);
     int getNanPublishTerminated(NanPublishTerminatedInd *event);
     int getNanMatch(NanMatchInd *event);
     int getNanMatchExpired(NanMatchExpiredInd *event);
