@@ -23,6 +23,10 @@ ifeq ($(TARGET_BUILD_VARIANT),userdebug)
 LOCAL_CFLAGS += "-DLOG_NDEBUG=0 -UNDEBUG"
 endif
 
+ifneq ($(TARGET_USES_AOSP),true)
+LOCAL_CFLAGS += -DQTI_BSP=1
+endif
+
 # gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'
 LOCAL_CLANG_CFLAGS := -Wno-pointer-bool-conversion
 
@@ -80,6 +84,10 @@ LOCAL_CFLAGS += -Wno-unused-parameter -Wall -Werror
 LOCAL_CPPFLAGS += -Wno-conversion-null
 ifeq ($(TARGET_BUILD_VARIANT),userdebug)
 LOCAL_CFLAGS += "-DLOG_NDEBUG=0 -UNDEBUG"
+endif
+
+ifneq ($(TARGET_USES_AOSP),true)
+LOCAL_CFLAGS += -DQTI_BSP=1
 endif
 
 # gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'

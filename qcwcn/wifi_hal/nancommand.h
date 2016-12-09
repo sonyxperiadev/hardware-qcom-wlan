@@ -20,7 +20,6 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "wifi_hal.h"
-#include "qca-vendor.h"
 #include "vendor_definitions.h"
 #include "nan_cert.h"
 
@@ -47,7 +46,9 @@ private:
     //based on the indication type
     int handleNanIndication();
     //Various Functions to get the appropriate indications
+#if QTI_BSP
     int getNanPublishReplied(NanPublishRepliedInd *event);
+#endif
     int getNanPublishTerminated(NanPublishTerminatedInd *event);
     int getNanMatch(NanMatchInd *event);
     int getNanMatchExpired(NanMatchExpiredInd *event);

@@ -350,6 +350,7 @@ typedef struct PACKED
     u16 value;
 } NanPublishServiceCancelRspMsg, *pNanPublishServiceCancelRspMsg;
 
+#if QTI_BSP
 /* Params for NAN Publish Replied Ind */
 typedef struct PACKED
 {
@@ -370,6 +371,7 @@ typedef struct PACKED
      */
     u8 ptlv[];
 } NanPublishRepliedIndMsg, *pNanPublishRepliedIndMsg;
+#endif
 
 /* NAN Publish Terminated Ind */
 typedef struct PACKED

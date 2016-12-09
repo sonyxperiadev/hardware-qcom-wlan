@@ -35,6 +35,7 @@ int NanCommand::handleNanIndication()
 
     ALOGV("handleNanIndication msg_id:%u", msg_id);
     switch (msg_id) {
+#if QTI_BSP
     case NAN_INDICATION_PUBLISH_REPLIED:
         NanPublishRepliedInd publishRepliedInd;
         memset(&publishRepliedInd, 0, sizeof(publishRepliedInd));
@@ -43,6 +44,7 @@ int NanCommand::handleNanIndication()
             (*mHandler.EventPublishReplied)(&publishRepliedInd);
         }
         break;
+#endif
 
     case NAN_INDICATION_PUBLISH_TERMINATED:
         NanPublishTerminatedInd publishTerminatedInd;
@@ -156,7 +158,11 @@ NanIndicationType NanCommand::getIndicationType()
 
     switch (pHeader->msgId) {
     case NAN_MSG_ID_PUBLISH_REPLIED_IND:
+#if QTI_BSP
         return NAN_INDICATION_PUBLISH_REPLIED;
+#else
+        return NAN_INDICATION_UNKNOWN;
+#endif
     case NAN_MSG_ID_PUBLISH_TERMINATED_IND:
         return NAN_INDICATION_PUBLISH_TERMINATED;
     case NAN_MSG_ID_MATCH_IND:
@@ -182,6 +188,7 @@ NanIndicationType NanCommand::getIndicationType()
     }
 }
 
+#if QTI_BSP
 int NanCommand::getNanPublishReplied(NanPublishRepliedInd *event)
 {
     if (event == NULL || mNanVendorEvent == NULL) {
@@ -230,6 +237,7 @@ int NanCommand::getNanPublishReplied(NanPublishRepliedInd *event)
     }
     return WIFI_SUCCESS;
 }
+#endif
 
 int NanCommand::getNanPublishTerminated(NanPublishTerminatedInd *event)
 {
