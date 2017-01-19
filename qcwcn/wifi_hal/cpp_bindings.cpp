@@ -29,7 +29,6 @@
 #include <netlink/object-api.h>
 #include <netlink/netlink.h>
 #include <netlink/socket.h>
-#include <netlink-types.h>
 #include <net/if.h>
 
 #include "nl80211_copy.h"
@@ -964,7 +963,8 @@ wifi_error WifiVendorCommand::get_mac_addr(struct nlattr **tb_vendor,
     }
 
     memcpy(addr, (u8 *)nla_data(tb_vendor[attribute]),
-                  nla_len(tb_vendor[attribute]));
+                 nla_len(tb_vendor[attribute]));
+
     return WIFI_SUCCESS;
 }
 

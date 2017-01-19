@@ -20,11 +20,7 @@ include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -Wno-unused-parameter
 ifeq ($(TARGET_BUILD_VARIANT),userdebug)
-LOCAL_CFLAGS += "-DLOG_NDEBUG=0 -UNDEBUG"
-endif
-
-ifneq ($(TARGET_USES_AOSP),true)
-LOCAL_CFLAGS += -DQTI_BSP=1
+LOCAL_CFLAGS += "-DLOG_NDEBUG=0"
 endif
 
 # gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'
@@ -34,12 +30,9 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
 	external/libnl/include \
 	$(call include-path-for, libhardware_legacy)/hardware_legacy \
-	frameworks/opt/net/wifi/libwifi_hal/include \
 	external/wpa_supplicant_8/src/drivers \
 	$(TARGET_OUT_HEADERS)/libwpa_client \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-
-LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_SRC_FILES := \
 	wifi_hal.cpp \
@@ -60,7 +53,8 @@ LOCAL_SRC_FILES := \
 	wifilogger_diag.cpp \
 	ring_buffer.cpp \
 	rb_wrapper.cpp \
-	rssi_monitor.cpp
+	rssi_monitor.cpp \
+	roam.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_CLANG := true
@@ -83,11 +77,7 @@ LOCAL_REQUIRED_MODULES :=
 LOCAL_CFLAGS += -Wno-unused-parameter -Wall -Werror
 LOCAL_CPPFLAGS += -Wno-conversion-null
 ifeq ($(TARGET_BUILD_VARIANT),userdebug)
-LOCAL_CFLAGS += "-DLOG_NDEBUG=0 -UNDEBUG"
-endif
-
-ifneq ($(TARGET_USES_AOSP),true)
-LOCAL_CFLAGS += -DQTI_BSP=1
+LOCAL_CFLAGS += "-DLOG_NDEBUG=0"
 endif
 
 # gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'
@@ -97,12 +87,9 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
 	external/libnl/include \
 	$(call include-path-for, libhardware_legacy)/hardware_legacy \
-	frameworks/opt/net/wifi/libwifi_hal/include \
 	external/wpa_supplicant_8/src/drivers \
 	$(TARGET_OUT_HEADERS)/libwpa_client \
 	$(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-
-LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_SRC_FILES := \
 	wifi_hal.cpp \
@@ -123,12 +110,13 @@ LOCAL_SRC_FILES := \
 	wifilogger_diag.cpp \
 	ring_buffer.cpp \
 	rb_wrapper.cpp \
-	rssi_monitor.cpp
+	rssi_monitor.cpp \
+	roam.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_CLANG := true
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
-LOCAL_SHARED_LIBRARIES += libdl libhardware_legacy
+LOCAL_SHARED_LIBRARIES += libdl
 
 ifneq ($(wildcard external/libnl),)
 LOCAL_SHARED_LIBRARIES += libnl

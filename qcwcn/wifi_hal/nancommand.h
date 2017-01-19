@@ -20,6 +20,7 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include "wifi_hal.h"
+#include "qca-vendor.h"
 #include "vendor_definitions.h"
 #include "nan_cert.h"
 
@@ -46,9 +47,6 @@ private:
     //based on the indication type
     int handleNanIndication();
     //Various Functions to get the appropriate indications
-#if QTI_BSP
-    int getNanPublishReplied(NanPublishRepliedInd *event);
-#endif
     int getNanPublishTerminated(NanPublishTerminatedInd *event);
     int getNanMatch(NanMatchInd *event);
     int getNanMatchExpired(NanMatchExpiredInd *event);
@@ -83,6 +81,8 @@ private:
     void getNanReceivePostConnectivityCapabilityVal(
         const u8* pInValue,
         NanReceivePostConnectivityCapability *pRxCapab);
+    void getNanReceiveSdeaCtrlParams(const u8* pInValue,
+        NanSdeaCtrlParams *pPeerSdeaParams);
     int getNanReceivePostDiscoveryVal(const u8 *pInValue,
                                       u32 length,
                                       NanReceivePostDiscovery *pRxDisc);
@@ -129,6 +129,17 @@ public:
     int putNanBeaconSdfPayload(transaction_id id, const NanBeaconSdfPayloadRequest *pReq);
     int getNanStaParameter(wifi_interface_handle iface, NanStaParameter *pRsp);
     int putNanCapabilities(transaction_id id);
+    int putNanAvailabilityDebug(NanAvailabilityDebug debug);
+
+    /* Functions for NAN error translation
+       For NanResponse, NanPublishTerminatedInd, NanSubscribeTerminatedInd,
+       NanDisabledInd, NanTransmitFollowupInd:
+       function to translate firmware specific errors
+       to generic freamework error along with the error string
+    */
+    void NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
+                             u32 valueRcvd,
+                             void *pRsp);
 };
 #endif /* __WIFI_HAL_NAN_COMMAND_H__ */
 

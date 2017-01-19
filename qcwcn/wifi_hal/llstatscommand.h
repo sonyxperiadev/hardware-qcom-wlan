@@ -32,11 +32,11 @@
 #include <netlink/object-api.h>
 #include <netlink/netlink.h>
 #include <netlink/socket.h>
-#include <netlink-types.h>
 #include <net/if.h>
 
 #include "nl80211_copy.h"
 #include "common.h"
+#include "qca-vendor.h"
 #include "cpp_bindings.h"
 #include "link_layer_stats.h"
 
@@ -103,7 +103,7 @@ public:
 
     virtual int requestResponse();
 
-    virtual void notifyResponse();
+    virtual wifi_error notifyResponse();
 
     virtual int handleResponse(WifiEvent &reply);
 

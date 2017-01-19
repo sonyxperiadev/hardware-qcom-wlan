@@ -591,6 +591,49 @@ cleanup:
     return (wifi_error)ret;
 }
 
+/*  Function to get NAN capabilities */
+wifi_error nan_availability_config(transaction_id id,
+                                   wifi_interface_handle iface,
+                                   NanAvailabilityDebug debug)
+{
+    int ret = 0;
+    NanCommand *nanCommand = NULL;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+
+    nanCommand = new NanCommand(wifiHandle,
+                                0,
+                                OUI_QCA,
+                                QCA_NL80211_VENDOR_SUBCMD_NAN);
+    if (nanCommand == NULL) {
+        ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ret = nanCommand->create();
+    if (ret < 0)
+        goto cleanup;
+
+    /* Set the interface Id of the message. */
+    ret = nanCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0)
+        goto cleanup;
+
+    ret = nanCommand->putNanAvailabilityDebug(debug);
+    if (ret != 0) {
+        ALOGE("%s: putNanAvailabilityDebug Error:%d",__FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    ret = nanCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
+    }
+cleanup:
+    delete nanCommand;
+    return (wifi_error)ret;
+}
+
 wifi_error nan_initialize_vendor_cmd(wifi_interface_handle iface,
                                      NanCommand **nanCommand)
 {
@@ -752,7 +795,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
             id) ||
         nanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_INSTANCE_ID,
-            msg->service_instance_id) ||
+            msg->requestor_instance_id) ||
         nanCommand->put_bytes(
             QCA_WLAN_VENDOR_ATTR_NDP_PEER_DISCOVERY_MAC_ADDR,
             (char *)msg->peer_disc_mac_addr,
@@ -1004,7 +1047,7 @@ int NanCommand::setCallbackHandler(NanCallbackHandler nHandler)
     if (res != 0) {
         //error case should not happen print log
         ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x"
-              " subcmd=QCA_NL80211_VENDOR_SUBCMD_NAN", __FUNCTION__, mVendor_id);
+              "subcmd=QCA_NL80211_VENDOR_SUBCMD_NAN", __FUNCTION__, mVendor_id);
         return res;
     }
 
@@ -1012,7 +1055,7 @@ int NanCommand::setCallbackHandler(NanCallbackHandler nHandler)
     if (res != 0) {
         //error case should not happen print log
         ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x"
-              " subcmd=QCA_NL80211_VENDOR_SUBCMD_NDP", __FUNCTION__, mVendor_id);
+              "subcmd=QCA_NL80211_VENDOR_SUBCMD_NDP", __FUNCTION__, mVendor_id);
         return res;
     }
     return res;

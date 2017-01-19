@@ -37,26 +37,53 @@ extern "C"
 #endif /* __cplusplus */
 
 typedef struct {
-  /* NAN master rank being advertised by DE */
-  u64 master_rank;
-  /* NAN master preference being advertised by DE */
-  u8 master_pref;
-  /* random value being advertised by DE */
-  u8 random_factor;
-  /* hop_count from anchor master */
-  u8 hop_count;
-  u32 beacon_transmit_time;
+    /* NAN master rank being advertised by DE */
+    u64 master_rank;
+    /* NAN master preference being advertised by DE */
+    u8 master_pref;
+    /* random value being advertised by DE */
+    u8 random_factor;
+    /* hop_count from anchor master */
+    u8 hop_count;
+    u32 beacon_transmit_time;
+    /* NDP channel Frequency */
+    u32 ndp_channel_freq;
 } NanStaParameter;
 
+typedef struct PACKED
+{
+    /*
+      Valid bit values:
+      0 - Invalidates any current and previous configuration of nan availability
+      1 - Current configuration is valid
+    */
+    u32 valid:1;
+    /*
+      2g_band_availability bit values
+      0 - 2G band all channel and all slots not available
+      1 - 2G band all channel and all slots available
+    */
+    u32 band_availability_2g:1;
+    /*
+      5g_band_availability bit values
+      0 - 5G band all channel and all slots not available
+      1 - 5G band all channel and all slots available
+    */
+    u32 band_availability_5g:1;
+    u32 reserved:29;
+} NanAvailabilityDebug;
 
 /*
-    Function to get the sta_parameter expected by Sigma
-    as per CAPI spec.
+   Function to get the sta_parameter expected by Sigma
+   as per CAPI spec.
 */
 wifi_error nan_get_sta_parameter(transaction_id id,
                                  wifi_interface_handle iface,
                                  NanStaParameter* msg);
 
+wifi_error nan_availability_config(transaction_id id,
+                                   wifi_interface_handle iface,
+                                   NanAvailabilityDebug msg);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

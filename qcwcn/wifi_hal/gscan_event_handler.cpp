@@ -103,7 +103,6 @@ GScanCommandEventHandler::GScanCommandEventHandler(wifi_handle handle, int id,
     mPasspointAnqpLen = 0;
     mPasspointNetId = -1;
     mEventHandlingEnabled = false;
-    mPnoObtainedResultsSize = 0;
 
     switch(mSubCommandId)
     {
@@ -1019,31 +1018,6 @@ wifi_error GScanCommandEventHandler::gscan_parse_pno_network_results(
             nla_get_u16(
             tb2[
             QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CAPABILITY]);
-        if (!
-            tb2[
-                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH
-            ])
-        {
-            ALOGE("%s: RESULTS_SCAN_RESULT_IE_LENGTH not found", __FUNCTION__);
-            return WIFI_ERROR_INVALID_ARGS;
-        }
-        results[i].ie_length =
-            nla_get_u32(
-            tb2[
-            QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH]);
-
-        if (!
-            tb2[
-                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_DATA
-            ])
-        {
-            ALOGE("%s: RESULTS_SCAN_RESULT_IE_DATA not found", __FUNCTION__);
-            return WIFI_ERROR_INVALID_ARGS;
-        }
-        memcpy(&(results[i].ie_data[0]),
-            nla_data(tb2[
-                QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_DATA]),
-            results[i].ie_length);
 
         ALOGV("gscan_parse_pno_network_results: ts %" PRId64 " SSID  %s "
               "BSSID: %02x:%02x:%02x:%02x:%02x:%02x channel %d rssi %d "
@@ -1095,7 +1069,6 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
 
             ALOGV("Event QCA_NL80211_VENDOR_SUBCMD_GSCAN_FULL_SCAN_RESULT "
                 "received.");
-
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
             {
@@ -1788,8 +1761,7 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
             wifi_request_id id;
             u32 resultsBufSize = 0;
             u32 numResults = 0;
-            u32 startingIndex;
-            u32 ieDataSize = 0;
+            u32 startingIndex, sizeOfObtainedResults;
 
             if (!tbVendor[
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_REQUEST_ID])
@@ -1821,23 +1793,13 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_NUM_RESULTS_AVAILABLE]);
             ALOGV("%s: number of results:%d", __FUNCTION__, numResults);
 
-            if (getVariableLenDataSize(tbVendor,
-                                       QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_LIST,
-                                       QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_IE_LENGTH,
-                                       QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_MAX,
-                                       &ieDataSize) !=WIFI_SUCCESS)
-            {
-                ALOGE("%s: Failed to get IE data length",
-                    __FUNCTION__);
-                ret = WIFI_ERROR_INVALID_ARGS;
-                break;
-            }
+            /* Get the memory size of previous fragments, if any. */
+            sizeOfObtainedResults = mPnoNetworkFoundNumResults *
+                          sizeof(wifi_scan_result);
 
             mPnoNetworkFoundNumResults += numResults;
-
-            resultsBufSize += mPnoObtainedResultsSize
-                              + numResults * sizeof(wifi_scan_result)
-                              + ieDataSize;
+            resultsBufSize += mPnoNetworkFoundNumResults *
+                                            sizeof(wifi_scan_result);
 
             /* Check if this chunck of scan results is a continuation of
              * a previous one.
@@ -1857,10 +1819,9 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 break;
             }
             /* Initialize the newly allocated memory area with 0. */
-            memset((u8 *)mPnoNetworkFoundResults + mPnoObtainedResultsSize, 0,
-                    resultsBufSize - mPnoObtainedResultsSize);
+            memset((u8 *)mPnoNetworkFoundResults + sizeOfObtainedResults, 0,
+                    resultsBufSize - sizeOfObtainedResults);
 
-            mPnoObtainedResultsSize = resultsBufSize;
             ALOGV("%s: Num of AP FOUND results = %d. \n", __FUNCTION__,
                                             mPnoNetworkFoundNumResults);
 
@@ -1906,7 +1867,6 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
                 }
                 mPnoNetworkFoundMoreData = false;
                 mPnoNetworkFoundNumResults = 0;
-                mPnoObtainedResultsSize = 0;
             }
         }
         break;
@@ -2055,33 +2015,4 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
         }
     }
     return NL_SKIP;
-}
-
-wifi_error GScanCommandEventHandler::getVariableLenDataSize(
-                                struct nlattr **tb_vendor,
-                                int nest_attr_id,
-                                int variable_len_attr_id,
-                                int attr_max,
-                                u32 *total_size)
-{
-    struct nlattr *nestInfo;
-    int rem = 0, size = 0;
-
-    for (nestInfo = (struct nlattr *) nla_data(tb_vendor[nest_attr_id]),
-            rem = nla_len(tb_vendor[nest_attr_id]);
-                nla_ok(nestInfo, rem); nestInfo = nla_next(nestInfo, &(rem)))
-    {
-        struct nlattr *tb2[attr_max + 1];
-        nla_parse(tb2, attr_max, (struct nlattr *) nla_data(nestInfo),
-                  nla_len(nestInfo), NULL);
-        if (!tb2[variable_len_attr_id])
-        {
-            ALOGE("%s: id: %d not found", __FUNCTION__, variable_len_attr_id);
-            return WIFI_ERROR_INVALID_ARGS;
-        }
-        size += nla_get_u32 (tb2[variable_len_attr_id]);
-    }
-
-    *total_size = size;
-    return WIFI_SUCCESS;
 }

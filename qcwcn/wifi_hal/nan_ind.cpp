@@ -35,17 +35,6 @@ int NanCommand::handleNanIndication()
 
     ALOGV("handleNanIndication msg_id:%u", msg_id);
     switch (msg_id) {
-#if QTI_BSP
-    case NAN_INDICATION_PUBLISH_REPLIED:
-        NanPublishRepliedInd publishRepliedInd;
-        memset(&publishRepliedInd, 0, sizeof(publishRepliedInd));
-        res = getNanPublishReplied(&publishRepliedInd);
-        if (!res && mHandler.EventPublishReplied) {
-            (*mHandler.EventPublishReplied)(&publishRepliedInd);
-        }
-        break;
-#endif
-
     case NAN_INDICATION_PUBLISH_TERMINATED:
         NanPublishTerminatedInd publishTerminatedInd;
         memset(&publishTerminatedInd, 0, sizeof(publishTerminatedInd));
@@ -158,11 +147,7 @@ NanIndicationType NanCommand::getIndicationType()
 
     switch (pHeader->msgId) {
     case NAN_MSG_ID_PUBLISH_REPLIED_IND:
-#if QTI_BSP
-        return NAN_INDICATION_PUBLISH_REPLIED;
-#else
         return NAN_INDICATION_UNKNOWN;
-#endif
     case NAN_MSG_ID_PUBLISH_TERMINATED_IND:
         return NAN_INDICATION_PUBLISH_TERMINATED;
     case NAN_MSG_ID_MATCH_IND:
@@ -188,57 +173,6 @@ NanIndicationType NanCommand::getIndicationType()
     }
 }
 
-#if QTI_BSP
-int NanCommand::getNanPublishReplied(NanPublishRepliedInd *event)
-{
-    if (event == NULL || mNanVendorEvent == NULL) {
-        ALOGE("%s: Invalid input argument event:%p mNanVendorEvent:%p",
-              __func__, event, mNanVendorEvent);
-        return WIFI_ERROR_INVALID_ARGS;
-    }
-
-    pNanPublishRepliedIndMsg pRsp = (pNanPublishRepliedIndMsg)mNanVendorEvent;
-    event->requestor_instance_id = pRsp->publishRepliedIndParams.matchHandle;
-
-    event->rssi_value = 0;
-    u8 *pInputTlv = pRsp->ptlv;
-    NanTlv outputTlv;
-    u16 readLen = 0;
-    int remainingLen = (mNanDataLen - \
-        (sizeof(NanMsgHeader)));
-
-    if (remainingLen <= 0) {
-        ALOGI("%s: No TLV's present",__func__);
-        return WIFI_SUCCESS;
-    }
-    while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
-        switch (outputTlv.type) {
-        case NAN_TLV_TYPE_MAC_ADDRESS:
-            if (outputTlv.length > sizeof(event->addr)) {
-                outputTlv.length = sizeof(event->addr);
-            }
-            memcpy(event->addr, outputTlv.value, outputTlv.length);
-            break;
-        case NAN_TLV_TYPE_RECEIVED_RSSI_VALUE:
-            if (outputTlv.length > sizeof(event->rssi_value)) {
-                outputTlv.length = sizeof(event->rssi_value);
-            }
-            memcpy(&event->rssi_value, outputTlv.value,
-                   outputTlv.length);
-            break;
-        default:
-            ALOGI("Unknown TLV type skipped");
-            break;
-        }
-        remainingLen -= readLen;
-        pInputTlv += readLen;
-        memset(&outputTlv, 0, sizeof(outputTlv));
-    }
-    return WIFI_SUCCESS;
-}
-#endif
-
 int NanCommand::getNanPublishTerminated(NanPublishTerminatedInd *event)
 {
     if (event == NULL || mNanVendorEvent == NULL) {
@@ -249,7 +183,8 @@ int NanCommand::getNanPublishTerminated(NanPublishTerminatedInd *event)
 
     pNanPublishTerminatedIndMsg pRsp = (pNanPublishTerminatedIndMsg)mNanVendorEvent;
     event->publish_id = pRsp->fwHeader.handle;
-    event->reason = (NanStatusType)pRsp->reason;
+    NanErrorTranslation((NanInternalStatusType)pRsp->reason, 0,
+                        (void*)event);
     return WIFI_SUCCESS;
 }
 
@@ -360,6 +295,36 @@ int NanCommand::getNanMatch(NanMatchInd *event)
                    outputTlv.value, outputTlv.length);
             event->cluster_attribute_len = outputTlv.length;
             break;
+        case NAN_TLV_TYPE_NAN_CSID:
+            if (outputTlv.length > sizeof(event->peer_cipher_type)) {
+                outputTlv.length = sizeof(event->peer_cipher_type);
+            }
+            memcpy(&event->peer_cipher_type, outputTlv.value,
+                   outputTlv.length);
+            break;
+        case NAN_TLV_TYPE_NAN_SCID:
+            if (outputTlv.length > sizeof(event->scid)) {
+                outputTlv.length = sizeof(event->scid);
+            }
+            event->scid_len = outputTlv.length;
+            memcpy(event->scid, outputTlv.value, outputTlv.length);
+            break;
+        case NAN_TLV_TYPE_SDEA_CTRL_PARAMS:
+            if (outputTlv.length != sizeof(u32)) {
+                ALOGE("NAN_TLV_TYPE_SDEA_CTRL_PARAMS"
+                      "Incorrect size:%d expecting %zu", outputTlv.length,
+                      sizeof(u32));
+                break;
+            }
+            getNanReceiveSdeaCtrlParams(outputTlv.value,
+                                             &event->peer_sdea_params);
+            break;
+        case NAN_TLV_TYPE_NAN_RANGE_RESULT:
+            if (outputTlv.length > sizeof(event->range_result)) {
+                outputTlv.length = sizeof(event->range_result);
+            }
+            memcpy(&event->range_result, outputTlv.value, outputTlv.length);
+            break;
         default:
             ALOGV("Unknown TLV type skipped");
             break;
@@ -395,7 +360,8 @@ int NanCommand::getNanSubscribeTerminated(NanSubscribeTerminatedInd *event)
 
     pNanSubscribeTerminatedIndMsg pRsp = (pNanSubscribeTerminatedIndMsg)mNanVendorEvent;
     event->subscribe_id = pRsp->fwHeader.handle;
-    event->reason = (NanStatusType)pRsp->reason;
+    NanErrorTranslation((NanInternalStatusType)pRsp->reason, 0,
+                        (void*)event);
     return WIFI_SUCCESS;
 }
 
@@ -536,7 +502,8 @@ int NanCommand::getNanDisabled(NanDisabledInd *event)
     }
 
     pNanDisableIndMsg pRsp = (pNanDisableIndMsg)mNanVendorEvent;
-    event->reason = (NanStatusType)pRsp->reason;
+    NanErrorTranslation((NanInternalStatusType)pRsp->reason, 0,
+                        (void*)event);
     return WIFI_SUCCESS;
 
 }
@@ -689,6 +656,25 @@ void NanCommand::getNanReceivePostConnectivityCapabilityVal(
         pRxCapab->is_wfds_supported = (pInValue[0] & (0x01 << 1));
         pRxCapab->is_wfd_supported = pInValue[0] & 0x01;
     }
+}
+
+void NanCommand::getNanReceiveSdeaCtrlParams(const u8* pInValue,
+    NanSdeaCtrlParams *pPeerSdeaParams)
+{
+    if (pInValue && pPeerSdeaParams) {
+        pPeerSdeaParams->security_cfg =
+                          (NanDataPathSecurityCfgStatus)((pInValue[0] & BIT_6) ?
+                           NAN_DP_CONFIG_SECURITY : NAN_DP_CONFIG_NO_SECURITY);
+        pPeerSdeaParams->ranging_state =
+                           (NanRangingState)((pInValue[0] & BIT_7) ?
+                            NAN_RANGING_ENABLE : NAN_RANGING_DISABLE);
+#if 0
+        pPeerSdeaParams->enable_ranging_limit =
+                         (NanRangingLimitState)((pInValue[0] & BIT_8) ?
+                          NAN_RANGING_LIMIT_ENABLE : NAN_RANGING_LIMIT_DISABLE);
+#endif
+    }
+    return;
 }
 
 int NanCommand::getNanReceivePostDiscoveryVal(const u8 *pInValue,
@@ -862,9 +848,10 @@ int NanCommand::getNanStaParameter(wifi_interface_handle iface,
     }
     ALOGV("%s: NanStaparameter Master_pref:%x," \
           " Random_factor:%x, hop_count:%x " \
-          " beacon_transmit_time:%d", __func__,
+          " beacon_transmit_time:%d" \
+          " ndp_channel_freq:%d", __func__,
           pRsp->master_pref, pRsp->random_factor,
-          pRsp->hop_count, pRsp->beacon_transmit_time);
+          pRsp->hop_count, pRsp->beacon_transmit_time, pRsp->ndp_channel_freq);
 cleanup:
     mStaParam = NULL;
     return (int)ret;
@@ -880,7 +867,8 @@ int NanCommand::getNanTransmitFollowupInd(NanTransmitFollowupInd *event)
 
     pNanSelfTransmitFollowupIndMsg pRsp = (pNanSelfTransmitFollowupIndMsg)mNanVendorEvent;
     event->id = pRsp->fwHeader.transactionId;
-    event->reason = (NanStatusType)pRsp->reason;
+    NanErrorTranslation((NanInternalStatusType)pRsp->reason, 0,
+                        (void*)event);
     return WIFI_SUCCESS;
 }
 

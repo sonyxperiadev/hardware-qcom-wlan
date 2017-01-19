@@ -857,11 +857,20 @@ int LLStatsCommand::requestResponse()
     return WifiCommand::requestResponse(mMsg);
 }
 
-void LLStatsCommand::notifyResponse()
+wifi_error LLStatsCommand::notifyResponse()
 {
-    mHandler.on_link_stats_results(mRequestId,
-                            mResultsParams.iface_stat, mNumRadios,
-                            mResultsParams.radio_stat);
+    wifi_error ret = WIFI_SUCCESS;
+
+    /* Indicate stats to framework only if both radio and iface stats
+     * are present */
+    if (mResultsParams.radio_stat && mResultsParams.iface_stat) {
+        mHandler.on_link_stats_results(mRequestId,
+                                       mResultsParams.iface_stat, mNumRadios,
+                                       mResultsParams.radio_stat);
+    } else {
+        ret = WIFI_ERROR_INVALID_ARGS;
+    }
+
     if(mResultsParams.radio_stat)
     {
         if (mResultsParams.radio_stat->tx_time_per_levels)
@@ -879,6 +888,8 @@ void LLStatsCommand::notifyResponse()
         free(mResultsParams.iface_stat);
         mResultsParams.iface_stat = NULL;
      }
+
+     return ret;
 }
 
 
@@ -1064,7 +1075,7 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                 case QCA_NL80211_VENDOR_SUBCMD_LL_STATS_TYPE_PEERS:
                 {
                     struct nlattr *peerInfo;
-                    wifi_iface_stat *pIfaceStat;
+                    wifi_iface_stat *pIfaceStat = NULL;
                     u32 numPeers, num_rates = 0;
                     if (!tb_vendor[
                             QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_NUM_PEERS])
@@ -1132,10 +1143,9 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                         if(mResultsParams.iface_stat) {
                             memcpy ( pIfaceStat, mResultsParams.iface_stat,
                                 sizeof(wifi_iface_stat));
-                            free(mResultsParams.iface_stat);
+                            free (mResultsParams.iface_stat);
+                            mResultsParams.iface_stat = pIfaceStat;
                         }
-                        mResultsParams.iface_stat = pIfaceStat;
-
                         wifi_peer_info *pPeerStats;
                         pIfaceStat->num_peers = numPeers;
 
@@ -1351,8 +1361,9 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
     if (ret < 0)
         goto cleanup;
 
-    if (ret == 0)
-        LLCommand->notifyResponse();
+    if (ret == 0) {
+        ret = LLCommand->notifyResponse();
+    }
 
 cleanup:
     return (wifi_error)ret;

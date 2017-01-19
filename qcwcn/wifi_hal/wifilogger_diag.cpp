@@ -980,7 +980,7 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
                     }
                     break;
                 default:
-                    return WIFI_SUCCESS;
+                    break;
                 }
             }
             break;
@@ -2193,7 +2193,7 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
         }
     } else if (wnl->nlh.nlmsg_type == ANI_NL_MSG_CNSS_DIAG) {
         uint16_t diag_fw_type;
-        buf = (uint8_t *)NLMSG_DATA(wnl) + sizeof(wnl->radio);
+        buf = (uint8_t *)NLMSG_DATA(wnl);
 
         fw_event_hdr_t *event_hdr =
                           (fw_event_hdr_t *)(buf);
