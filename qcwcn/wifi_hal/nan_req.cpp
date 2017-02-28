@@ -136,10 +136,6 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
            sizeof(u32)) : 0 \
         ) + \
         (
-           pReq->config_responder_auto_response ? (SIZEOF_TLV_HDR + \
-           sizeof(u32)) : 0 \
-        ) + \
-        (
            pReq->discovery_indication_cfg ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
         );
@@ -291,11 +287,6 @@ int NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *pReq)
                       sizeof(u32),
                       (const u8*)&pReq->disc_mac_addr_rand_interval_sec, tlvs);
     }
-    if (pReq->config_responder_auto_response) {
-        tlvs = addTlv(NAN_TLV_TYPE_RANGING_AUTO_RESPONSE_CFG,
-                      sizeof(u32),
-                      (const u8*)&pReq->ranging_auto_response_cfg, tlvs);
-    }
     if (pReq->discovery_indication_cfg) {
         NanConfigDiscoveryIndications discovery_indications;
         discovery_indications.disableDiscoveryMacAddressEvent =
@@ -423,10 +414,6 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
            sizeof(u32)) : 0 \
         ) + \
         (
-           pReq->config_responder_auto_response ? (SIZEOF_TLV_HDR + \
-           sizeof(u32)) : 0 \
-        )  + \
-        (
            pReq->discovery_indication_cfg ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
         );
@@ -537,11 +524,6 @@ int NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *pReq)
                       sizeof(u32),
                       (const u8*)&pReq->disc_mac_addr_rand_interval_sec, tlvs);
     }
-    if (pReq->config_responder_auto_response) {
-        tlvs = addTlv(NAN_TLV_TYPE_RANGING_AUTO_RESPONSE_CFG,
-                      sizeof(u32),
-                      (const u8*)&pReq->ranging_auto_response_cfg, tlvs);
-    }
 
     if (pReq->discovery_indication_cfg) {
         NanConfigDiscoveryIndications discovery_indications;
@@ -584,7 +566,7 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         (pReq->service_specific_info_len ? SIZEOF_TLV_HDR + pReq->service_specific_info_len : 0) +
         (pReq->rx_match_filter_len ? SIZEOF_TLV_HDR + pReq->rx_match_filter_len : 0) +
         (pReq->tx_match_filter_len ? SIZEOF_TLV_HDR + pReq->tx_match_filter_len : 0) +
-        (pReq->service_responder_policy ? SIZEOF_TLV_HDR + sizeof(NanServiceAcceptPolicy) : 0) +
+        (SIZEOF_TLV_HDR + sizeof(NanServiceAcceptPolicy)) +
         (pReq->cipher_type ? SIZEOF_TLV_HDR + sizeof(NanCsidType) : 0) +
         (pReq->pmk_len ? SIZEOF_TLV_HDR + NAN_PMK_INFO_LEN : 0) +
         ((pReq->sdea_params.config_nan_data_path || pReq->sdea_params.security_cfg ||
@@ -648,10 +630,11 @@ int NanCommand::putNanPublish(transaction_id id, const NanPublishRequest *pReq)
         tlvs = addTlv(NAN_TLV_TYPE_TX_MATCH_FILTER, pReq->tx_match_filter_len,
                       (const u8*)&pReq->tx_match_filter[0], tlvs);
     }
-    if (pReq->service_responder_policy) {
-        tlvs = addTlv(NAN_TLV_TYPE_NAN_SERVICE_ACCEPT_POLICY, sizeof(NanServiceAcceptPolicy),
-                      (const u8*)&pReq->service_responder_policy, tlvs);
-    }
+
+    /* Pass the Accept policy always */
+    tlvs = addTlv(NAN_TLV_TYPE_NAN_SERVICE_ACCEPT_POLICY, sizeof(NanServiceAcceptPolicy),
+                  (const u8*)&pReq->service_responder_policy, tlvs);
+
     if (pReq->cipher_type) {
         NanCsidType pNanCsidType;
         pNanCsidType.csid_type = pReq->cipher_type;

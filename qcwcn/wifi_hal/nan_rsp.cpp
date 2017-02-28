@@ -587,6 +587,12 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
                        pFwRsp->max_app_info_len;
             pRsp->body.nan_capabilities.max_queued_transmit_followup_msgs = \
                        pFwRsp->max_queued_transmit_followup_msgs;
+            pRsp->body.nan_capabilities.cipher_suites_supported = \
+                       pFwRsp->cipher_suites_supported;
+            pRsp->body.nan_capabilities.max_subscribe_address = \
+                       pFwRsp->max_subscribe_address;
+            pRsp->body.nan_capabilities.max_sdea_service_specific_info_len = \
+                       pFwRsp->max_sdea_service_specific_info_len;
             break;
         }
         default:
