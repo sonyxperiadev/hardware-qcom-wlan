@@ -347,7 +347,7 @@ typedef struct PACKED
 {
     u16 ttl;
     u16 period;
-    u32 reserved:1;
+    u32 replyIndFlag:1;
     u32 publishType:2;
     u32 txType:1;
     u32 rssiThresholdFlag:1;
@@ -406,6 +406,27 @@ typedef struct PACKED
     u16 reason;
     u16 reserved;
 } NanPublishTerminatedIndMsg, *pNanPublishTerminatedIndMsg;
+
+/* Params for NAN Publish Replied Ind */
+typedef struct PACKED
+{
+  u32  matchHandle;
+} NanPublishRepliedIndParams;
+
+/* NAN Publish Replied Ind */
+typedef struct PACKED
+{
+    NanMsgHeader fwHeader;
+    NanPublishRepliedIndParams publishRepliedIndParams;
+    /*
+     * Excludes TLVs
+     *
+     * Required: MAC Address
+     * Optional: Received RSSI Value
+     *
+     */
+    u8 ptlv[];
+} NanPublishRepliedIndMsg, *pNanPublishRepliedIndMsg;
 
 /* NAN Subscribe Service Req */
 typedef struct PACKED
@@ -974,6 +995,7 @@ typedef struct PACKED
   Definition of various NanIndication(events)
 */
 typedef enum {
+    NAN_INDICATION_PUBLISH_REPLIED         =0,
     NAN_INDICATION_PUBLISH_TERMINATED      =1,
     NAN_INDICATION_MATCH                   =2,
     NAN_INDICATION_MATCH_EXPIRED           =3,
