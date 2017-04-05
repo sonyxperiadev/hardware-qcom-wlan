@@ -940,6 +940,7 @@ typedef struct PACKED
     u32 discBeaconTxFailures;
     u32 amHopCountExpireCount;
     u32 ndpChannelFreq;
+    u32 ndpChannelFreq2;
 } FwNanSyncStats, *pFwNanSyncStats;
 
 /* NAN Misc DE Statistics */

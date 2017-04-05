@@ -867,6 +867,7 @@ void NanCommand::handleNanStatsResponse(NanStatsType stats_type,
         sync_stats.discBeaconTxFailures = pSyncStats->discBeaconTxFailures;
         sync_stats.amHopCountExpireCount = pSyncStats->amHopCountExpireCount;
         sync_stats.ndpChannelFreq = pSyncStats->ndpChannelFreq;
+        sync_stats.ndpChannelFreq2 = pSyncStats->ndpChannelFreq2;
         memcpy(&pRsp->data, &sync_stats, sizeof(NanSyncStats));
     } else if (stats_type == NAN_STATS_ID_DE) {
         NanDeStats de_stats;
