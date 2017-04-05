@@ -21,6 +21,7 @@
 #include "common.h"
 #include "cpp_bindings.h"
 #include <utils/Log.h>
+#include <errno.h>
 #include "nancommand.h"
 #include "vendor_definitions.h"
 
@@ -31,6 +32,8 @@
 #define PRINTF_FORMAT(a,b)
 #define STRUCT_PACKED
 #endif
+
+#define OUT_OF_BAND_SERVICE_INSTANCE_ID 0
 
 //Singleton Static Instance
 NanCommand* NanCommand::mNanCommandInstance  = NULL;
@@ -592,9 +595,10 @@ cleanup:
 }
 
 /*  Function to get NAN capabilities */
-wifi_error nan_availability_config(transaction_id id,
+wifi_error nan_debug_command_config(transaction_id id,
                                    wifi_interface_handle iface,
-                                   NanAvailabilityDebug debug)
+                                   NanDebugParams debug,
+                                   int debug_msg_length)
 {
     int ret = 0;
     NanCommand *nanCommand = NULL;
@@ -610,6 +614,12 @@ wifi_error nan_availability_config(transaction_id id,
         return WIFI_ERROR_UNKNOWN;
     }
 
+    if (debug_msg_length <= 0) {
+        ALOGE("%s: Invalid debug message length = %d", __FUNCTION__,
+                                                       debug_msg_length);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
     ret = nanCommand->create();
     if (ret < 0)
         goto cleanup;
@@ -619,9 +629,9 @@ wifi_error nan_availability_config(transaction_id id,
     if (ret < 0)
         goto cleanup;
 
-    ret = nanCommand->putNanAvailabilityDebug(debug);
+    ret = nanCommand->putNanDebugCommand(debug, debug_msg_length);
     if (ret != 0) {
-        ALOGE("%s: putNanAvailabilityDebug Error:%d",__FUNCTION__, ret);
+        ALOGE("%s: putNanDebugCommand Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
 
@@ -674,6 +684,7 @@ wifi_error nan_data_interface_create(transaction_id id,
                                      wifi_interface_handle iface,
                                      char* iface_name)
 {
+    ALOGV("NAN_DP_INTERFACE_CREATE");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
@@ -721,6 +732,7 @@ wifi_error nan_data_interface_delete(transaction_id id,
                                      wifi_interface_handle iface,
                                      char* iface_name)
 {
+    ALOGV("NAN_DP_INTERFACE_DELETE");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
@@ -768,6 +780,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
                                       wifi_interface_handle iface,
                                       NanDataPathInitiatorRequest* msg)
 {
+    ALOGV("NAN_DP_REQUEST_INITIATOR");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData, *nlCfgSecurity, *nlCfgQos;
     NanCommand *nanCommand = NULL;
@@ -780,6 +793,22 @@ wifi_error nan_data_request_initiator(transaction_id id,
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
         return (wifi_error)ret;
+    }
+
+    if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
+        (msg->key_info.body.pmk_info.pmk_len == 0) &&
+        (msg->key_info.body.passphrase_info.passphrase_len == 0)) {
+        ALOGE("%s: Failed-Initiator req, missing pmk and passphrase",
+               __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
+        (msg->requestor_instance_id == OUT_OF_BAND_SERVICE_INSTANCE_ID) &&
+        (msg->service_name_len == 0)) {
+        ALOGE("%s: Failed-Initiator req, missing service name for out of band request",
+              __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -849,11 +878,30 @@ wifi_error nan_data_request_initiator(transaction_id id,
         if (nanCommand->put_u32(QCA_WLAN_VENDOR_ATTR_NDP_CSID,
                 msg->cipher_type))
             goto cleanup;
-    }
-    if (msg->pmk_len == NAN_PMK_INFO_LEN) {
-        if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
-            (char *)msg->pmk, msg->pmk_len))
-            goto cleanup;
+
+        if ( msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK &&
+             msg->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
+                (char *)msg->key_info.body.pmk_info.pmk,
+                msg->key_info.body.pmk_info.pmk_len))
+                goto cleanup;
+        } else if (msg->key_info.key_type ==
+            NAN_SECURITY_KEY_INPUT_PASSPHRASE &&
+            msg->key_info.body.passphrase_info.passphrase_len >=
+            NAN_SECURITY_MIN_PASSPHRASE_LEN &&
+            msg->key_info.body.passphrase_info.passphrase_len <=
+            NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
+                (char *)msg->key_info.body.passphrase_info.passphrase,
+                msg->key_info.body.passphrase_info.passphrase_len))
+                goto cleanup;
+        }
+
+        if (msg->service_name_len) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_NAME,
+                (char *)msg->service_name, msg->service_name_len))
+                goto cleanup;
+        }
     }
     nanCommand->attr_end(nlData);
 
@@ -870,6 +918,7 @@ wifi_error nan_data_indication_response(transaction_id id,
                                         wifi_interface_handle iface,
                                         NanDataPathIndicationResponse* msg)
 {
+    ALOGV("NAN_DP_INDICATION_RESPONSE");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData, *nlCfgSecurity, *nlCfgQos;
     NanCommand *nanCommand = NULL;
@@ -882,6 +931,14 @@ wifi_error nan_data_indication_response(transaction_id id,
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
         return (wifi_error)ret;
+    }
+
+    if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
+        (msg->key_info.body.pmk_info.pmk_len == 0) &&
+        (msg->key_info.body.passphrase_info.passphrase_len == 0)) {
+        ALOGE("%s: Failed-Initiator req, missing pmk and passphrase",
+               __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -940,11 +997,29 @@ wifi_error nan_data_indication_response(transaction_id id,
         if (nanCommand->put_u32(QCA_WLAN_VENDOR_ATTR_NDP_CSID,
                 msg->cipher_type))
             goto cleanup;
-    }
-    if (msg->pmk_len == NAN_PMK_INFO_LEN) {
-        if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
-            (char *)msg->pmk, msg->pmk_len))
-            goto cleanup;
+
+        if ( msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK &&
+             msg->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
+                (char *)msg->key_info.body.pmk_info.pmk,
+                msg->key_info.body.pmk_info.pmk_len))
+                goto cleanup;
+        } else if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE &&
+            msg->key_info.body.passphrase_info.passphrase_len >=
+            NAN_SECURITY_MIN_PASSPHRASE_LEN &&
+            msg->key_info.body.passphrase_info.passphrase_len <=
+            NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
+                (char *)msg->key_info.body.passphrase_info.passphrase,
+                msg->key_info.body.passphrase_info.passphrase_len))
+                goto cleanup;
+        }
+
+        if (msg->service_name_len) {
+            if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_NAME,
+                (char *)msg->service_name, msg->service_name_len))
+                goto cleanup;
+        }
     }
     nanCommand->attr_end(nlData);
 
@@ -961,6 +1036,7 @@ wifi_error nan_data_end(transaction_id id,
                         wifi_interface_handle iface,
                         NanDataPathEndRequest* msg)
 {
+    ALOGV("NAN_DP_END");
     int ret = WIFI_SUCCESS;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
