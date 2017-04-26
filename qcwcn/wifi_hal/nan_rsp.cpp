@@ -347,6 +347,7 @@ void NanCommand::NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
     NanPublishTerminatedInd* pRspInd;
     NanDisabledInd* pRspdInd;
     char tlvInfo[NAN_ERROR_STR_LEN];
+    tlvInfo[0] = '\0';
 
     if (isNanResponse()) {
         pRsp = (NanResponseMsg*)pResponse;
