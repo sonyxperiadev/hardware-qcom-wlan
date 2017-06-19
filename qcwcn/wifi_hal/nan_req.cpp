@@ -1393,6 +1393,12 @@ wifi_error NanCommand::requestEvent()
         goto out;
     }
 
+    if (!mInfo->cmd_sock) {
+        ALOGE("%s: Command socket is null",__func__);
+        res = WIFI_ERROR_OUT_OF_MEMORY;
+        goto out;
+    }
+
     /* send message */
     ALOGV("%s:Handle:%p Socket Value:%p", __func__, mInfo, mInfo->cmd_sock);
     status = nl_send_auto_complete(mInfo->cmd_sock, mMsg.getMessage());
