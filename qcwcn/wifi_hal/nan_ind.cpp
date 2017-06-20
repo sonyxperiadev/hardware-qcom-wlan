@@ -1070,6 +1070,7 @@ int NanCommand::getNdpConfirm(struct nlattr **tb_vendor,
                               NanDataPathConfirmInd *event)
 {
     u32 len = 0;
+    NanInternalStatusType drv_reason_code;
 
     if (event == NULL || tb_vendor == NULL) {
         ALOGE("%s: Invalid input argument event:%p tb_vendor:%p",
@@ -1101,6 +1102,20 @@ int NanCommand::getNdpConfirm(struct nlattr **tb_vendor,
     } else {
         ALOGD("%s: NDP App Info not present", __FUNCTION__);
     }
+    drv_reason_code = (NanInternalStatusType)nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_DRV_RETURN_VALUE]);
+    ALOGD("%s: Drv reason code %d", __FUNCTION__, drv_reason_code);
+    switch (drv_reason_code) {
+        case NDP_I_MGMT_FRAME_REQUEST_FAILED:
+        case NDP_I_MGMT_FRAME_RESPONSE_FAILED:
+        case NDP_I_MGMT_FRAME_CONFIRM_FAILED:
+        case NDP_I_MGMT_FRAME_SECURITY_INSTALL_FAILED:
+            event->reason_code = NAN_STATUS_PROTOCOL_FAILURE;
+            break;
+        default:
+            event->reason_code = (NanStatusType)drv_reason_code;
+            break;
+    }
+    ALOGD("%s: Reason code %d", __FUNCTION__, event->reason_code);
     return WIFI_SUCCESS;
 }
 
