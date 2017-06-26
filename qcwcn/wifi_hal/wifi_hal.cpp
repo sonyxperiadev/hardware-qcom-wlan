@@ -40,6 +40,9 @@
 #include <netinet/in.h>
 #include <cld80211_lib.h>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "sync.h"
 
 #define LOG_TAG  "WifiHAL"

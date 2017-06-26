@@ -32,6 +32,7 @@
 #include <time.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "wificonfigcommand.h"
 
 /* Implementation of the API functions exposed in wifi_config.h */
