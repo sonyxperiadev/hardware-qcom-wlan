@@ -286,6 +286,146 @@ cleanup:
     return (wifi_error)ret;
 }
 
+wifi_error wifi_set_tx_power_limit(wifi_interface_handle handle,
+                                   u32 tx_level_dbm)
+{
+    int ret = 0;
+    WiFiConfigCommand *wifiConfigCommand;
+    struct nlattr *nlData, *nlLimitSpec;
+    interface_info *ifaceInfo = getIfaceInfo(handle);
+    wifi_handle wifiHandle = getWifiHandle(handle);
+    u32 numSpecs = 1, j;
+
+    ALOGV("%s : tx power limit:%u", __FUNCTION__, tx_level_dbm);
+
+    wifiConfigCommand = new WiFiConfigCommand(
+                            wifiHandle,
+                            1,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS);
+    if (wifiConfigCommand == NULL) {
+        ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = wifiConfigCommand->create();
+    if (ret < 0) {
+        ALOGE("wifi_set_tx_power_limit: failed to create NL msg. Error:%d", ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = wifiConfigCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0) {
+        ALOGE("wifi_set_tx_power_limit: failed to set iface id. Error:%d", ret);
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ALOGE("wifi_set_tx_power_limit: failed attr_start for VENDOR_DATA. "
+            "Error:%d", ret);
+        goto cleanup;
+    }
+
+    if (wifiConfigCommand->put_u32(
+                      QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SAR_ENABLE,
+                      QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_USER) ||
+        wifiConfigCommand->put_u32(
+                      QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_NUM_SPECS, numSpecs)) {
+        ALOGE("failed to put SAR_ENABLE or NUM_SPECS");
+        goto cleanup;
+    }
+
+    nlLimitSpec =
+        wifiConfigCommand->attr_start(QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SPEC);
+
+    /* Add NL attributes for SAR limit specs . */
+    for (j = 0; j < numSpecs; j++) {
+        struct nlattr *nl_sarSpec = wifiConfigCommand->attr_start(j);
+
+        if (wifiConfigCommand->put_u32(
+            QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SPEC_POWER_LIMIT, tx_level_dbm)) {
+            ALOGE("wifi_set_tx_power_limit: failed to add vendor data.");
+            goto cleanup;
+        }
+
+        wifiConfigCommand->attr_end(nl_sarSpec);
+    }
+    wifiConfigCommand->attr_end(nlLimitSpec);
+    wifiConfigCommand->attr_end(nlData);
+
+    ret = wifiConfigCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("wifi_set_tx_power_limit(): requestEvent Error:%d", ret);
+        goto cleanup;
+    }
+
+cleanup:
+    delete wifiConfigCommand;
+    return (wifi_error)ret;
+}
+
+wifi_error wifi_reset_tx_power_limit(wifi_interface_handle handle)
+{
+    int ret = 0;
+    WiFiConfigCommand *wifiConfigCommand;
+    struct nlattr *nlData;
+    interface_info *ifaceInfo = getIfaceInfo(handle);
+    wifi_handle wifiHandle = getWifiHandle(handle);
+
+    wifiConfigCommand = new WiFiConfigCommand(
+                            wifiHandle,
+                            1,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_SET_SAR_LIMITS);
+    if (wifiConfigCommand == NULL) {
+        ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = wifiConfigCommand->create();
+    if (ret < 0) {
+        ALOGE("wifi_set_tx_power_limit: failed to create NL msg. Error:%d", ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = wifiConfigCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0) {
+        ALOGE("wifi_set_tx_power_limit: failed to set iface id. Error:%d", ret);
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ALOGE("wifi_set_tx_power_limit: failed attr_start for VENDOR_DATA. "
+            "Error:%d", ret);
+        goto cleanup;
+    }
+
+    if (wifiConfigCommand->put_u32(QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SAR_ENABLE,
+                               QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_NONE)) {
+        ALOGE("failed to put SAR_ENABLE or NUM_SPECS");
+        goto cleanup;
+    }
+    wifiConfigCommand->attr_end(nlData);
+
+    ret = wifiConfigCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("wifi_set_tx_power_limit(): requestEvent Error:%d", ret);
+        goto cleanup;
+    }
+
+cleanup:
+    delete wifiConfigCommand;
+    return (wifi_error)ret;
+}
+
 WiFiConfigCommand::WiFiConfigCommand(wifi_handle handle,
                                      int id, u32 vendor_id,
                                      u32 subcmd)
