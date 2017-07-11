@@ -408,6 +408,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_get_roaming_capabilities = wifi_get_roaming_capabilities;
     fn->wifi_configure_roaming = wifi_configure_roaming;
     fn->wifi_enable_firmware_roaming = wifi_enable_firmware_roaming;
+    fn->wifi_set_tx_power_limit = wifi_set_tx_power_limit;
+    fn->wifi_reset_tx_power_limit = wifi_reset_tx_power_limit;
 
     return WIFI_SUCCESS;
 }
