@@ -36,7 +36,7 @@ extern "C"
 {
 #endif /* __cplusplus */
 
-#define NAN_CERT_VERSION                        3
+#define NAN_CERT_VERSION                        4
 #define NAN_MAX_DEBUG_MESSAGE_DATA_LEN          100
 #define NAN_MAX_ALLOWED_DW_AWAKE_INTERVAL       16
 
