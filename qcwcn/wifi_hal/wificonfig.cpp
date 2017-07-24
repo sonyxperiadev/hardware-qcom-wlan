@@ -360,6 +360,8 @@ wifi_error wifi_set_tx_power_limit(wifi_interface_handle handle,
     ret = wifiConfigCommand->requestEvent();
     if (ret != 0) {
         ALOGE("wifi_set_tx_power_limit(): requestEvent Error:%d", ret);
+        if (ret == -EOPNOTSUPP)
+            ret = WIFI_ERROR_NOT_SUPPORTED;
         goto cleanup;
     }
 
@@ -418,6 +420,8 @@ wifi_error wifi_reset_tx_power_limit(wifi_interface_handle handle)
     ret = wifiConfigCommand->requestEvent();
     if (ret != 0) {
         ALOGE("wifi_set_tx_power_limit(): requestEvent Error:%d", ret);
+        if (ret == -EOPNOTSUPP)
+            ret = WIFI_ERROR_NOT_SUPPORTED;
         goto cleanup;
     }
 
