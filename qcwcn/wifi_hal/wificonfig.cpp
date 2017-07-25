@@ -100,7 +100,7 @@ wifi_error wifi_extended_dtim_config_set(wifi_request_id id,
 
 cleanup:
     delete wifiConfigCommand;
-    return (wifi_error)ret;
+    return mapErrorKernelToWifiHAL(ret);
 }
 
 /* Set the country code to driver. */
@@ -151,7 +151,7 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
 
 cleanup:
     delete wifiConfigCommand;
-    return (wifi_error)ret;
+    return mapErrorKernelToWifiHAL(ret);
 }
 
 wifi_error wifi_set_beacon_wifi_iface_stats_averaging_factor(
@@ -219,7 +219,7 @@ wifi_error wifi_set_beacon_wifi_iface_stats_averaging_factor(
 
 cleanup:
     delete wifiConfigCommand;
-    return (wifi_error)ret;
+    return mapErrorKernelToWifiHAL(ret);
 }
 
 wifi_error wifi_set_guard_time(wifi_request_id id,
@@ -283,7 +283,7 @@ wifi_error wifi_set_guard_time(wifi_request_id id,
 
 cleanup:
     delete wifiConfigCommand;
-    return (wifi_error)ret;
+    return mapErrorKernelToWifiHAL(ret);
 }
 
 wifi_error wifi_set_tx_power_limit(wifi_interface_handle handle,
@@ -360,14 +360,12 @@ wifi_error wifi_set_tx_power_limit(wifi_interface_handle handle,
     ret = wifiConfigCommand->requestEvent();
     if (ret != 0) {
         ALOGE("wifi_set_tx_power_limit(): requestEvent Error:%d", ret);
-        if (ret == -EOPNOTSUPP)
-            ret = WIFI_ERROR_NOT_SUPPORTED;
         goto cleanup;
     }
 
 cleanup:
     delete wifiConfigCommand;
-    return (wifi_error)ret;
+    return mapErrorKernelToWifiHAL(ret);
 }
 
 wifi_error wifi_reset_tx_power_limit(wifi_interface_handle handle)
@@ -420,14 +418,12 @@ wifi_error wifi_reset_tx_power_limit(wifi_interface_handle handle)
     ret = wifiConfigCommand->requestEvent();
     if (ret != 0) {
         ALOGE("wifi_set_tx_power_limit(): requestEvent Error:%d", ret);
-        if (ret == -EOPNOTSUPP)
-            ret = WIFI_ERROR_NOT_SUPPORTED;
         goto cleanup;
     }
 
 cleanup:
     delete wifiConfigCommand;
-    return (wifi_error)ret;
+    return mapErrorKernelToWifiHAL(ret);
 }
 
 WiFiConfigCommand::WiFiConfigCommand(wifi_handle handle,
