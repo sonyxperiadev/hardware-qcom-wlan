@@ -287,17 +287,17 @@ cleanup:
     return mapErrorKernelToWifiHAL(ret);
 }
 
-wifi_error wifi_set_tx_power_limit(wifi_interface_handle handle,
-                                   u32 tx_level_dbm)
+wifi_error wifi_select_tx_power_scenario(wifi_interface_handle handle,
+                                         wifi_power_scenario scenario)
 {
     int ret = 0;
     WiFiConfigCommand *wifiConfigCommand;
-    struct nlattr *nlData, *nlLimitSpec;
+    struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(handle);
     wifi_handle wifiHandle = getWifiHandle(handle);
-    u32 numSpecs = 1, j;
+    u32 bdf_file = 0;
 
-    ALOGV("%s : tx power limit:%u", __FUNCTION__, tx_level_dbm);
+    ALOGV("%s : power scenario:%d", __FUNCTION__, scenario);
 
     wifiConfigCommand = new WiFiConfigCommand(
                             wifiHandle,
@@ -312,55 +312,43 @@ wifi_error wifi_set_tx_power_limit(wifi_interface_handle handle,
     /* Create the NL message. */
     ret = wifiConfigCommand->create();
     if (ret < 0) {
-        ALOGE("wifi_set_tx_power_limit: failed to create NL msg. Error:%d", ret);
+        ALOGE("wifi_select_tx_power_scenario: failed to create NL msg. Error:%d", ret);
         goto cleanup;
     }
 
     /* Set the interface Id of the message. */
     ret = wifiConfigCommand->set_iface_id(ifaceInfo->name);
     if (ret < 0) {
-        ALOGE("wifi_set_tx_power_limit: failed to set iface id. Error:%d", ret);
+        ALOGE("wifi_select_tx_power_scenario: failed to set iface id. Error:%d", ret);
         goto cleanup;
     }
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
-        ALOGE("wifi_set_tx_power_limit: failed attr_start for VENDOR_DATA. "
+        ALOGE("wifi_select_tx_power_scenario: failed attr_start for VENDOR_DATA. "
             "Error:%d", ret);
         goto cleanup;
     }
 
-    if (wifiConfigCommand->put_u32(
-                      QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SAR_ENABLE,
-                      QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_USER) ||
-        wifiConfigCommand->put_u32(
-                      QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_NUM_SPECS, numSpecs)) {
-        ALOGE("failed to put SAR_ENABLE or NUM_SPECS");
+    if (scenario == WIFI_POWER_SCENARIO_VOICE_CALL) {
+        bdf_file = QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_BDF0;
+    } else {
+        ALOGE("wifi_select_tx_power_scenario: invalid scenario %d", scenario);
+        ret = WIFI_ERROR_INVALID_ARGS;
         goto cleanup;
     }
-
-    nlLimitSpec =
-        wifiConfigCommand->attr_start(QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SPEC);
-
-    /* Add NL attributes for SAR limit specs . */
-    for (j = 0; j < numSpecs; j++) {
-        struct nlattr *nl_sarSpec = wifiConfigCommand->attr_start(j);
-
-        if (wifiConfigCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SPEC_POWER_LIMIT, tx_level_dbm)) {
-            ALOGE("wifi_set_tx_power_limit: failed to add vendor data.");
-            goto cleanup;
-        }
-
-        wifiConfigCommand->attr_end(nl_sarSpec);
+    if (wifiConfigCommand->put_u32(
+                      QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SAR_ENABLE,
+                      bdf_file)) {
+        ALOGE("failed to put SAR_ENABLE");
+        goto cleanup;
     }
-    wifiConfigCommand->attr_end(nlLimitSpec);
     wifiConfigCommand->attr_end(nlData);
 
     ret = wifiConfigCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("wifi_set_tx_power_limit(): requestEvent Error:%d", ret);
+        ALOGE("wifi_select_tx_power_scenario(): requestEvent Error:%d", ret);
         goto cleanup;
     }
 
@@ -369,7 +357,7 @@ cleanup:
     return mapErrorKernelToWifiHAL(ret);
 }
 
-wifi_error wifi_reset_tx_power_limit(wifi_interface_handle handle)
+wifi_error wifi_reset_tx_power_scenario(wifi_interface_handle handle)
 {
     int ret = 0;
     WiFiConfigCommand *wifiConfigCommand;
@@ -390,21 +378,21 @@ wifi_error wifi_reset_tx_power_limit(wifi_interface_handle handle)
     /* Create the NL message. */
     ret = wifiConfigCommand->create();
     if (ret < 0) {
-        ALOGE("wifi_set_tx_power_limit: failed to create NL msg. Error:%d", ret);
+        ALOGE("wifi_reset_tx_power_scenario: failed to create NL msg. Error:%d", ret);
         goto cleanup;
     }
 
     /* Set the interface Id of the message. */
     ret = wifiConfigCommand->set_iface_id(ifaceInfo->name);
     if (ret < 0) {
-        ALOGE("wifi_set_tx_power_limit: failed to set iface id. Error:%d", ret);
+        ALOGE("wifi_reset_tx_power_scenario: failed to set iface id. Error:%d", ret);
         goto cleanup;
     }
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
-        ALOGE("wifi_set_tx_power_limit: failed attr_start for VENDOR_DATA. "
+        ALOGE("wifi_reset_tx_power_scenario: failed attr_start for VENDOR_DATA. "
             "Error:%d", ret);
         goto cleanup;
     }
@@ -418,7 +406,7 @@ wifi_error wifi_reset_tx_power_limit(wifi_interface_handle handle)
 
     ret = wifiConfigCommand->requestEvent();
     if (ret != 0) {
-        ALOGE("wifi_set_tx_power_limit(): requestEvent Error:%d", ret);
+        ALOGE("wifi_reset_tx_power_scenario(): requestEvent Error:%d", ret);
         goto cleanup;
     }
 
