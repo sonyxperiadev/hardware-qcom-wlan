@@ -447,3 +447,24 @@ cleanup:
     return LowiWifiHalApi;
 }
 
+wifi_error mapKernelErrortoWifiHalError(int kern_err)
+{
+    if (kern_err >= 0)
+        return WIFI_SUCCESS;
+
+    switch (kern_err) {
+        case -EOPNOTSUPP:
+            return WIFI_ERROR_NOT_SUPPORTED;
+        case -EAGAIN:
+            return WIFI_ERROR_NOT_AVAILABLE;
+        case -EINVAL:
+            return WIFI_ERROR_INVALID_ARGS;
+        case -ETIMEDOUT:
+            return WIFI_ERROR_TIMED_OUT;
+        case -ENOMEM:
+            return WIFI_ERROR_OUT_OF_MEMORY;
+        case -EBUSY:
+            return WIFI_ERROR_BUSY;
+    }
+    return WIFI_ERROR_UNKNOWN;
+}

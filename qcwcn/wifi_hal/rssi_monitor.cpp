@@ -253,7 +253,7 @@ wifi_error wifi_start_rssi_monitoring(wifi_request_id id,
                                       s8 min_rssi,
                                       wifi_rssi_event_handler eh)
 {
-    int ret = WIFI_SUCCESS;
+    wifi_error ret;
     struct nlattr *nlData;
     WifiVendorCommand *vCommand = NULL;
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -264,7 +264,7 @@ wifi_error wifi_start_rssi_monitoring(wifi_request_id id,
                                 &vCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return (wifi_error)ret;
+        return ret;
     }
 
     ALOGV("%s: Max RSSI:%d Min RSSI:%d", __FUNCTION__,
@@ -274,47 +274,49 @@ wifi_error wifi_start_rssi_monitoring(wifi_request_id id,
     if (!nlData)
         goto cleanup;
 
-    if (vCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CONTROL,
-            QCA_WLAN_RSSI_MONITORING_START) ||
-        vCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_REQUEST_ID,
-            id) ||
-        vCommand->put_s8(
-            QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_MAX_RSSI,
-            max_rssi) ||
-        vCommand->put_s8(
-            QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_MIN_RSSI,
-            min_rssi))
-    {
+    ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CONTROL,
+                             QCA_WLAN_RSSI_MONITORING_START);
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
-    }
+    ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_REQUEST_ID,
+                            id);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+    ret = vCommand->put_s8(QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_MAX_RSSI,
+                           max_rssi);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+    ret = vCommand->put_s8(QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_MIN_RSSI,
+                           min_rssi);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
 
     vCommand->attr_end(nlData);
 
     rssiCommand = RSSIMonitorCommand::instance(wifiHandle, id);
     if (rssiCommand == NULL) {
         ALOGE("%s: Error rssiCommand NULL", __FUNCTION__);
-        return WIFI_ERROR_OUT_OF_MEMORY;
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        goto cleanup;
     }
 
     rssiCommand->setCallbackHandler(eh);
 
     ret = vCommand->requestResponse();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     rssiCommand->enableEventHandling();
 
 cleanup:
     delete vCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 wifi_error wifi_stop_rssi_monitoring(wifi_request_id id,
                                      wifi_interface_handle iface)
 {
-    int ret = WIFI_SUCCESS;
+    wifi_error ret;
     struct nlattr *nlData;
     WifiVendorCommand *vCommand = NULL;
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -322,7 +324,7 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id,
     rssi_monitor_event_handlers* event_handlers;
     hal_info *info = getHalInfo(wifiHandle);
 
-    event_handlers = (rssi_monitor_event_handlers*)info->rssi_handlers;
+    event_handlers = info->rssi_handlers;
     rssiCommand = event_handlers->mRSSIMonitorCommandInstance;
 
     if (rssiCommand == NULL ||
@@ -337,7 +339,7 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id,
                                 &vCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return (wifi_error)ret;
+        return ret;
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -345,26 +347,24 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id,
     if (!nlData)
         goto cleanup;
 
-    if (vCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CONTROL,
-            QCA_WLAN_RSSI_MONITORING_STOP) ||
-        vCommand->put_u32(
-            QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_REQUEST_ID,
-            id))
-    {
+    ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_CONTROL,
+                            QCA_WLAN_RSSI_MONITORING_STOP);
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
-    }
+    ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_RSSI_MONITORING_REQUEST_ID,
+                            id);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
 
     vCommand->attr_end(nlData);
 
     ret = vCommand->requestResponse();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     rssiCommand->disableEventHandling();
 
-
 cleanup:
     delete vCommand;
-    return (wifi_error)ret;
+    return ret;
 }

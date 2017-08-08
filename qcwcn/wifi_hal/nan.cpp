@@ -43,7 +43,7 @@ wifi_error nan_register_handler(wifi_interface_handle iface,
                                 NanCallbackHandler handlers)
 {
     // Obtain the singleton instance
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     wifi_handle wifiHandle = getWifiHandle(iface);
 
@@ -54,7 +54,7 @@ wifi_error nan_register_handler(wifi_interface_handle iface,
     }
 
     ret = nanCommand->setCallbackHandler(handlers);
-    return (wifi_error)ret;
+    return ret;
 }
 
 wifi_error nan_get_version(wifi_handle handle,
@@ -69,7 +69,7 @@ wifi_error nan_enable_request(transaction_id id,
                               wifi_interface_handle iface,
                               NanEnableRequest* msg)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -84,33 +84,33 @@ wifi_error nan_enable_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanEnable(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanEnable Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to send disable request to the wifi driver.*/
 wifi_error nan_disable_request(transaction_id id,
                                wifi_interface_handle iface)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -125,26 +125,26 @@ wifi_error nan_disable_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanDisable(id);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanDisable Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to send publish request to the wifi driver.*/
@@ -152,7 +152,7 @@ wifi_error nan_publish_request(transaction_id id,
                                wifi_interface_handle iface,
                                NanPublishRequest* msg)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -167,26 +167,27 @@ wifi_error nan_publish_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanPublish(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanPublish Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to send publish cancel to the wifi driver.*/
@@ -194,7 +195,7 @@ wifi_error nan_publish_cancel_request(transaction_id id,
                                       wifi_interface_handle iface,
                                       NanPublishCancelRequest* msg)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -209,26 +210,27 @@ wifi_error nan_publish_cancel_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanPublishCancel(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanPublishCancel Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to send Subscribe request to the wifi driver.*/
@@ -236,7 +238,7 @@ wifi_error nan_subscribe_request(transaction_id id,
                                  wifi_interface_handle iface,
                                  NanSubscribeRequest* msg)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -251,26 +253,27 @@ wifi_error nan_subscribe_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanSubscribe(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanSubscribe Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to cancel subscribe to the wifi driver.*/
@@ -278,7 +281,7 @@ wifi_error nan_subscribe_cancel_request(transaction_id id,
                                         wifi_interface_handle iface,
                                         NanSubscribeCancelRequest* msg)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -293,26 +296,27 @@ wifi_error nan_subscribe_cancel_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanSubscribeCancel(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanSubscribeCancel Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to send NAN follow up request to the wifi driver.*/
@@ -320,7 +324,7 @@ wifi_error nan_transmit_followup_request(transaction_id id,
                                          wifi_interface_handle iface,
                                          NanTransmitFollowupRequest* msg)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -335,26 +339,27 @@ wifi_error nan_transmit_followup_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanTransmitFollowup(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanTransmitFollowup Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to send NAN statistics request to the wifi driver.*/
@@ -362,7 +367,7 @@ wifi_error nan_stats_request(transaction_id id,
                              wifi_interface_handle iface,
                              NanStatsRequest* msg)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -377,26 +382,27 @@ wifi_error nan_stats_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanStats(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanStats Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to send NAN configuration request to the wifi driver.*/
@@ -404,7 +410,7 @@ wifi_error nan_config_request(transaction_id id,
                               wifi_interface_handle iface,
                               NanConfigRequest* msg)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -419,26 +425,27 @@ wifi_error nan_config_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanConfig(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanConfig Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to send NAN request to the wifi driver.*/
@@ -446,7 +453,7 @@ wifi_error nan_tca_request(transaction_id id,
                            wifi_interface_handle iface,
                            NanTCARequest* msg)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -461,26 +468,27 @@ wifi_error nan_tca_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanTCA(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanTCA Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to send NAN Beacon sdf payload to the wifi driver.
@@ -491,7 +499,7 @@ wifi_error nan_beacon_sdf_payload_request(transaction_id id,
                                          wifi_interface_handle iface,
                                          NanBeaconSdfPayloadRequest* msg)
 {
-    int ret = WIFI_ERROR_NOT_SUPPORTED;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -506,34 +514,34 @@ wifi_error nan_beacon_sdf_payload_request(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanBeaconSdfPayload(id, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanBeaconSdfPayload Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
 
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 wifi_error nan_get_sta_parameter(transaction_id id,
                                  wifi_interface_handle iface,
                                  NanStaParameter* msg)
 {
-    int ret = WIFI_ERROR_NOT_SUPPORTED;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     wifi_handle wifiHandle = getWifiHandle(iface);
 
@@ -544,20 +552,20 @@ wifi_error nan_get_sta_parameter(transaction_id id,
     }
 
     ret = nanCommand->getNanStaParameter(iface, msg);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: getNanStaParameter Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
 
 cleanup:
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to get NAN capabilities */
 wifi_error nan_get_capabilities(transaction_id id,
                                 wifi_interface_handle iface)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -572,26 +580,27 @@ wifi_error nan_get_capabilities(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanCapabilities(id);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanCapabilities Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 /*  Function to get NAN capabilities */
@@ -600,7 +609,7 @@ wifi_error nan_debug_command_config(transaction_id id,
                                    NanDebugParams debug,
                                    int debug_msg_length)
 {
-    int ret = 0;
+    wifi_error ret;
     NanCommand *nanCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
@@ -621,33 +630,33 @@ wifi_error nan_debug_command_config(transaction_id id,
     }
 
     ret = nanCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /* Set the interface Id of the message. */
     ret = nanCommand->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = nanCommand->putNanDebugCommand(debug, debug_msg_length);
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: putNanDebugCommand Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
 
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 wifi_error nan_initialize_vendor_cmd(wifi_interface_handle iface,
                                      NanCommand **nanCommand)
 {
-    int ret = 0;
+    wifi_error ret;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
 
@@ -667,17 +676,17 @@ wifi_error nan_initialize_vendor_cmd(wifi_interface_handle iface,
 
     /* Create the message */
     ret = (*nanCommand)->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = (*nanCommand)->set_iface_id(ifaceInfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     return WIFI_SUCCESS;
 cleanup:
     delete *nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 wifi_error nan_data_interface_create(transaction_id id,
@@ -685,7 +694,7 @@ wifi_error nan_data_interface_create(transaction_id id,
                                      char* iface_name)
 {
     ALOGV("NAN_DP_INTERFACE_CREATE");
-    int ret = WIFI_SUCCESS;
+    wifi_error ret;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
 
@@ -698,7 +707,7 @@ wifi_error nan_data_interface_create(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return (wifi_error)ret;
+        return ret;
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -720,12 +729,12 @@ wifi_error nan_data_interface_create(transaction_id id,
 
     nanCommand->attr_end(nlData);
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 wifi_error nan_data_interface_delete(transaction_id id,
@@ -733,7 +742,7 @@ wifi_error nan_data_interface_delete(transaction_id id,
                                      char* iface_name)
 {
     ALOGV("NAN_DP_INTERFACE_DELETE");
-    int ret = WIFI_SUCCESS;
+    wifi_error ret;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
 
@@ -745,7 +754,7 @@ wifi_error nan_data_interface_delete(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return (wifi_error)ret;
+        return ret;
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -768,12 +777,12 @@ wifi_error nan_data_interface_delete(transaction_id id,
     nanCommand->attr_end(nlData);
 
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 wifi_error nan_data_request_initiator(transaction_id id,
@@ -781,7 +790,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
                                       NanDataPathInitiatorRequest* msg)
 {
     ALOGV("NAN_DP_REQUEST_INITIATOR");
-    int ret = WIFI_SUCCESS;
+    wifi_error ret;
     struct nlattr *nlData, *nlCfgSecurity, *nlCfgQos;
     NanCommand *nanCommand = NULL;
 
@@ -792,7 +801,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return (wifi_error)ret;
+        return ret;
     }
 
     if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
@@ -903,12 +912,12 @@ wifi_error nan_data_request_initiator(transaction_id id,
     nanCommand->attr_end(nlData);
 
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 wifi_error nan_data_indication_response(transaction_id id,
@@ -916,7 +925,7 @@ wifi_error nan_data_indication_response(transaction_id id,
                                         NanDataPathIndicationResponse* msg)
 {
     ALOGV("NAN_DP_INDICATION_RESPONSE");
-    int ret = WIFI_SUCCESS;
+    wifi_error ret;
     struct nlattr *nlData, *nlCfgSecurity, *nlCfgQos;
     NanCommand *nanCommand = NULL;
 
@@ -927,7 +936,7 @@ wifi_error nan_data_indication_response(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return (wifi_error)ret;
+        return ret;
     }
 
     if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
@@ -1020,20 +1029,20 @@ wifi_error nan_data_indication_response(transaction_id id,
     nanCommand->attr_end(nlData);
 
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 wifi_error nan_data_end(transaction_id id,
                         wifi_interface_handle iface,
                         NanDataPathEndRequest* msg)
 {
+    wifi_error ret;
     ALOGV("NAN_DP_END");
-    int ret = WIFI_SUCCESS;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
 
@@ -1044,7 +1053,7 @@ wifi_error nan_data_end(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return (wifi_error)ret;
+        return ret;
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -1067,12 +1076,12 @@ wifi_error nan_data_end(transaction_id id,
     nanCommand->attr_end(nlData);
 
     ret = nanCommand->requestEvent();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
-    }
+
 cleanup:
     delete nanCommand;
-    return (wifi_error)ret;
+    return ret;
 }
 
 // Implementation related to nan class common functions
@@ -1131,12 +1140,12 @@ int NanCommand::handleResponse(WifiEvent &reply){
     return NL_SKIP;
 }
 
-int NanCommand::setCallbackHandler(NanCallbackHandler nHandler)
+wifi_error NanCommand::setCallbackHandler(NanCallbackHandler nHandler)
 {
-    int res = WIFI_SUCCESS;
+    wifi_error res;
     mHandler = nHandler;
     res = registerVendorHandler(mVendor_id, QCA_NL80211_VENDOR_SUBCMD_NAN);
-    if (res != 0) {
+    if (res != WIFI_SUCCESS) {
         //error case should not happen print log
         ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x"
               "subcmd=QCA_NL80211_VENDOR_SUBCMD_NAN", __FUNCTION__, mVendor_id);
@@ -1144,7 +1153,7 @@ int NanCommand::setCallbackHandler(NanCallbackHandler nHandler)
     }
 
     res = registerVendorHandler(mVendor_id, QCA_NL80211_VENDOR_SUBCMD_NDP);
-    if (res != 0) {
+    if (res != WIFI_SUCCESS) {
         //error case should not happen print log
         ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x"
               "subcmd=QCA_NL80211_VENDOR_SUBCMD_NDP", __FUNCTION__, mVendor_id);
@@ -1154,24 +1163,21 @@ int NanCommand::setCallbackHandler(NanCallbackHandler nHandler)
 }
 
 /* This function implements creation of Vendor command */
-int NanCommand::create() {
-    int ret = mMsg.create(NL80211_CMD_VENDOR, 0, 0);
-    if (ret < 0) {
+wifi_error NanCommand::create() {
+    wifi_error ret = mMsg.create(NL80211_CMD_VENDOR, 0, 0);
+    if (ret != WIFI_SUCCESS)
         goto out;
-    }
 
     /* Insert the oui in the msg */
     ret = mMsg.put_u32(NL80211_ATTR_VENDOR_ID, mVendor_id);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto out;
     /* Insert the subcmd in the msg */
     ret = mMsg.put_u32(NL80211_ATTR_VENDOR_SUBCMD, mSubcmd);
-    if (ret < 0)
-        goto out;
+
 out:
-    if (ret < 0) {
+    if (ret != WIFI_SUCCESS)
         mMsg.destroy();
-    }
     return ret;
 }
 

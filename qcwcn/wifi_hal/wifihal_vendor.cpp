@@ -44,19 +44,19 @@ NUDStatsCommand* NUDStatsCommand::mNUDStatsCommandInstance  = NULL;
 
 // This function implements creation of Vendor command
 // For NUDStats just call base Vendor command create
-int NUDStatsCommand::create() {
-    int ret = mMsg.create(NL80211_CMD_VENDOR, 0, 0);
-    if (ret < 0) {
+wifi_error NUDStatsCommand::create() {
+    wifi_error ret = mMsg.create(NL80211_CMD_VENDOR, 0, 0);
+    if (ret != WIFI_SUCCESS) {
         return ret;
     }
     // insert the oui in the msg
     ret = mMsg.put_u32(NL80211_ATTR_VENDOR_ID, mVendor_id);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto out;
 
     // insert the subcmd in the msg
     ret = mMsg.put_u32(NL80211_ATTR_VENDOR_SUBCMD, mSubcmd);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto out;
 
 out:
@@ -104,7 +104,7 @@ void NUDStatsCommand::setSubCmd(u32 subcmd)
     mSubcmd = subcmd;
 }
 
-int NUDStatsCommand::requestResponse()
+wifi_error NUDStatsCommand::requestResponse()
 {
     return WifiCommand::requestResponse(mMsg);
 }
@@ -245,7 +245,7 @@ void NUDStatsCommand::copyStats(nud_stats *stats)
 
 wifi_error wifi_set_nud_stats(wifi_interface_handle iface, u32 gw_addr)
 {
-    int ret = 0;
+    wifi_error ret;
     NUDStatsCommand *NUDCommand;
     struct nlattr *nl_data;
     interface_info *iinfo = getIfaceInfo(iface);
@@ -261,11 +261,11 @@ wifi_error wifi_set_nud_stats(wifi_interface_handle iface, u32 gw_addr)
 
     /* create the message */
     ret = NUDCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = NUDCommand->set_iface_id(iinfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /*add the attributes*/
@@ -276,25 +276,25 @@ wifi_error wifi_set_nud_stats(wifi_interface_handle iface, u32 gw_addr)
     ret = NUDCommand->put_flag(QCA_ATTR_NUD_STATS_SET_START);
 
     ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_GW_IPV4, gw_addr);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
     /**/
     NUDCommand->attr_end(nl_data);
 
     ret = NUDCommand->requestResponse();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
     }
 
 cleanup:
-    return (wifi_error)ret;
+    return ret;
 }
 
 
 wifi_error wifi_get_nud_stats(wifi_interface_handle iface,
                               nud_stats *stats)
 {
-    int ret = 0;
+    wifi_error ret;
     NUDStatsCommand *NUDCommand;
     struct nlattr *nl_data;
     interface_info *iinfo = getIfaceInfo(iface);
@@ -314,11 +314,11 @@ wifi_error wifi_get_nud_stats(wifi_interface_handle iface,
 
     /* create the message */
     ret = NUDCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = NUDCommand->set_iface_id(iinfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
     /*add the attributes*/
     nl_data = NUDCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
@@ -328,7 +328,7 @@ wifi_error wifi_get_nud_stats(wifi_interface_handle iface,
     NUDCommand->attr_end(nl_data);
 
     ret = NUDCommand->requestResponse();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
@@ -336,13 +336,13 @@ wifi_error wifi_get_nud_stats(wifi_interface_handle iface,
     NUDCommand->copyStats(stats);
 
 cleanup:
-    return (wifi_error)ret;
+    return ret;
 }
 
 
 wifi_error wifi_clear_nud_stats(wifi_interface_handle iface)
 {
-    int ret = 0;
+    wifi_error ret;
     NUDStatsCommand *NUDCommand;
     struct nlattr *nl_data;
     interface_info *iinfo = getIfaceInfo(iface);
@@ -357,11 +357,11 @@ wifi_error wifi_clear_nud_stats(wifi_interface_handle iface)
 
     /* create the message */
     ret = NUDCommand->create();
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     ret = NUDCommand->set_iface_id(iinfo->name);
-    if (ret < 0)
+    if (ret != WIFI_SUCCESS)
         goto cleanup;
 
     /*add the attributes*/
@@ -372,10 +372,9 @@ wifi_error wifi_clear_nud_stats(wifi_interface_handle iface)
     NUDCommand->attr_end(nl_data);
 
     ret = NUDCommand->requestResponse();
-    if (ret != 0) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
-    }
 
 cleanup:
-    return (wifi_error)ret;
+    return ret;
 }

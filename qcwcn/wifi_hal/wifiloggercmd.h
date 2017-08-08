@@ -90,16 +90,16 @@ public:
 
     // This function implements creation of WifiLogger specific Request
     // based on  the request type
-    virtual int create();
-    virtual int requestEvent();
-    virtual int requestResponse();
+    virtual wifi_error create();
+    virtual wifi_error requestEvent();
+    virtual wifi_error requestResponse();
     virtual int handleResponse(WifiEvent &reply);
     virtual int handleEvent(WifiEvent &event);
-    int setCallbackHandler(WifiLoggerCallbackHandler nHandler);
+    wifi_error setCallbackHandler(WifiLoggerCallbackHandler nHandler);
     virtual void unregisterHandler(u32 subCmd);
 
     /* Takes wait time in seconds. */
-    virtual int timed_wait(u16 wait_time);
+    virtual wifi_error timed_wait(u16 wait_time);
     virtual void waitForRsp(bool wait);
     virtual void setVersionInfo(char *buffer, int buffer_size);
     virtual void setFeatureSet(u32 *support);

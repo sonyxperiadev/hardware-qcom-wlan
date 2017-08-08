@@ -96,7 +96,7 @@ private:
 public:
     WifihalGeneric(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
     virtual ~WifihalGeneric();
-    virtual int requestResponse();
+    virtual wifi_error requestResponse();
     virtual int handleResponse(WifiEvent &reply);
     virtual void getResponseparams(feature_set *pset);
     virtual void setMaxSetSize(int set_size_max);
