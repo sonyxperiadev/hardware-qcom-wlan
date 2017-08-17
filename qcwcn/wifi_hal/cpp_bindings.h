@@ -219,6 +219,9 @@ public:
     int put_s64(int attribute, s64 value) {
         return nla_put(mMsg, attribute, sizeof(int64_t), &value);
     }
+    int put_flag(int attribute) {
+        return nla_put_flag(mMsg, attribute);
+    }
 
     u8 get_u8(const struct nlattr *nla)
     {
@@ -426,6 +429,8 @@ public:
     virtual int put_s32(int attribute, s32 value);
 
     virtual int put_s64(int attribute, s64 value);
+
+    int put_flag(int attribute);
 
     virtual u8 get_u8(const struct nlattr *nla);
     virtual u16 get_u16(const struct nlattr *nla);
