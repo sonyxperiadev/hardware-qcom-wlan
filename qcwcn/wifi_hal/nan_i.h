@@ -1259,7 +1259,8 @@ typedef struct PACKED
 */
 void NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
                          u32 valueRcvd,
-                         void *pRsp);
+                         void *pRsp,
+                         bool is_ndp_rsp);
 
 #ifdef __cplusplus
 }
