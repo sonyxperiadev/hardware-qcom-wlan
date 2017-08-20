@@ -142,7 +142,8 @@ public:
     */
     void NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
                              u32 valueRcvd,
-                             void *pRsp);
+                             void *pRsp,
+                             bool is_ndp_rsp);
 };
 #endif /* __WIFI_HAL_NAN_COMMAND_H__ */
 
