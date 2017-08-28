@@ -421,7 +421,6 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
             __FUNCTION__);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
-    return (wifi_error)ret;
 
     if (gScanStartCmdEventHandler == NULL ||
         gScanStartCmdEventHandler->isEventHandlingEnabled() == false) {
