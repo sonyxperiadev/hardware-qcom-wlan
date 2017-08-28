@@ -58,6 +58,10 @@ endif
 include $(CLEAR_VARS)
 LOCAL_MODULE := lib_driver_cmd_qcwcn
 LOCAL_SHARED_LIBRARIES := libc libcutils
+ifneq ($(wildcard external/libnl),)
+LOCAL_SHARED_LIBRARIES += libnl
+endif
+LOCAL_SHARED_LIBRARIES += libdl
 LOCAL_CFLAGS := $(L_CFLAGS) -Wall
 LOCAL_SRC_FILES := $(WPA_SRC_FILE)
 LOCAL_C_INCLUDES := $(WPA_SUPPL_DIR_INCLUDE)

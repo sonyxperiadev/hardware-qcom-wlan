@@ -14,6 +14,8 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <net/if.h>
+#include <netlink/object-api.h>
+#include <linux/pkt_sched.h>
 
 #include "common.h"
 #include "linux_ioctl.h"
@@ -73,7 +75,23 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 	struct wpa_driver_nl80211_data *driver;
 	struct ifreq ifr;
 	android_wifi_priv_cmd priv_cmd;
-	int ret = 0;
+	int ret = 0, status = 0;
+	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL};
+
+	if (wpa_driver_oem_initialize(&oem_cb_table) !=
+		WPA_DRIVER_OEM_STATUS_FAILURE) {
+		ret = oem_cb_table.wpa_driver_driver_cmd_oem_cb(
+				priv, cmd, buf, buf_len, &status);
+		if (ret == WPA_DRIVER_OEM_STATUS_SUCCESS ) {
+			return 0;
+		} else if ((ret == WPA_DRIVER_OEM_STATUS_FAILURE) &&
+							 (status != 0)) {
+			wpa_printf(MSG_DEBUG, "%s: Received error: %d",
+					__func__, ret);
+			return ret;
+		}
+		/* else proceed with legacy handling as below */
+	}
 
 	if (os_strcasecmp(cmd, "START") == 0) {
 		dl_list_for_each(driver, &drv->global->interfaces, struct wpa_driver_nl80211_data, list) {
