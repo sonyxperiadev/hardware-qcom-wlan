@@ -616,18 +616,18 @@ wifi_error nan_debug_command_config(transaction_id id,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
 
+    if (debug_msg_length <= 0) {
+        ALOGE("%s: Invalid debug message length = %d", __FUNCTION__,
+                                                       debug_msg_length);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
     nanCommand = new NanCommand(wifiHandle,
                                 0,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
         ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
-        return WIFI_ERROR_UNKNOWN;
-    }
-
-    if (debug_msg_length <= 0) {
-        ALOGE("%s: Invalid debug message length = %d", __FUNCTION__,
-                                                       debug_msg_length);
         return WIFI_ERROR_UNKNOWN;
     }
 
