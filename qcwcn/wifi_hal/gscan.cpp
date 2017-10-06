@@ -82,6 +82,8 @@ wifi_error cleanupGscanHandlers(hal_info *info)
             delete event_handlers->gScanPnoSetPasspointListCmdEventHandler;
         }
         memset(event_handlers, 0, sizeof(gscan_event_handlers));
+        free(info->gscan_handlers);
+        info->gscan_handlers = NULL;
         return WIFI_SUCCESS;
     }
     ALOGE ("%s: info or info->gscan_handlers NULL", __FUNCTION__);
