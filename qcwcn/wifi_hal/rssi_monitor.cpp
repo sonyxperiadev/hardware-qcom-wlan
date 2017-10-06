@@ -67,6 +67,8 @@ wifi_error cleanupRSSIMonitorHandler(hal_info *info)
             delete event_handlers->mRSSIMonitorCommandInstance;
         }
         memset(event_handlers, 0, sizeof(rssi_monitor_event_handlers));
+        free(info->rssi_handlers);
+        info->rssi_handlers = NULL;
         return WIFI_SUCCESS;
     }
     ALOGE ("%s: info or info->rssi_handlers NULL", __FUNCTION__);
