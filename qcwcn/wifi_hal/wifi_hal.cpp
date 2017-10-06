@@ -731,6 +731,18 @@ static void internal_cleaned_up_handler(wifi_handle handle)
         info->event_sock = NULL;
     }
 
+    if (info->interfaces) {
+        for (int i = 0; i < info->num_interfaces; i++)
+            free(info->interfaces[i]);
+        free(info->interfaces);
+    }
+
+    if (info->cmd)
+        free(info->cmd);
+
+    if (info->event_cb)
+        free(info->event_cb);
+
     if (info->cldctx != NULL) {
         cld80211lib_cleanup(info);
     } else if (info->user_sock != 0) {
