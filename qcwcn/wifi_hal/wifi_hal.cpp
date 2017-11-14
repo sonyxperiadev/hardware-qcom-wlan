@@ -432,6 +432,15 @@ static void cld80211lib_cleanup(hal_info *info)
     info->cldctx = NULL;
 }
 
+static int wifi_get_iface_id(hal_info *info, const char *iface)
+{
+    int i;
+    for (i = 0; i < info->num_interfaces; i++)
+        if (!strcmp(info->interfaces[i]->name, iface))
+            return i;
+    return -1;
+}
+
 wifi_error wifi_initialize(wifi_handle *handle)
 {
     int err = 0;
@@ -441,6 +450,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     struct nl_sock *event_sock = NULL;
     struct nl_cb *cb = NULL;
     int status = 0;
+    int index;
 
     ALOGI("Initializing wifi");
     hal_info *info = (hal_info *)malloc(sizeof(hal_info));
@@ -592,17 +602,17 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
-    iface_handle = wifi_get_iface_handle((info->interfaces[0])->handle,
-            (info->interfaces[0])->name);
-    if (iface_handle == NULL) {
+    index = wifi_get_iface_id(info, "wlan0");
+    if (index == -1) {
         int i;
         for (i = 0; i < info->num_interfaces; i++)
         {
             free(info->interfaces[i]);
         }
-        ALOGE("%s no iface with %s\n", __func__, info->interfaces[0]->name);
+        ALOGE("%s no iface with wlan0", __func__);
         goto unload;
     }
+    iface_handle = (wifi_interface_handle)info->interfaces[index];
 
     ret = acquire_supported_features(iface_handle,
             &info->supported_feature_set);
