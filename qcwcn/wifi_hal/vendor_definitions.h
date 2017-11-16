@@ -249,6 +249,8 @@ enum qca_wlan_vendor_attr_wifi_config {
     QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_TX_RATE = 5,
     /* Unsigned 32-bit value */
     QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_PENALIZE_AFTER_NCONS_BEACON_MISS = 6,
+    /* Unsigned 8-bit, for setting qpower dynamically */
+    QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER_VENDOR = 25,
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_MAX =

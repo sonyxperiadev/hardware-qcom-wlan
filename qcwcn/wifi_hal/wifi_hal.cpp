@@ -414,6 +414,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_select_tx_power_scenario = wifi_select_tx_power_scenario;
     fn->wifi_reset_tx_power_scenario = wifi_reset_tx_power_scenario;
     fn->wifi_set_radio_mode_change_handler = wifi_set_radio_mode_change_handler;
+    /* Customers will uncomment when they want to set qpower*/
+    //fn->wifi_set_qpower = wifi_set_qpower;
 
     return WIFI_SUCCESS;
 }
