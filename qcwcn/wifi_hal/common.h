@@ -119,6 +119,7 @@ typedef struct hal_info_s {
     int num_interfaces;                             // number of interfaces
 
     feature_set supported_feature_set;
+    u32 supported_logger_feature_set;
     // add other details
     int user_sock_arg;
     struct rb_info rb_infos[NUM_RING_BUFS];

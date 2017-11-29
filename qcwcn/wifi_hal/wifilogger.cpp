@@ -60,6 +60,14 @@ static int get_ring_id(hal_info *info, char *ring_name)
     return -1;
 }
 
+static bool check_supported_logger(uint32_t supported_logger)
+{
+    if(supported_logger == 0)
+       return false;
+    else
+       return true;
+}
+
 //Implementation of the functions exposed in wifi_logger.h
 
 /* Function to intiate logging */
@@ -77,6 +85,11 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
     hal_info *info = getHalInfo(wifiHandle);
     int ring_id = 0;
 
+    /* Check Supported logger capability */
+    if(!check_supported_logger(info->supported_logger_feature_set)) {
+        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
     /*
      * No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
@@ -161,6 +174,12 @@ wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
     wifi_ring_buffer_status *rbs;
     struct rb_info *rb_info;
     int rb_id;
+
+    /* Check Supported logger capability */
+    if(!check_supported_logger(info->supported_logger_feature_set)) {
+        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     if ((*num_buffers) < NUM_RING_BUFS) {
         ALOGE("%s: Input num_buffers:%u cannot be accommodated, "
@@ -278,6 +297,12 @@ wifi_error wifi_get_ring_data(wifi_interface_handle iface,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
     int ring_id = 0;
+
+    /* Check Supported logger capability */
+    if(!check_supported_logger(info->supported_logger_feature_set)) {
+        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     ring_id = get_ring_id(info, ring_name);
     if (ring_id < 0) {
@@ -467,6 +492,13 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
     struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    /* Check Supported logger capability */
+    if(!check_supported_logger(info->supported_logger_feature_set)) {
+        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate one randomly.
@@ -1348,7 +1380,14 @@ wifi_error wifi_get_driver_memory_dump(wifi_interface_handle iface,
     size_t fileSize, remaining, readSize;
     size_t numRecordsRead;
     char *memBuffer = NULL, *buffer = NULL;
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
 
+    /* Check Supported logger capability */
+    if(!check_supported_logger(info->supported_logger_feature_set)) {
+        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
     /* Open File */
     fp = fopen(DRIVER_MEMDUMP_FILENAME, "r");
     if (fp == NULL) {
@@ -1427,6 +1466,13 @@ wifi_error wifi_get_wake_reason_stats(wifi_interface_handle iface,
     struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
+
+    /* Check Supported logger capability */
+    if(!check_supported_logger(info->supported_logger_feature_set)) {
+        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate it randomly.
