@@ -1208,7 +1208,7 @@ int NanCommand::getNanRangeReportInd(NanRangeReportInd *event)
                 outputTlv.length = sizeof(NanFWRangeReportParams);
             }
             memcpy(&range_params, outputTlv.value, outputTlv.length);
-            event->range_measurement_cm = range_params.range_measurement;
+            event->range_measurement_mm = range_params.range_measurement;
             event->publish_id = range_params.publish_id;
 //          event->event_type = range_params.event_type;
             break;

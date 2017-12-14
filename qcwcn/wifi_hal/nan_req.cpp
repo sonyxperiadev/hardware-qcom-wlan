@@ -605,7 +605,7 @@ wifi_error NanCommand::putNanPublish(transaction_id id, const NanPublishRequest 
           pReq->sdea_params.qos_cfg) ?
           SIZEOF_TLV_HDR + sizeof(NanFWSdeaCtrlParams) : 0) +
         ((pReq->ranging_cfg.ranging_interval_msec || pReq->ranging_cfg.config_ranging_indications ||
-          pReq->ranging_cfg.distance_ingress_cm || pReq->ranging_cfg.distance_egress_cm) ?
+          pReq->ranging_cfg.distance_ingress_mm || pReq->ranging_cfg.distance_egress_mm) ?
           SIZEOF_TLV_HDR + sizeof(NanFWRangeConfigParams) : 0) +
         ((pReq->range_response_cfg.publish_id ||
           pReq->range_response_cfg.ranging_response) ?
@@ -743,8 +743,8 @@ wifi_error NanCommand::putNanPublish(transaction_id id, const NanPublishRequest 
 
     if (pReq->ranging_cfg.ranging_interval_msec ||
         pReq->ranging_cfg.config_ranging_indications ||
-        pReq->ranging_cfg.distance_ingress_cm ||
-        pReq->ranging_cfg.distance_ingress_cm) {
+        pReq->ranging_cfg.distance_ingress_mm ||
+        pReq->ranging_cfg.distance_ingress_mm) {
         NanFWRangeConfigParams pNanFWRangingCfg;
 
         memset(&pNanFWRangingCfg, 0, sizeof(NanFWRangeConfigParams));
@@ -758,10 +758,10 @@ wifi_error NanCommand::putNanPublish(transaction_id id, const NanPublishRequest 
         pNanFWRangingCfg.ranging_indication_event = pReq->ranging_cfg.config_ranging_indications;
         if (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_INGRESS_MET_MASK)
             pNanFWRangingCfg.geo_fence_threshold.inner_threshold =
-                                        pReq->ranging_cfg.distance_ingress_cm;
+                                        pReq->ranging_cfg.distance_ingress_mm;
         if (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_EGRESS_MET_MASK)
             pNanFWRangingCfg.geo_fence_threshold.outer_threshold =
-                                       pReq->ranging_cfg.distance_egress_cm;
+                                       pReq->ranging_cfg.distance_egress_mm;
         tlvs = addTlv(NAN_TLV_TYPE_NAN_RANGING_CFG, sizeof(NanFWRangeConfigParams),
                                                     (const u8*)&pNanFWRangingCfg, tlvs);
     }
@@ -862,7 +862,7 @@ wifi_error NanCommand::putNanSubscribe(transaction_id id,
           pReq->sdea_params.qos_cfg) ?
           SIZEOF_TLV_HDR + sizeof(NanFWSdeaCtrlParams) : 0) +
         ((pReq->ranging_cfg.ranging_interval_msec || pReq->ranging_cfg.config_ranging_indications ||
-          pReq->ranging_cfg.distance_ingress_cm || pReq->ranging_cfg.distance_egress_cm) ?
+          pReq->ranging_cfg.distance_ingress_mm || pReq->ranging_cfg.distance_egress_mm) ?
           SIZEOF_TLV_HDR + sizeof(NanFWRangeConfigParams) : 0) +
         ((pReq->range_response_cfg.requestor_instance_id ||
           pReq->range_response_cfg.ranging_response) ?
@@ -1007,8 +1007,8 @@ wifi_error NanCommand::putNanSubscribe(transaction_id id,
 
     }
 
-    if (pReq->ranging_cfg.ranging_interval_msec || pReq->ranging_cfg.config_ranging_indications || pReq->ranging_cfg.distance_ingress_cm
-        || pReq->ranging_cfg.distance_ingress_cm) {
+    if (pReq->ranging_cfg.ranging_interval_msec || pReq->ranging_cfg.config_ranging_indications || pReq->ranging_cfg.distance_ingress_mm
+        || pReq->ranging_cfg.distance_ingress_mm) {
         NanFWRangeConfigParams pNanFWRangingCfg;
         memset(&pNanFWRangingCfg, 0, sizeof(NanFWRangeConfigParams));
         pNanFWRangingCfg.range_interval =
@@ -1022,10 +1022,10 @@ wifi_error NanCommand::putNanSubscribe(transaction_id id,
                                           pReq->ranging_cfg.config_ranging_indications;
         if (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_INGRESS_MET_MASK)
             pNanFWRangingCfg.geo_fence_threshold.inner_threshold =
-                                        pReq->ranging_cfg.distance_ingress_cm;
+                                        pReq->ranging_cfg.distance_ingress_mm;
         if (pReq->ranging_cfg.config_ranging_indications & NAN_RANGING_INDICATE_EGRESS_MET_MASK)
             pNanFWRangingCfg.geo_fence_threshold.outer_threshold =
-                                       pReq->ranging_cfg.distance_egress_cm;
+                                       pReq->ranging_cfg.distance_egress_mm;
         tlvs = addTlv(NAN_TLV_TYPE_NAN_RANGING_CFG, sizeof(NanFWRangeConfigParams),
                                                     (const u8*)&pNanFWRangingCfg, tlvs);
     }
