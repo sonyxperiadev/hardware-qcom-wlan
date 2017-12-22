@@ -106,6 +106,8 @@
 #define QCA_NL80211_VENDOR_SUBCMD_GET_BUS_SIZE 84
 /* Get wake reason stats */
 #define QCA_NL80211_VENDOR_SUBCMD_GET_WAKE_REASON_STATS 85
+/* Radio Mode change */
+#define QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_MODE 165
 #endif
 
 enum qca_wlan_vendor_attr_tdls_enable
@@ -500,5 +502,61 @@ enum qca_wlan_vendor_attr_wake_stats
     QCA_WLAN_VENDOR_ATTR_WAKE_STATS_AFTER_LAST,
     QCA_WLAN_VENDOR_ATTR_WAKE_STATS_MAX =
         QCA_WLAN_VENDOR_ATTR_WAKE_STATS_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_mac - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_INFO.
+ */
+enum qca_wlan_vendor_attr_mac {
+    QCA_WLAN_VENDOR_ATTR_MAC_INVALID = 0,
+    /* MAC mode info list which has an array of nested values as
+     * per attributes in enum qca_wlan_vendor_attr_mac_info.
+     */
+    QCA_WLAN_VENDOR_ATTR_MAC_INFO = 1,
+    /* keep last */
+    QCA_WLAN_VENDOR_ATTR_MAC_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_MAC_MAX =
+    QCA_WLAN_VENDOR_ATTR_MAC_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_mac_iface_info - Information of the connected
+ * WiFi netdev interface on a respective MAC.
+ * Used by the attribute QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO.
+ */
+enum qca_wlan_vendor_attr_mac_iface_info {
+    QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_INVALID = 0,
+    /* Wi-Fi Netdev's interface id.u32. */
+    QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_ID = 1,
+    /* Associated frequency in MHz of the connected Wi-Fi interface. u32 */
+    QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_FREQ = 2,
+    /* keep last */
+    QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_MAX =
+    QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_mac_info - Points to MAC the information.
+ * Used by the attribute QCA_WLAN_VENDOR_ATTR_MAC_INFO of the
+ * vendor command QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_INFO.
+ */
+enum qca_wlan_vendor_attr_mac_info {
+    QCA_WLAN_VENDOR_ATTR_MAC_INFO_INVALID = 0,
+    /* Hardware MAC ID associated for the MAC (u32) */
+    QCA_WLAN_VENDOR_ATTR_MAC_INFO_MAC_ID = 1,
+    /* Band supported by the respective MAC at a given point.
+     * Represented by enum qca_wlan_vendor_mac_info_band.
+     */
+    QCA_WLAN_VENDOR_ATTR_MAC_INFO_BAND = 2,
+    /* Refers to list of WLAN net dev interfaces associated with this MAC.
+     * Represented by enum qca_wlan_vendor_attr_mac_iface_info.
+     */
+    QCA_WLAN_VENDOR_ATTR_MAC_IFACE_INFO = 3,
+    /* keep last */
+    QCA_WLAN_VENDOR_ATTR_MAC_INFO_AFTER_LAST,
+    QCA_WLAN_VENDOR_ATTR_MAC_INFO_MAX =
+    QCA_WLAN_VENDOR_ATTR_MAC_INFO_AFTER_LAST - 1,
 };
 #endif

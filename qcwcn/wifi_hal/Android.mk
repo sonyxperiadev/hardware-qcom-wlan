@@ -57,7 +57,8 @@ LOCAL_SRC_FILES := \
 	ring_buffer.cpp \
 	rb_wrapper.cpp \
 	rssi_monitor.cpp \
-	roam.cpp
+	roam.cpp \
+	radio_mode.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_VENDOR_MODULE := true
@@ -118,7 +119,8 @@ LOCAL_SRC_FILES := \
 	ring_buffer.cpp \
 	rb_wrapper.cpp \
 	rssi_monitor.cpp \
-	roam.cpp
+	roam.cpp \
+	radio_mode.cpp
 
 LOCAL_CFLAGS += -Wall -Werror
 LOCAL_MODULE := libwifi-hal-qcom
