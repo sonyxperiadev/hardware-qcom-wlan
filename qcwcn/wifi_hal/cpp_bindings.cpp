@@ -1,4 +1,10 @@
 /*
+ * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ *
+ * Not a Contribution
+ */
+
+/*
  * Copyright (C) 2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -920,6 +926,11 @@ s32 WifiVendorCommand::get_s32(const struct nlattr *nla)
 s64 WifiVendorCommand::get_s64(const struct nlattr *nla)
 {
     return mMsg.get_s64(nla);
+}
+
+wifi_error WifiVendorCommand::put_ipv6_addr(int attribute, uint8_t value[16])
+{
+    return mMsg.put_ipv6_addr(attribute, value);
 }
 
 wifi_error WifiVendorCommand::put_string(int attribute, const char *value)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -42,8 +42,10 @@ class NUDStatsCommand: public WifiVendorCommand
 private:
     static NUDStatsCommand *mNUDStatsCommandInstance;
 
+    pkt_stats_result_handler mHandler;
     nud_stats mStats;
-
+    cmdData *mpktInfo;
+    int mnumStats;
     NUDStatsCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
 
 public:
@@ -59,9 +61,15 @@ public:
 
     virtual wifi_error requestResponse();
 
+    virtual wifi_error notifyResponse();
+
     virtual int handleResponse(WifiEvent &reply);
 
-    void copyStats(nud_stats *stats);
+    virtual void setHandler(pkt_stats_result_handler handler);
+
+    void copyStats(nud_stats *stats, cmdData *pktdstats);
+
+    void GetPktInfo(struct nlattr **tbvendor);
 };
 
 #ifdef __cplusplus
