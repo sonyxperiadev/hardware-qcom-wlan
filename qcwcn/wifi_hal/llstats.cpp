@@ -1289,7 +1289,7 @@ wifi_error wifi_set_link_stats(wifi_interface_handle iface,
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
 
 cleanup:
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 //Implementation of the functions exposed in LLStats.h
@@ -1351,7 +1351,7 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
         ret = LLCommand->notifyResponse();
 
 cleanup:
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 
@@ -1407,5 +1407,5 @@ wifi_error wifi_clear_link_stats(wifi_interface_handle iface,
 
 cleanup:
     delete LLCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }

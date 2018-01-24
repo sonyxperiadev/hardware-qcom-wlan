@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015, 2018 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -102,7 +102,7 @@ wifi_error wifi_extended_dtim_config_set(wifi_request_id id,
 
 cleanup:
     delete wifiConfigCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 /* Set the country code to driver. */
@@ -155,7 +155,7 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
 
 cleanup:
     delete wifiConfigCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 wifi_error wifi_set_beacon_wifi_iface_stats_averaging_factor(
@@ -223,7 +223,7 @@ wifi_error wifi_set_beacon_wifi_iface_stats_averaging_factor(
 
 cleanup:
     delete wifiConfigCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 wifi_error wifi_set_guard_time(wifi_request_id id,
@@ -287,7 +287,7 @@ wifi_error wifi_set_guard_time(wifi_request_id id,
 
 cleanup:
     delete wifiConfigCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 wifi_error wifi_select_tx_power_scenario(wifi_interface_handle handle,
@@ -357,7 +357,7 @@ wifi_error wifi_select_tx_power_scenario(wifi_interface_handle handle,
 
 cleanup:
     delete wifiConfigCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 wifi_error wifi_reset_tx_power_scenario(wifi_interface_handle handle)
@@ -415,7 +415,7 @@ wifi_error wifi_reset_tx_power_scenario(wifi_interface_handle handle)
 
 cleanup:
     delete wifiConfigCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 WiFiConfigCommand::WiFiConfigCommand(wifi_handle handle,

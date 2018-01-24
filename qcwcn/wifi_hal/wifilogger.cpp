@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015, 2018 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -152,9 +152,8 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
     rb_start_logging(&info->rb_infos[ring_id], verbose_level,
                     flags, max_interval_sec, min_data_size);
 cleanup:
-    if (wifiLoggerCommand)
-        delete wifiLoggerCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    delete wifiLoggerCommand;
+    return ret;
 }
 
 /*  Function to get each ring related info */
@@ -275,7 +274,7 @@ wifi_error wifi_get_logger_supported_feature_set(wifi_interface_handle iface,
 
 cleanup:
     delete wifiLoggerCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 /*  Function to get the data in each ring for the given ring ID.*/
@@ -344,7 +343,7 @@ wifi_error wifi_get_ring_data(wifi_interface_handle iface,
 
 cleanup:
     delete wifiLoggerCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 void WifiLoggerCommand::setVersionInfo(char *buffer, int buffer_size) {
@@ -408,7 +407,8 @@ wifi_error wifi_get_firmware_version(wifi_interface_handle iface,
 
 cleanup:
     delete wifiLoggerCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
+
 }
 
 /*  Function to get wlan driver version.*/
@@ -465,9 +465,10 @@ wifi_error wifi_get_driver_version(wifi_interface_handle iface,
     ret = wifiLoggerCommand->requestResponse();
     if (ret != WIFI_SUCCESS)
         ALOGE("%s: Error %d happened. ", __FUNCTION__, ret);
+
 cleanup:
     delete wifiLoggerCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 
@@ -541,7 +542,7 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
 
 cleanup:
     delete wifiLoggerCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 wifi_error wifi_set_log_handler(wifi_request_id id,
@@ -1539,7 +1540,7 @@ wifi_error wifi_get_wake_reason_stats(wifi_interface_handle iface,
 
 cleanup:
     delete wifiLoggerCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
 
 void WifiLoggerCommand::getWakeStatsRspParams(

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014, 2018 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #define LOG_TAG  "WifiHAL"
 #include <utils/Log.h>
 #include <time.h>
+#include <errno.h>
 
 #include "ifaceeventhandler.h"
 
@@ -233,7 +234,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_FEATURE_SET not found", __func__);
-                    return WIFI_ERROR_INVALID_ARGS;
+                    return -EINVAL;
                 }
                 mSet = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]);
                 ALOGV("Supported feature set : %x", mSet);
@@ -296,7 +297,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION"
                           " not found", __FUNCTION__);
-                    return WIFI_ERROR_INVALID_ARGS;
+                    return -EINVAL;
                 }
                 filterVersion = nla_get_u32(
                        tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION]);
@@ -306,7 +307,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH"
                           " not found", __FUNCTION__);
-                    return WIFI_ERROR_INVALID_ARGS;
+                    return -EINVAL;
                 }
                 filterLength = nla_get_u32(
                     tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH]);
@@ -325,7 +326,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE"
                           " not found", __FUNCTION__);
-                    return WIFI_ERROR_INVALID_ARGS;
+                    return -EINVAL;
                 }
                 firmware_bus_max_size = nla_get_u32(
                        tb_vendor[QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE]);

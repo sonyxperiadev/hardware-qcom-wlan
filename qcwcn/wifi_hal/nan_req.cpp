@@ -1445,7 +1445,7 @@ wifi_error NanCommand::requestEvent()
 
     if (!mInfo->cmd_sock) {
         ALOGE("%s: Command socket is null",__func__);
-        res = WIFI_ERROR_NOT_SUPPORTED;
+        res = WIFI_ERROR_OUT_OF_MEMORY;
         goto out;
     }
 

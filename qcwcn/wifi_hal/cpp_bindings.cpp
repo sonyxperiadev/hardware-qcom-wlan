@@ -1014,5 +1014,5 @@ wifi_error initialize_vendor_cmd(wifi_interface_handle iface,
 
 cleanup:
     delete *vCommand;
-    return mapKernelErrortoWifiHalError(ret);
+    return ret;
 }
