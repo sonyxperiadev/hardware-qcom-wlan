@@ -877,15 +877,10 @@ void LLStatsCommand::clearStats()
 {
     if(mResultsParams.radio_stat)
     {
-        wifi_radio_stat *radioStat = mResultsParams.radio_stat;
-        for (u8 radio = 0; radio < mNumRadios; radio++) {
-            if (radioStat->tx_time_per_levels) {
-                free(radioStat->tx_time_per_levels);
-                radioStat->tx_time_per_levels = NULL;
-            }
-            radioStat = (wifi_radio_stat *)((u8 *)radioStat +
-                sizeof(wifi_radio_stat) +  (sizeof(wifi_channel_stat) *
-                    radioStat->num_channels));
+        if (mResultsParams.radio_stat->tx_time_per_levels)
+        {
+            free(mResultsParams.radio_stat->tx_time_per_levels);
+            mResultsParams.radio_stat->tx_time_per_levels = NULL;
         }
         free(mResultsParams.radio_stat);
         mResultsParams.radio_stat = NULL;
@@ -1294,7 +1289,7 @@ wifi_error wifi_set_link_stats(wifi_interface_handle iface,
         ALOGE("%s: requestResponse Error:%d",__FUNCTION__, ret);
 
 cleanup:
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 //Implementation of the functions exposed in LLStats.h
@@ -1352,11 +1347,11 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
         goto cleanup;
     }
 
-    if (ret != WIFI_SUCCESS)
+    if (ret == WIFI_SUCCESS)
         ret = LLCommand->notifyResponse();
 
 cleanup:
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 
@@ -1412,5 +1407,5 @@ wifi_error wifi_clear_link_stats(wifi_interface_handle iface,
 
 cleanup:
     delete LLCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }

@@ -797,7 +797,7 @@ int WifiVendorCommand::handleEvent(WifiEvent &event)
     return NL_SKIP;
 }
 
- wifi_error WifiVendorCommand::create() {
+wifi_error WifiVendorCommand::create() {
     int ifindex;
     wifi_error ret = mMsg.create(NL80211_CMD_VENDOR, 0, 0);
     if (ret != WIFI_SUCCESS)
@@ -822,10 +822,8 @@ int WifiVendorCommand::handleEvent(WifiEvent &event)
     //insert the iface id to be "wlan0"
     ifindex = if_nametoindex("wlan0");
     ret = mMsg.set_iface_id(ifindex);
-
 out:
     return ret;
-
 }
 
 wifi_error WifiVendorCommand::requestResponse()
@@ -1016,5 +1014,5 @@ wifi_error initialize_vendor_cmd(wifi_interface_handle iface,
 
 cleanup:
     delete *vCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }

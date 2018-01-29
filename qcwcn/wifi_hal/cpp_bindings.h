@@ -337,7 +337,7 @@ public:
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
-    virtual int cancel() {
+    virtual wifi_error cancel() {
         /* by default there is no way to cancel */
         return WIFI_ERROR_NOT_SUPPORTED;
     }

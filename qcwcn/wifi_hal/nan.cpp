@@ -54,7 +54,7 @@ wifi_error nan_register_handler(wifi_interface_handle iface,
     }
 
     ret = nanCommand->setCallbackHandler(handlers);
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 wifi_error nan_get_version(wifi_handle handle,
@@ -97,13 +97,14 @@ wifi_error nan_enable_request(transaction_id id,
         ALOGE("%s: putNanEnable Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
     if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to send disable request to the wifi driver.*/
@@ -138,13 +139,14 @@ wifi_error nan_disable_request(transaction_id id,
         ALOGE("%s: putNanDisable Error:%d",__FUNCTION__, ret);
         goto cleanup;
     }
+
     ret = nanCommand->requestEvent();
     if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d",__FUNCTION__, ret);
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to send publish request to the wifi driver.*/
@@ -187,7 +189,7 @@ wifi_error nan_publish_request(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to send publish cancel to the wifi driver.*/
@@ -230,7 +232,7 @@ wifi_error nan_publish_cancel_request(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to send Subscribe request to the wifi driver.*/
@@ -273,7 +275,7 @@ wifi_error nan_subscribe_request(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to cancel subscribe to the wifi driver.*/
@@ -316,7 +318,7 @@ wifi_error nan_subscribe_cancel_request(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to send NAN follow up request to the wifi driver.*/
@@ -359,7 +361,7 @@ wifi_error nan_transmit_followup_request(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to send NAN statistics request to the wifi driver.*/
@@ -402,7 +404,7 @@ wifi_error nan_stats_request(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to send NAN configuration request to the wifi driver.*/
@@ -445,7 +447,7 @@ wifi_error nan_config_request(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to send NAN request to the wifi driver.*/
@@ -488,7 +490,7 @@ wifi_error nan_tca_request(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to send NAN Beacon sdf payload to the wifi driver.
@@ -534,7 +536,7 @@ wifi_error nan_beacon_sdf_payload_request(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 wifi_error nan_get_sta_parameter(transaction_id id,
@@ -558,7 +560,7 @@ wifi_error nan_get_sta_parameter(transaction_id id,
     }
 
 cleanup:
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to get NAN capabilities */
@@ -600,7 +602,7 @@ wifi_error nan_get_capabilities(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 /*  Function to get NAN capabilities */
@@ -614,18 +616,18 @@ wifi_error nan_debug_command_config(transaction_id id,
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
 
-    if (debug_msg_length <= 0) {
-        ALOGE("%s: Invalid debug message length = %d", __FUNCTION__,
-                                                       debug_msg_length);
-        return WIFI_ERROR_UNKNOWN;
-    }
-
     nanCommand = new NanCommand(wifiHandle,
                                 0,
                                 OUI_QCA,
                                 QCA_NL80211_VENDOR_SUBCMD_NAN);
     if (nanCommand == NULL) {
         ALOGE("%s: Error NanCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    if (debug_msg_length <= 0) {
+        ALOGE("%s: Invalid debug message length = %d", __FUNCTION__,
+                                                       debug_msg_length);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -684,9 +686,10 @@ wifi_error nan_initialize_vendor_cmd(wifi_interface_handle iface,
         goto cleanup;
 
     return WIFI_SUCCESS;
+
 cleanup:
     delete *nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 wifi_error nan_data_interface_create(transaction_id id,
@@ -707,7 +710,7 @@ wifi_error nan_data_interface_create(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return ret;
+        return mapKernelErrortoWifiHalError(ret);
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -728,13 +731,14 @@ wifi_error nan_data_interface_create(transaction_id id,
     }
 
     nanCommand->attr_end(nlData);
+
     ret = nanCommand->requestEvent();
     if (ret != WIFI_SUCCESS)
         ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 wifi_error nan_data_interface_delete(transaction_id id,
@@ -754,7 +758,7 @@ wifi_error nan_data_interface_delete(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return ret;
+        return mapKernelErrortoWifiHalError(ret);
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -782,7 +786,7 @@ wifi_error nan_data_interface_delete(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 wifi_error nan_data_request_initiator(transaction_id id,
@@ -801,7 +805,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return ret;
+        return mapKernelErrortoWifiHalError(ret);
     }
 
     if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
@@ -917,7 +921,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 wifi_error nan_data_indication_response(transaction_id id,
@@ -936,7 +940,7 @@ wifi_error nan_data_indication_response(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return ret;
+        return mapKernelErrortoWifiHalError(ret);
     }
 
     if ((msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) &&
@@ -1034,7 +1038,7 @@ wifi_error nan_data_indication_response(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 wifi_error nan_data_end(transaction_id id,
@@ -1053,7 +1057,7 @@ wifi_error nan_data_end(transaction_id id,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return ret;
+        return mapKernelErrortoWifiHalError(ret);
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -1081,7 +1085,7 @@ wifi_error nan_data_end(transaction_id id,
 
 cleanup:
     delete nanCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 // Implementation related to nan class common functions
@@ -1244,6 +1248,7 @@ int NanCommand::handleEvent(WifiEvent &event)
                 case QCA_WLAN_VENDOR_ATTR_NDP_DATA_REQUEST_IND:
                 case QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND:
                 case QCA_WLAN_VENDOR_ATTR_NDP_END_IND:
+                case QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_IND:
                     handleNdpIndication(ndpCmdType, tb_vendor);
                     break;
                 default:

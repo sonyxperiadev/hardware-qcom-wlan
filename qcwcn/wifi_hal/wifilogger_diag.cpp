@@ -136,7 +136,6 @@ static wifi_error process_log_extscan_capabilities(hal_info *info,
 
     pRingBufferEntry = (wifi_ring_buffer_entry *)&out_buf[0];
     memset(pRingBufferEntry, 0, SCAN_CAP_ENTRY_SIZE);
-    memset(&cap_vendor_data, 0, sizeof(gscan_capabilities_vendor_data_t));
     pConnectEvent = (wifi_ring_buffer_driver_connectivity_event *)
                      (pRingBufferEntry + 1);
 
@@ -702,8 +701,6 @@ static wifi_error process_roam_event(hal_info *info, u32 id,
             roam_candidate_found_vendor_data_t roamCandidateFoundVendata;
             pConnectEvent->event = WIFI_EVENT_ROAM_CANDIDATE_FOUND;
             pRoamCandidateFound = (wlan_roam_candidate_found_payload_type *)buf;
-            memset(&roamCandidateFoundVendata, 0,
-                   sizeof(roam_candidate_found_vendor_data_t));
             pTlv = &pConnectEvent->tlvs[0];
             pTlv = addLoggerTlv(WIFI_TAG_CHANNEL,
                                 sizeof(pRoamCandidateFound->channel),
@@ -2254,6 +2251,7 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
         }
     } else if (cmd == ANI_NL_MSG_CNSS_DIAG) {
         uint16_t diag_fw_type;
+        struct nlmsghdr *nlh = nlmsg_hdr(msg);
 
         if (!info->cldctx) {
             buf = (uint8_t *)NLMSG_DATA(wnl) + sizeof(wnl->clh.radio);
@@ -2271,6 +2269,12 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                       wnl->nlh.nlmsg_len);
                 return WIFI_ERROR_UNKNOWN;
             }
+        } else {
+            if (nlh->nlmsg_len <= NLMSG_HDRLEN + sizeof(dbglog_slot)) {
+                ALOGE("Received CNSS_DIAG message with insufficent length: %d: %s:%d",
+                      nlh->nlmsg_len, __FUNCTION__, __LINE__);
+                return WIFI_ERROR_UNKNOWN;
+            }
         }
         diag_fw_type = event_hdr->diag_type;
         if (diag_fw_type == DIAG_TYPE_FW_MSG) {
@@ -2278,6 +2282,16 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
             u16 length = 0;
 
             slot = (dbglog_slot *)buf;
+            if (nlh->nlmsg_len < (NLMSG_HDRLEN + sizeof(dbglog_slot) +
+                                        slot->length)) {
+                ALOGE("Received CNSS_DIAG message with insufficent length: %d:"
+                              " expected: %zu, %s:%d",
+                      nlh->nlmsg_len,
+                      (NLMSG_HDRLEN + sizeof(dbglog_slot) +slot->length),
+                      __FUNCTION__,
+                      __LINE__);
+                return WIFI_ERROR_UNKNOWN;
+            }
             length = get_le32((u8 *)&slot->length);
             process_fw_diag_msg(info, &slot->payload[0], length);
         }

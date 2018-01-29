@@ -212,6 +212,9 @@ typedef enum
     NAN_TLV_TYPE_DISC_MAC_ADDR_RANDOM_INTERVAL,
     NAN_TLV_TYPE_RANGING_AUTO_RESPONSE_CFG = 4134,
     NAN_TLV_TYPE_SUBSCRIBE_SID_BEACON = 4135,
+    NAN_TLV_TYPE_DW_EARLY_TERMINATION = 4136,
+    NAN_TLV_TYPE_TX_RX_CHAINS = 4137,
+    NAN_TLV_TYPE_ENABLE_DEVICE_RANGING = 4138,
     NAN_TLV_TYPE_CONFIG_LAST = 8191,
 
     /* Attributes types */
@@ -1074,10 +1077,8 @@ typedef struct PACKED
     u32 security_required:1;
     u32 ranging_required:1;
     u32 range_limit_present:1;
-    u32 service_update_ind_present:1;
-    u32 reserved1:6;
     u32 range_report:1;
-    u32 reserved2:15;
+    u32 reserved:22;
 } NanFWSdeaCtrlParams;
 
 /* NAN Ranging Configuration params */
@@ -1262,7 +1263,8 @@ typedef struct PACKED
 */
 void NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
                          u32 valueRcvd,
-                         void *pRsp);
+                         void *pRsp,
+                         bool is_ndp_rsp);
 
 #ifdef __cplusplus
 }

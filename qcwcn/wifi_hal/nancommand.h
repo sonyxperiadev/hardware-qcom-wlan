@@ -104,6 +104,7 @@ private:
     int getNanTransmitFollowupInd(NanTransmitFollowupInd *event);
     int getNanRangeRequestReceivedInd(NanRangeRequestInd *event);
     int getNanRangeReportInd(NanRangeReportInd *event);
+    int getNdpScheduleUpdate(struct nlattr **tb_vendor, NanDataPathScheduleUpdateInd *event);
 public:
     NanCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
     static NanCommand* instance(wifi_handle handle);
@@ -142,7 +143,8 @@ public:
     */
     void NanErrorTranslation(NanInternalStatusType firmwareErrorRecvd,
                              u32 valueRcvd,
-                             void *pRsp);
+                             void *pRsp,
+                             bool is_ndp_rsp);
 };
 #endif /* __WIFI_HAL_NAN_COMMAND_H__ */
 

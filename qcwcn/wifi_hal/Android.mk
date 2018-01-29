@@ -26,6 +26,8 @@ endif
 # gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'
 LOCAL_CLANG_CFLAGS := -Wno-pointer-bool-conversion
 
+LOCAL_CFLAGS += -Wall -Werror
+
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
 	external/libnl/include \
@@ -55,10 +57,10 @@ LOCAL_SRC_FILES := \
 	ring_buffer.cpp \
 	rb_wrapper.cpp \
 	rssi_monitor.cpp \
-	roam.cpp \
-	wifihal_vendor.cpp
+	roam.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_CLANG := true
 LOCAL_SHARED_LIBRARIES += libnetutils liblog libwpa_client libcld80211
 
@@ -69,6 +71,8 @@ else
 LOCAL_SHARED_LIBRARIES += libnl_2
 LOCAL_C_INCLUDES += external/libnl-headers
 endif
+
+LOCAL_HEADER_LIBRARIES := libcutils_headers libutils_headers
 
 include $(BUILD_STATIC_LIBRARY)
 
@@ -114,9 +118,9 @@ LOCAL_SRC_FILES := \
 	ring_buffer.cpp \
 	rb_wrapper.cpp \
 	rssi_monitor.cpp \
-	roam.cpp \
-	wifihal_vendor.cpp
+	roam.cpp
 
+LOCAL_CFLAGS += -Wall -Werror
 LOCAL_MODULE := libwifi-hal-qcom
 LOCAL_PROPRIETARY_MODULE := true
 LOCAL_CLANG := true
@@ -131,4 +135,5 @@ LOCAL_SHARED_LIBRARIES += libnl_2
 LOCAL_C_INCLUDES += external/libnl-headers
 endif
 
+LOCAL_HEADER_LIBRARIES := libcutils_headers libutils_headers
 include $(BUILD_SHARED_LIBRARY)

@@ -147,7 +147,20 @@ wifi_error NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *p
         (
            pReq->config_discovery_beacon_int ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
+        ) + \
+        (
+           pReq->config_nss ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
+        ) + \
+        (
+           pReq->config_enable_ranging ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
+        ) + \
+        (
+           pReq->config_dw_early_termination ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
         );
+
     pNanEnableReqMsg pFwReq = (pNanEnableReqMsg)malloc(message_len);
     if (pFwReq == NULL) {
         cleanup();
@@ -312,6 +325,18 @@ wifi_error NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *p
         tlvs = addTlv(NAN_TLV_TYPE_DB_INTERVAL, sizeof(u32),
                       (const u8*)&pReq->discovery_beacon_interval, tlvs);
     }
+    if (pReq->config_nss) {
+        tlvs = addTlv(NAN_TLV_TYPE_TX_RX_CHAINS, sizeof(u32),
+                      (const u8*)&pReq->nss, tlvs);
+    }
+    if (pReq->config_enable_ranging) {
+        tlvs = addTlv(NAN_TLV_TYPE_ENABLE_DEVICE_RANGING, sizeof(u32),
+                      (const u8*)&pReq->enable_ranging, tlvs);
+    }
+    if (pReq->config_dw_early_termination) {
+        tlvs = addTlv(NAN_TLV_TYPE_DW_EARLY_TERMINATION, sizeof(u32),
+                      (const u8*)&pReq->enable_dw_termination, tlvs);
+    }
 
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
@@ -437,6 +462,18 @@ wifi_error NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *p
         ) + \
         (
            pReq->config_discovery_beacon_int ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
+        ) + \
+        (
+           pReq->config_nss ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
+        ) + \
+        (
+           pReq->config_enable_ranging ? (SIZEOF_TLV_HDR + \
+           sizeof(u32)) : 0 \
+        ) + \
+        (
+           pReq->config_dw_early_termination ? (SIZEOF_TLV_HDR + \
            sizeof(u32)) : 0 \
         );
 
@@ -569,6 +606,19 @@ wifi_error NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *p
     tlvs = addTlv(NAN_TLV_TYPE_CONFIG_DISCOVERY_INDICATIONS,
                   sizeof(u32),
                   (const u8*)&config_discovery_indications, tlvs);
+
+    if (pReq->config_nss) {
+        tlvs = addTlv(NAN_TLV_TYPE_TX_RX_CHAINS, sizeof(u32),
+                      (const u8*)&pReq->nss, tlvs);
+    }
+    if (pReq->config_enable_ranging) {
+        tlvs = addTlv(NAN_TLV_TYPE_ENABLE_DEVICE_RANGING, sizeof(u32),
+                      (const u8*)&pReq->enable_ranging, tlvs);
+    }
+    if (pReq->config_dw_early_termination) {
+        tlvs = addTlv(NAN_TLV_TYPE_DW_EARLY_TERMINATION, sizeof(u32),
+                      (const u8*)&pReq->enable_dw_termination, tlvs);
+    }
 
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
@@ -1395,7 +1445,7 @@ wifi_error NanCommand::requestEvent()
 
     if (!mInfo->cmd_sock) {
         ALOGE("%s: Command socket is null",__func__);
-        res = WIFI_ERROR_OUT_OF_MEMORY;
+        res = WIFI_ERROR_NOT_SUPPORTED;
         goto out;
     }
 

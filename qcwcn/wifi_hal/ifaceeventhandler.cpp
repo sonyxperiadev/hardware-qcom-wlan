@@ -233,7 +233,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET])
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_FEATURE_SET not found", __func__);
-                    return -EINVAL;
+                    return WIFI_ERROR_INVALID_ARGS;
                 }
                 mSet = nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]);
                 ALOGV("Supported feature set : %x", mSet);
@@ -296,7 +296,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION"
                           " not found", __FUNCTION__);
-                    return -EINVAL;
+                    return WIFI_ERROR_INVALID_ARGS;
                 }
                 filterVersion = nla_get_u32(
                        tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION]);
@@ -306,7 +306,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH"
                           " not found", __FUNCTION__);
-                    return -EINVAL;
+                    return WIFI_ERROR_INVALID_ARGS;
                 }
                 filterLength = nla_get_u32(
                     tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH]);
@@ -325,7 +325,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 {
                     ALOGE("%s: QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE"
                           " not found", __FUNCTION__);
-                    return -EINVAL;
+                    return WIFI_ERROR_INVALID_ARGS;
                 }
                 firmware_bus_max_size = nla_get_u32(
                        tb_vendor[QCA_WLAN_VENDOR_ATTR_DRV_INFO_BUS_SIZE]);

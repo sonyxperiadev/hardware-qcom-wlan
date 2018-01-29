@@ -67,8 +67,6 @@ wifi_error cleanupRSSIMonitorHandler(hal_info *info)
             delete event_handlers->mRSSIMonitorCommandInstance;
         }
         memset(event_handlers, 0, sizeof(rssi_monitor_event_handlers));
-        free(info->rssi_handlers);
-        info->rssi_handlers = NULL;
         return WIFI_SUCCESS;
     }
     ALOGE ("%s: info or info->rssi_handlers NULL", __FUNCTION__);
@@ -266,7 +264,7 @@ wifi_error wifi_start_rssi_monitoring(wifi_request_id id,
                                 &vCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return ret;
+        return mapKernelErrortoWifiHalError(ret);
     }
 
     ALOGV("%s: Max RSSI:%d Min RSSI:%d", __FUNCTION__,
@@ -312,7 +310,7 @@ wifi_error wifi_start_rssi_monitoring(wifi_request_id id,
 
 cleanup:
     delete vCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }
 
 wifi_error wifi_stop_rssi_monitoring(wifi_request_id id,
@@ -341,7 +339,7 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id,
                                 &vCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return ret;
+        return mapKernelErrortoWifiHalError(ret);
     }
 
     /* Add the vendor specific attributes for the NL command. */
@@ -368,5 +366,5 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id,
 
 cleanup:
     delete vCommand;
-    return ret;
+    return mapKernelErrortoWifiHalError(ret);
 }

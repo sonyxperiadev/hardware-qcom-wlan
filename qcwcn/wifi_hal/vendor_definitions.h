@@ -369,7 +369,17 @@ enum qca_wlan_vendor_attr_ndp_params
     QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
     /* Array of u8: len = NAN_MAX_SERVICE_NAME_LEN */
     QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_NAME,
+    /* Unsigned 32-bit value indicating schedule update */
+    QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_REASON,
+    /* Unsigned 32-bit value for NSS */
+    QCA_WLAN_VENDOR_ATTR_NDP_NSS,
+    /* Unsigned 32-bit value for NUMBER NDP CHANNEL */
+    QCA_WLAN_VENDOR_ATTR_NDP_NUM_CHANNELS,
+    /* Unsigned 32-bit value for CHANNEL BANDWIDTH */
+    QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_WIDTH,
 
+    /* Array of channel/band width */
+    QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL_INFO,
 
     /* KEEP LAST */
     QCA_WLAN_VENDOR_ATTR_NDP_AFTER_LAST,
@@ -406,7 +416,8 @@ enum qca_wlan_vendor_attr_ndp_sub_cmd_value
    QCA_WLAN_VENDOR_ATTR_NDP_END_RESPONSE = 8,
    QCA_WLAN_VENDOR_ATTR_NDP_DATA_REQUEST_IND = 9,
    QCA_WLAN_VENDOR_ATTR_NDP_CONFIRM_IND = 10,
-   QCA_WLAN_VENDOR_ATTR_NDP_END_IND = 11
+   QCA_WLAN_VENDOR_ATTR_NDP_END_IND = 11,
+   QCA_WLAN_VENDOR_ATTR_NDP_SCHEDULE_UPDATE_IND = 12
 };
 
 #define PACKET_FILTER_ID 0
