@@ -60,7 +60,7 @@ LOCAL_SRC_FILES := \
 	roam.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE := true
 LOCAL_CLANG := true
 LOCAL_SHARED_LIBRARIES += libnetutils liblog libwpa_client libcld80211
 
@@ -122,7 +122,7 @@ LOCAL_SRC_FILES := \
 
 LOCAL_CFLAGS += -Wall -Werror
 LOCAL_MODULE := libwifi-hal-qcom
-LOCAL_PROPRIETARY_MODULE := true
+LOCAL_VENDOR_MODULE := true
 LOCAL_CLANG := true
 LOCAL_SHARED_LIBRARIES += libnetutils liblog
 LOCAL_SHARED_LIBRARIES += libdl libwpa_client libcld80211
