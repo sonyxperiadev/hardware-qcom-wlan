@@ -60,14 +60,6 @@ static int get_ring_id(hal_info *info, char *ring_name)
     return -1;
 }
 
-static bool check_supported_logger(uint32_t supported_logger)
-{
-    if(supported_logger == 0)
-       return false;
-    else
-       return true;
-}
-
 //Implementation of the functions exposed in wifi_logger.h
 
 /* Function to intiate logging */
@@ -86,8 +78,9 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
     int ring_id = 0;
 
     /* Check Supported logger capability */
-    if(!check_supported_logger(info->supported_logger_feature_set)) {
-        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+    if (!(info->supported_logger_feature_set & LOGGER_RING_BUFFER)) {
+        ALOGE("%s: Ring buffer logging feature not supported %x", __FUNCTION__,
+              info->supported_logger_feature_set);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
     /*
@@ -176,8 +169,9 @@ wifi_error wifi_get_ring_buffers_status(wifi_interface_handle iface,
     int rb_id;
 
     /* Check Supported logger capability */
-    if(!check_supported_logger(info->supported_logger_feature_set)) {
-        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+    if (!(info->supported_logger_feature_set & LOGGER_RING_BUFFER)) {
+        ALOGE("%s: Ring buffer logging feature not supported %x", __FUNCTION__,
+              info->supported_logger_feature_set);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
@@ -298,8 +292,9 @@ wifi_error wifi_get_ring_data(wifi_interface_handle iface,
     int ring_id = 0;
 
     /* Check Supported logger capability */
-    if(!check_supported_logger(info->supported_logger_feature_set)) {
-        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+    if (!(info->supported_logger_feature_set & LOGGER_RING_BUFFER)) {
+        ALOGE("%s: Ring buffer logging feature not supported %x", __FUNCTION__,
+              info->supported_logger_feature_set);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
@@ -489,8 +484,10 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
     hal_info *info = getHalInfo(wifiHandle);
 
     /* Check Supported logger capability */
-    if(!check_supported_logger(info->supported_logger_feature_set)) {
-        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+    if (!(info->supported_logger_feature_set &
+          WIFI_LOGGER_MEMORY_DUMP_SUPPORTED)) {
+        ALOGE("%s: Firmware memory dump logging feature not supported %x",
+              __FUNCTION__, info->supported_logger_feature_set);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
@@ -615,6 +612,14 @@ wifi_error wifi_start_pkt_fate_monitoring(wifi_interface_handle iface)
 {
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
+
+    /* Check Supported logger capability */
+    if (!(info->supported_logger_feature_set &
+          WIFI_LOGGER_PACKET_FATE_SUPPORTED)) {
+        ALOGE("%s: packet fate logging feature not supported %x",
+              __FUNCTION__, info->supported_logger_feature_set);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     if (info->fate_monitoring_enabled == true) {
         ALOGV("Packet monitoring is already enabled");
@@ -831,6 +836,13 @@ void rb_timerhandler(hal_info *info)
 wifi_error wifi_logger_ring_buffers_init(hal_info *info)
 {
     wifi_error ret;
+
+    /* Check Supported logger capability */
+    if (!(info->supported_logger_feature_set & LOGGER_RING_BUFFER)) {
+        ALOGE("%s: Ring buffer logging feature not supported %x", __FUNCTION__,
+              info->supported_logger_feature_set);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    }
 
     ret = rb_init(info, &info->rb_infos[POWER_EVENTS_RB_ID],
                   POWER_EVENTS_RB_ID,
@@ -1377,8 +1389,10 @@ wifi_error wifi_get_driver_memory_dump(wifi_interface_handle iface,
     hal_info *info = getHalInfo(wifiHandle);
 
     /* Check Supported logger capability */
-    if(!check_supported_logger(info->supported_logger_feature_set)) {
-        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+    if (!(info->supported_logger_feature_set &
+          WIFI_LOGGER_DRIVER_DUMP_SUPPORTED)) {
+        ALOGE("%s: Driver memory dump logging feature not supported %x",
+              __FUNCTION__, info->supported_logger_feature_set);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
     /* Open File */
@@ -1462,8 +1476,10 @@ wifi_error wifi_get_wake_reason_stats(wifi_interface_handle iface,
     hal_info *info = getHalInfo(wifiHandle);
 
     /* Check Supported logger capability */
-    if(!check_supported_logger(info->supported_logger_feature_set)) {
-        ALOGE("%s: Logger feature not supported ", __FUNCTION__);
+    if (!(info->supported_logger_feature_set &
+          WIFI_LOGGER_WAKE_LOCK_SUPPORTED)) {
+        ALOGE("%s: Wake lock logging feature not supported %x",
+              __FUNCTION__, info->supported_logger_feature_set);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
 
