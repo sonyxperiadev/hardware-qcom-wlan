@@ -189,6 +189,38 @@ cleanup:
     return ret;
 }
 
+static wifi_error acquire_driver_supported_features(wifi_interface_handle iface,
+                                          features_info *driver_features)
+{
+    wifi_error ret;
+    interface_info *iinfo = getIfaceInfo(iface);
+    wifi_handle handle = getWifiHandle(iface);
+
+    WifihalGeneric driverFeatures(handle, 0,
+            OUI_QCA,
+            QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES);
+
+    /* create the message */
+    ret = driverFeatures.create();
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    ret = driverFeatures.set_iface_id(iinfo->name);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    ret = driverFeatures.requestResponse();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: requestResponse Error:%d",__func__, ret);
+        goto cleanup;
+    }
+
+    driverFeatures.getDriverFeatures(driver_features);
+
+cleanup:
+    return mapKernelErrortoWifiHalError(ret);
+}
+
 static wifi_error wifi_get_capabilities(wifi_interface_handle handle)
 {
     wifi_error ret;
@@ -629,6 +661,13 @@ wifi_error wifi_initialize(wifi_handle *handle)
         ret = WIFI_SUCCESS;
     }
 
+    ret = acquire_driver_supported_features(iface_handle,
+                                  &info->driver_supported_features);
+    if (ret != WIFI_SUCCESS) {
+        ALOGI("Failed to get vendor feature set : %d", ret);
+        ret = WIFI_SUCCESS;
+    }
+
     ret =  wifi_get_logger_supported_feature_set(iface_handle,
                          &info->supported_logger_feature_set);
     if (ret != WIFI_SUCCESS) {
@@ -722,6 +761,10 @@ unload:
             if (info->rx_aggr_pkts) free(info->rx_aggr_pkts);
             cleanupGscanHandlers(info);
             cleanupRSSIMonitorHandler(info);
+            if (info->driver_supported_features.flags) {
+                free(info->driver_supported_features.flags);
+                info->driver_supported_features.flags = NULL;
+            }
             free(info);
         }
     }
@@ -787,6 +830,11 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     if (info->pkt_fate_stats) {
         free(info->pkt_fate_stats);
         info->pkt_fate_stats = NULL;
+    }
+
+    if (info->driver_supported_features.flags) {
+        free(info->driver_supported_features.flags);
+        info->driver_supported_features.flags = NULL;
     }
 
     (*cleaned_up_handler)(handle);

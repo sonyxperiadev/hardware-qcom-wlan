@@ -105,6 +105,14 @@ cleanup:
     return ret;
 }
 
+int check_feature(enum qca_wlan_vendor_features feature, features_info *info)
+{
+    size_t idx = feature / 8;
+
+    return (idx < info->flags_len) &&
+            (info->flags[idx] & BIT(feature % 8));
+}
+
 /* Set the country code to driver. */
 wifi_error wifi_set_country_code(wifi_interface_handle iface,
                                  const char* country_code)
@@ -113,6 +121,7 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
     wifi_error ret;
     WiFiConfigCommand *wifiConfigCommand;
     wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
 
     ALOGV("%s: %s", __FUNCTION__, country_code);
 
@@ -143,6 +152,18 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
         ALOGE("wifi_set_country_code: put country code failed. Error:%d", ret);
         goto cleanup;
     }
+
+    if (check_feature(QCA_WLAN_VENDOR_FEATURE_SELF_MANAGED_REGULATORY,
+                      &info->driver_supported_features)) {
+        ret = wifiConfigCommand->put_u32(NL80211_ATTR_USER_REG_HINT_TYPE,
+                                         NL80211_USER_REG_HINT_CELL_BASE);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("wifi_set_country_code: put reg hint type failed. Error:%d",
+                  ret);
+            goto cleanup;
+        }
+    }
+
 
     /* Send the NL msg. */
     wifiConfigCommand->waitForRsp(false);
