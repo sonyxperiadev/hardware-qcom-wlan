@@ -1239,6 +1239,17 @@ static void process_wlan_log_complete_event(hal_info *info,
     }
 }
 
+static void process_wlan_data_stall_event(hal_info *info,
+                                          u8* buf,
+                                          int length)
+{
+   wlan_data_stall_event_t *event;
+
+   ALOGV("Received Data Stall Event from Driver");
+   event = (wlan_data_stall_event_t *)buf;
+   ALOGE("Received Data Stall event, sending alert %d", event->reason);
+   send_alert(info, DATA_STALL_OFFSET_REASON_CODE + event->reason);
+}
 
 static void process_wlan_low_resource_failure(hal_info *info,
                                               u8* buf,
@@ -2199,6 +2210,9 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                         break;
                     case EVENT_WLAN_LOW_RESOURCE_FAILURE:
                         process_wlan_low_resource_failure(info, buf, event_hdr->length);
+                        break;
+                    case EVENT_WLAN_STA_DATA_STALL:
+                        process_wlan_data_stall_event(info, buf, event_hdr->length);
                         break;
                     default:
                         return WIFI_SUCCESS;
