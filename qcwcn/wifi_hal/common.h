@@ -149,6 +149,7 @@ typedef struct hal_info_s {
     struct rssi_monitor_event_handler_s *rssi_handlers;
     wifi_capa capa;
     struct cld80211_ctx *cldctx;
+    bool apf_enabled;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);

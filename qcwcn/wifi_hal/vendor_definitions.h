@@ -430,6 +430,14 @@ enum packet_filter_sub_cmd
 {
     QCA_WLAN_SET_PACKET_FILTER = 1,
     QCA_WLAN_GET_PACKET_FILTER_SIZE = 2,
+    /* For writing packet filter program + data */
+    QCA_WLAN_WRITE_PACKET_FILTER = 3,
+    /* For reading packet filter data */
+    QCA_WLAN_READ_PACKET_FILTER = 4,
+    /* Enable APF faeature */
+    QCA_WLAN_ENABLE_PACKET_FILTER = 5,
+    /* Disable APF faeature */
+    QCA_WLAN_DISABLE_PACKET_FILTER = 6,
 };
 
 enum qca_wlan_vendor_attr_packet_filter
@@ -442,6 +450,10 @@ enum qca_wlan_vendor_attr_packet_filter
     QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH,
     QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_CURRENT_OFFSET,
     QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM,
+    /* The length of the program in the write buffer,
+     * the write buffer may have program+data
+     */
+    QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROG_LENGTH,
 
     /* keep last */
     QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_AFTER_LAST,

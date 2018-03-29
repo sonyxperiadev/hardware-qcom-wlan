@@ -203,6 +203,8 @@ WifihalGeneric::WifihalGeneric(wifi_handle handle, int id, u32 vendor_id,
     filterLength = 0;
     firmware_bus_max_size = 0;
     mCapa = &(info->capa);
+    mfilter_packet_read_buffer = NULL;
+    mfilter_packet_length = 0;
 }
 
 WifihalGeneric::~WifihalGeneric()
@@ -287,31 +289,69 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
             break;
         case QCA_NL80211_VENDOR_SUBCMD_PACKET_FILTER:
             {
+                int subCmd;
                 struct nlattr *tb_vendor[
                         QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX + 1];
                 nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_MAX,
                         (struct nlattr *)mVendorData,
                         mDataLen, NULL);
 
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION])
+                if (tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SUB_CMD])
                 {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION"
-                          " not found", __FUNCTION__);
-                    return -EINVAL;
+                    subCmd = nla_get_u32(
+                           tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SUB_CMD]);
+                } else {
+                    /*
+                     * The older drivers may not send PACKET_FILTER_SUB_CMD as
+                     * they support QCA_WLAN_GET_PACKET_FILTER_SIZE only.
+                     */
+                    subCmd = QCA_WLAN_GET_PACKET_FILTER_SIZE;
                 }
-                filterVersion = nla_get_u32(
-                       tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION]);
-                ALOGV("Current version : %u", filterVersion);
+                if (subCmd == QCA_WLAN_GET_PACKET_FILTER_SIZE) {
+                    if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION])
+                    {
+                        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION"
+                              " not found", __FUNCTION__);
+                        return -EINVAL;
+                    }
+                    filterVersion = nla_get_u32(
+                           tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_VERSION]);
+                    ALOGV("Current version : %u", filterVersion);
 
-                if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH])
-                {
-                    ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH"
-                          " not found", __FUNCTION__);
-                    return -EINVAL;
+                    if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH])
+                    {
+                        ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH"
+                              " not found", __FUNCTION__);
+                        return -EINVAL;
+                    }
+                    filterLength = nla_get_u32(
+                        tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH]);
+                    ALOGV("Max filter length Supported : %u", filterLength);
+                } else if (subCmd == QCA_WLAN_READ_PACKET_FILTER) {
+
+                   if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM])
+                   {
+                       ALOGE("%s: QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM"
+                             " not found", __FUNCTION__);
+                       return -EINVAL;
+                   }
+                   if (nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM])
+                           < mfilter_packet_length)
+                   {
+                       ALOGE("%s: Expected packet filter length :%d but received only: %d bytes",
+                             __FUNCTION__, mfilter_packet_length,
+                             nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM]));
+                       return -EINVAL;
+                   }
+                   memcpy(mfilter_packet_read_buffer,
+                      nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_PROGRAM]),
+                      mfilter_packet_length);
+                   ALOGV("Filter Program length : %u", mfilter_packet_length);
+                } else {
+                       ALOGE("%s: Unknown APF sub command received",
+                             __FUNCTION__);
+                       return -EINVAL;
                 }
-                filterLength = nla_get_u32(
-                    tb_vendor[QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH]);
-                ALOGV("Max filter length Supported : %u", filterLength);
 
             }
             break;
@@ -521,6 +561,10 @@ int WifihalGeneric::getFilterVersion() {
 
 int WifihalGeneric::getFilterLength() {
     return filterLength;
+}
+void WifihalGeneric::setPacketBufferParams(u8 *host_packet_buffer, int packet_length) {
+    mfilter_packet_read_buffer = host_packet_buffer;
+    mfilter_packet_length = packet_length;
 }
 
 int WifihalGeneric::getBusSize() {
