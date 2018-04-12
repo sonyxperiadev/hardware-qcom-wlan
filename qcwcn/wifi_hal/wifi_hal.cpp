@@ -66,6 +66,13 @@
 #define WIFI_HAL_CMD_SOCK_PORT       644
 #define WIFI_HAL_EVENT_SOCK_PORT     645
 
+/*
+ * Defines for wifi_wait_for_driver_ready()
+ * Specify durations between polls and max wait time
+ */
+#define POLL_DRIVER_DURATION_US (100000)
+#define POLL_DRIVER_MAX_TIME_MS (10000)
+
 static void internal_event_handler(wifi_handle handle, int events,
                                    struct nl_sock *sock);
 static int internal_valid_message_handler(nl_msg *msg, void *arg);
@@ -360,6 +367,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     }
 
     fn->wifi_initialize = wifi_initialize;
+    fn->wifi_wait_for_driver_ready = wifi_wait_for_driver_ready;
     fn->wifi_cleanup = wifi_cleanup;
     fn->wifi_event_loop = wifi_event_loop;
     fn->wifi_get_supported_feature_set = wifi_get_supported_feature_set;
@@ -761,6 +769,25 @@ unload:
     }
 
     return ret;
+}
+
+wifi_error wifi_wait_for_driver_ready(void)
+{
+    // This function will wait to make sure basic client netdev is created
+    // Function times out after 10 seconds
+    int count = (POLL_DRIVER_MAX_TIME_MS * 1000) / POLL_DRIVER_DURATION_US;
+    FILE *fd;
+
+    do {
+        if ((fd = fopen("/sys/class/net/wlan0", "r")) != NULL) {
+            fclose(fd);
+            return WIFI_SUCCESS;
+        }
+        usleep(POLL_DRIVER_DURATION_US);
+    } while(--count > 0);
+
+    ALOGE("Timed out wating on Driver ready ... ");
+    return WIFI_ERROR_TIMED_OUT;
 }
 
 static int wifi_add_membership(wifi_handle handle, const char *group)
