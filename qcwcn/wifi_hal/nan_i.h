@@ -1077,8 +1077,10 @@ typedef struct PACKED
     u32 security_required:1;
     u32 ranging_required:1;
     u32 range_limit_present:1;
+    u32 service_update_ind_present:1;
+    u32 reserved1:6;
     u32 range_report:1;
-    u32 reserved:22;
+    u32 reserved2:15;
 } NanFWSdeaCtrlParams;
 
 /* NAN Ranging Configuration params */
