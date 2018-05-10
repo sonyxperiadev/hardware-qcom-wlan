@@ -129,6 +129,8 @@ static wifi_error process_log_extscan_capabilities(hal_info *info,
     wlan_ext_scan_capabilities_payload_type *pScanCapabilities;
     wifi_gscan_capabilities gscan_cap;
     gscan_capabilities_vendor_data_t cap_vendor_data;
+    memset(&cap_vendor_data, 0, sizeof(cap_vendor_data));
+
     tlv_log *pTlv;
     int tot_len = sizeof(wifi_ring_buffer_driver_connectivity_event);
     u8 out_buf[SCAN_CAP_ENTRY_SIZE];
