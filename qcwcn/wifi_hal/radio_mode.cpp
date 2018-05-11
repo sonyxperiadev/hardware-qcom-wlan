@@ -96,6 +96,7 @@ int RADIOModeCommand::handleEvent(WifiEvent &event)
     wifi_error ret = WIFI_SUCCESS;
     int num_of_mac = 0;
     wifi_mac_info mode_info;
+    memset(&mode_info, 0, sizeof(mode_info));
 
     WifiVendorCommand::handleEvent(event);
 
