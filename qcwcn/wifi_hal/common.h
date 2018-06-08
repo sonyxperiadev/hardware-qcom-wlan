@@ -195,6 +195,9 @@ wifi_error wifi_stop_rssi_monitoring(wifi_request_id id, wifi_interface_handle i
 wifi_error wifi_set_radio_mode_change_handler(wifi_request_id id, wifi_interface_handle
         iface, wifi_radio_mode_change_handler eh);
 wifi_error mapKernelErrortoWifiHalError(int kern_err);
+wifi_error wifi_add_or_remove_virtual_intf(wifi_interface_handle iface,
+                                           const char* ifname, u32 iface_type,
+                                           bool create);
 // some common macros
 
 #define min(x, y)       ((x) < (y) ? (x) : (y))

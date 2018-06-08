@@ -451,6 +451,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_radio_mode_change_handler = wifi_set_radio_mode_change_handler;
     /* Customers will uncomment when they want to set qpower*/
     //fn->wifi_set_qpower = wifi_set_qpower;
+    fn->wifi_add_or_remove_virtual_intf = wifi_add_or_remove_virtual_intf;
 
     return WIFI_SUCCESS;
 }
@@ -1180,6 +1181,22 @@ wifi_error wifi_get_ifaces(wifi_handle handle, int *num,
         wifi_interface_handle **interfaces)
 {
     hal_info *info = (hal_info *)handle;
+
+    /* In case of dynamic interface add/remove, interface handles need to be
+     * updated so that, interface specific APIs could be instantiated.
+     * Reload here to get interfaces which are dynamically added. */
+
+    if (info->num_interfaces > 0) {
+        for (int i = 0; i < info->num_interfaces; i++)
+            free(info->interfaces[i]);
+        free(info->interfaces);
+    }
+
+    wifi_error ret = wifi_init_interfaces(handle);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to init interfaces while wifi_get_ifaces");
+        return ret;
+    }
 
     *interfaces = (wifi_interface_handle *)info->interfaces;
     *num = info->num_interfaces;
