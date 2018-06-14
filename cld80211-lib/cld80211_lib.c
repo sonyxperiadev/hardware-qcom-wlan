@@ -5,7 +5,7 @@
  * Copyright (c) 2005-2006, Devicescape Software, Inc.
  * Copyright (c) 2007, Johannes Berg <johannes@sipsolutions.net>
  * Copyright (c) 2009-2010, Atheros Communications
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -38,11 +38,22 @@
 #include <netlink/genl/ctrl.h>
 #include <linux/pkt_sched.h>
 #include <unistd.h>
-#include <log/log.h>
 #include "cld80211_lib.h"
 
-#undef LOG_TAG
-#define LOG_TAG "CLD80211"
+#ifndef LE_BUILD
+ #include <log/log.h>
+ #undef LOG_TAG
+ #define LOG_TAG "CLD80211"
+#else
+ #include <stdlib.h>
+ #include <syslog.h>
+ #include <unistd.h>
+ #define ALOGI(fmt, args...) syslog(LOG_INFO, fmt, ## args)
+ #define ALOGE(fmt, args...) syslog(LOG_ERR, fmt, ## args)
+ extern const char *__progname;
+ const char *getprogname() { return (__progname); }
+#endif
+
 #define SOCK_BUF_SIZE (256*1024)
 
 struct family_data {
