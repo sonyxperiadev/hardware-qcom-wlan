@@ -46,6 +46,7 @@
 #include "rb_wrapper.h"
 #include "pkt_stats.h"
 #include "wifihal_internal.h"
+#include "qca-vendor_copy.h"
 
 #define SOCKET_BUFFER_SIZE      (32768U)
 #define RECV_BUF_SIZE           (4096)

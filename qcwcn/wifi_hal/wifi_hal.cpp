@@ -52,7 +52,6 @@
 #include "cpp_bindings.h"
 #include "ifaceeventhandler.h"
 #include "wifiloggercmd.h"
-#include "vendor_definitions.h"
 
 /*
  BUGBUG: normally, libnl allocates ports for all connections it makes; but
@@ -1409,7 +1408,7 @@ wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
         goto cleanup;
 
     ret = vCommand->put_bytes(
-            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_IP_PACKET,
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_IP_PACKET_DATA,
             (const char *)ip_packet, ip_packet_len);
     if (ret != WIFI_SUCCESS)
         goto cleanup;
@@ -1486,6 +1485,8 @@ cleanup:
     return ret;
 }
 
+#define PACKET_FILTER_ID 0
+
 static wifi_error wifi_set_packet_filter(wifi_interface_handle iface,
                                          const u8 *program, u32 len)
 {
@@ -1525,7 +1526,7 @@ static wifi_error wifi_set_packet_filter(wifi_interface_handle iface,
                                 PACKET_FILTER_ID);
         if (ret != WIFI_SUCCESS)
             goto cleanup;
-        ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH,
+        ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SIZE,
                                 len);
         if (ret != WIFI_SUCCESS)
             goto cleanup;
@@ -1608,7 +1609,7 @@ static wifi_error wifi_get_packet_filter_capabilities(
         goto cleanup;
 
     ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SUB_CMD,
-                            QCA_WLAN_GET_PACKET_FILTER_SIZE);
+                            QCA_WLAN_GET_PACKET_FILTER);
     if (ret != WIFI_SUCCESS)
         goto cleanup;
 
@@ -1736,7 +1737,7 @@ wifi_error wifi_write_packet_filter(wifi_interface_handle iface,
                                 PACKET_FILTER_ID);
         if (ret != WIFI_SUCCESS)
             goto cleanup;
-        ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH,
+        ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SIZE,
                                 len);
         if (ret != WIFI_SUCCESS)
             goto cleanup;
@@ -1917,7 +1918,7 @@ static wifi_error wifi_read_packet_filter(wifi_interface_handle handle,
 
         currentLength = min(remainingLengthToBeRead, info->firmware_bus_max_size);
 
-        ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_TOTAL_LENGTH,
+        ret = vCommand->put_u32(QCA_WLAN_VENDOR_ATTR_PACKET_FILTER_SIZE,
                                 currentLength);
         if (ret != WIFI_SUCCESS)
             break;

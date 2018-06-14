@@ -258,7 +258,7 @@ wifi_error wifi_get_logger_supported_feature_set(wifi_interface_handle iface,
     if (!nlData)
         goto cleanup;
 
-    ret = wifiLoggerCommand->put_u32(QCA_WLAN_VENDOR_ATTR_FEATURE_SET,
+    ret = wifiLoggerCommand->put_u32(QCA_WLAN_VENDOR_ATTR_LOGGER_SUPPORTED,
                                      requestId);
     if (ret != WIFI_SUCCESS)
         goto cleanup;
@@ -1054,14 +1054,14 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
         break;
         case QCA_NL80211_VENDOR_SUBCMD_GET_LOGGER_FEATURE_SET:
         {
-            struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET_MAX + 1];
+            struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_LOGGER_MAX + 1];
 
-            nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_FEATURE_SET_MAX,
+            nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_LOGGER_MAX,
                             (struct nlattr *)mVendorData, mDataLen, NULL);
 
-            if (tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]) {
+            if (tb_vendor[QCA_WLAN_VENDOR_ATTR_LOGGER_SUPPORTED]) {
                 *mSupportedSet =
-                nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_SET]);
+                nla_get_u32(tb_vendor[QCA_WLAN_VENDOR_ATTR_LOGGER_SUPPORTED]);
 #ifdef QC_HAL_DEBUG
                 ALOGV("%s: Supported Feature Set : val 0x%x",
                       __FUNCTION__, *mSupportedSet);
@@ -1159,10 +1159,10 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
         break;
         case QCA_NL80211_VENDOR_SUBCMD_GET_WAKE_REASON_STATS:
         {
-            struct nlattr *tbVendor[QCA_WLAN_VENDOR_ATTR_WAKE_STATS_MAX +1];
+            struct nlattr *tbVendor[QCA_WLAN_VENDOR_GET_WAKE_STATS_MAX+1];
 
             /* parse and extract wake reason stats */
-            nla_parse(tbVendor, QCA_WLAN_VENDOR_ATTR_WAKE_STATS_MAX,
+            nla_parse(tbVendor, QCA_WLAN_VENDOR_GET_WAKE_STATS_MAX,
                       (struct nlattr *)mVendorData,
                       mDataLen, NULL);
 

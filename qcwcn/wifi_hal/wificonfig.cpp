@@ -84,7 +84,7 @@ wifi_error wifi_extended_dtim_config_set(wifi_request_id id,
     }
 
     ret = wifiConfigCommand->put_u32(
-                  QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_DYNAMIC_DTIM, extended_dtim);
+                  QCA_WLAN_VENDOR_ATTR_CONFIG_DYNAMIC_DTIM, extended_dtim);
     if (ret != WIFI_SUCCESS) {
         ALOGE("wifi_extended_dtim_config_set(): failed to put vendor data. "
             "Error:%d", ret);
@@ -232,7 +232,7 @@ wifi_error wifi_set_qpower(wifi_interface_handle iface,
     }
 
     if (wifiConfigCommand->put_u8(
-        QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER_VENDOR, powersave)) {
+        QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER, powersave)) {
         ALOGE("wifi_set_qpower(): failed to put vendor data. "
             "Error:%d", ret);
         goto cleanup;
@@ -300,7 +300,7 @@ wifi_error wifi_set_beacon_wifi_iface_stats_averaging_factor(
     }
 
     if (wifiConfigCommand->put_u32(
-        QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_STATS_AVG_FACTOR, factor)) {
+        QCA_WLAN_VENDOR_ATTR_CONFIG_STATS_AVG_FACTOR, factor)) {
         ALOGE("wifi_set_beacon_wifi_iface_stats_averaging_factor(): failed to "
             "put vendor data. Error:%d", ret);
         goto cleanup;
@@ -366,7 +366,7 @@ wifi_error wifi_set_guard_time(wifi_request_id id,
     }
 
     if (wifiConfigCommand->put_u32(
-        QCA_WLAN_VENDOR_ATTR_WIFI_CONFIG_GUARD_TIME, guard_time)) {
+        QCA_WLAN_VENDOR_ATTR_CONFIG_GUARD_TIME, guard_time)) {
         ALOGE("wifi_set_guard_time: failed to add vendor data.");
         goto cleanup;
     }
