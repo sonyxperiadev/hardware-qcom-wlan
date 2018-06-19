@@ -1826,12 +1826,18 @@ cleanup:
 static wifi_error wifi_read_packet_filter(wifi_interface_handle handle,
                                           u32 src_offset, u8 *host_dst, u32 length)
 {
-    wifi_error ret;
+    wifi_error ret = WIFI_SUCCESS;
     struct nlattr *nlData;
     WifihalGeneric *vCommand = NULL;
     interface_info *ifaceInfo = getIfaceInfo(handle);
     wifi_handle wifiHandle = getWifiHandle(handle);
     hal_info *info = getHalInfo(wifiHandle);
+
+    /* Length to be passed to this function should be non-zero
+     * Return invalid argument if length is passed as zero
+     */
+    if (length == 0)
+        return  WIFI_ERROR_INVALID_ARGS;
 
     /*Temporary varibles to support the read complete length in chunks */
     u8 *temp_host_dst;
