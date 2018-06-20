@@ -682,7 +682,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     }
 
     ret = wifi_logger_ring_buffers_init(info);
-    if (ret != WIFI_SUCCESS && ret != WIFI_ERROR_NOT_SUPPORTED) {
+    if (ret != WIFI_SUCCESS) {
         ALOGE("Wifi Logger Ring Initialization Failed");
         goto unload;
     }
