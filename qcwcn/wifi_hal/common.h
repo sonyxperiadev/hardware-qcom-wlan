@@ -50,7 +50,6 @@
 #define SOCKET_BUFFER_SIZE      (32768U)
 #define RECV_BUF_SIZE           (4096)
 #define DEFAULT_EVENT_CB_SIZE   (64)
-#define DEFAULT_CMD_SIZE        (64)
 #define NUM_RING_BUFS           5
 
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
@@ -116,10 +115,6 @@ typedef struct hal_info_s {
     int alloc_event_cb;                             // number of allocated callback objects
     pthread_mutex_t cb_lock;                        // mutex for the event_cb access
 
-    cmd_info *cmd;                                  // Outstanding commands
-    int num_cmd;                                    // number of commands
-    int alloc_cmd;                                  // number of commands allocated
-
     interface_info **interfaces;                    // array of interfaces
     int num_interfaces;                             // number of interfaces
 
@@ -166,10 +161,6 @@ wifi_error wifi_register_vendor_handler(wifi_handle handle,
 
 void wifi_unregister_handler(wifi_handle handle, int cmd);
 void wifi_unregister_vendor_handler(wifi_handle handle, uint32_t id, int subcmd);
-
-wifi_error wifi_register_cmd(wifi_handle handle, int id, WifiCommand *cmd);
-WifiCommand *wifi_unregister_cmd(wifi_handle handle, int id);
-void wifi_unregister_cmd(wifi_handle handle, WifiCommand *cmd);
 
 interface_info *getIfaceInfo(wifi_interface_handle);
 wifi_handle getWifiHandle(wifi_interface_handle handle);

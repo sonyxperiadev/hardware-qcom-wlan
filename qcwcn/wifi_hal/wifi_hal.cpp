@@ -560,15 +560,6 @@ wifi_error wifi_initialize(wifi_handle *handle)
     info->alloc_event_cb = DEFAULT_EVENT_CB_SIZE;
     info->num_event_cb = 0;
 
-    info->cmd = (cmd_info *)malloc(sizeof(cmd_info) * DEFAULT_CMD_SIZE);
-    if (info->cmd == NULL) {
-        ALOGE("Could not allocate cmd info");
-        ret = WIFI_ERROR_OUT_OF_MEMORY;
-        goto unload;
-    }
-    info->alloc_cmd = DEFAULT_CMD_SIZE;
-    info->num_cmd = 0;
-
     info->nl80211_family_id = genl_ctrl_resolve(cmd_sock, "nl80211");
     if (info->nl80211_family_id < 0) {
         ALOGE("Could not resolve nl80211 familty id");
@@ -751,7 +742,6 @@ unload:
         if (event_sock)
             nl_socket_free(event_sock);
         if (info) {
-            if (info->cmd) free(info->cmd);
             if (info->cldctx) {
                 cld80211lib_cleanup(info);
             } else if (info->user_sock) {
@@ -808,9 +798,6 @@ static void internal_cleaned_up_handler(wifi_handle handle)
             free(info->interfaces[i]);
         free(info->interfaces);
     }
-
-    if (info->cmd)
-        free(info->cmd);
 
     if (info->cldctx != NULL) {
         cld80211lib_cleanup(info);
