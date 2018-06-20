@@ -670,10 +670,8 @@ wifi_error wifi_initialize(wifi_handle *handle)
 
     ret =  wifi_get_logger_supported_feature_set(iface_handle,
                          &info->supported_logger_feature_set);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("Failed to get supported logger featur set: %d", ret);
-        ret = WIFI_SUCCESS;
-    }
+    if (ret != WIFI_SUCCESS)
+        ALOGE("Failed to get supported logger feature set: %d", ret);
 
     ret = get_firmware_bus_max_size_supported(iface_handle);
     if (ret != WIFI_SUCCESS) {
@@ -682,10 +680,8 @@ wifi_error wifi_initialize(wifi_handle *handle)
     }
 
     ret = wifi_logger_ring_buffers_init(info);
-    if (ret != WIFI_SUCCESS) {
+    if (ret != WIFI_SUCCESS)
         ALOGE("Wifi Logger Ring Initialization Failed");
-        goto unload;
-    }
 
     ret = wifi_get_capabilities(iface_handle);
     if (ret != WIFI_SUCCESS)
@@ -757,6 +753,7 @@ unload:
             }
             if (info->pkt_stats) free(info->pkt_stats);
             if (info->rx_aggr_pkts) free(info->rx_aggr_pkts);
+            wifi_logger_ring_buffers_deinit(info);
             cleanupGscanHandlers(info);
             cleanupRSSIMonitorHandler(info);
             free(info->event_cb);

@@ -909,6 +909,9 @@ void wifi_logger_ring_buffers_deinit(hal_info *info)
 {
     int i;
 
+    if (!(info->supported_logger_feature_set & LOGGER_RING_BUFFER))
+        return;
+
     for (i = 0; i < NUM_RING_BUFS; i++) {
         rb_deinit(&info->rb_infos[i]);
     }
