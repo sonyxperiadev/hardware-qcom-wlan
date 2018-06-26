@@ -609,6 +609,8 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
                        pFwRsp->max_sdea_service_specific_info_len;
             pRsp->body.nan_capabilities.max_subscribe_address = \
                        pFwRsp->max_subscribe_address;
+            pRsp->body.nan_capabilities.ndpe_attr_supported = \
+                       pFwRsp->ndpe_attr_supported;
             break;
         }
         default:
