@@ -25,4 +25,3 @@ lib_LTLIBRARIES = libcld80211.la
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = cld80211-lib.pc
 EXTRA_DIST = $(pkgconfig_DATA)
-pkginclude_HEADERS = $(h_sources)
