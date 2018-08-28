@@ -667,6 +667,7 @@ out:
     return res;
 }
 
+#ifdef WCNSS_QTI_AOSP
 wifi_error wifi_add_or_remove_virtual_intf(wifi_interface_handle iface,
                                            const char* ifname, u32 iface_type,
                                            bool create)
@@ -722,3 +723,4 @@ done:
     delete wifiConfigCommand;
     return ret;
 }
+#endif

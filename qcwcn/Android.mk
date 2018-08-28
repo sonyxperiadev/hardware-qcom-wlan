@@ -4,3 +4,7 @@ ifeq ($(filter adp8064 fox,$(TARGET_DEVICE)),)
     include $(call all-subdir-makefiles)
   endif
 endif
+
+ifneq ($(TARGET_USES_AOSP), true)
+LOCAL_CFLAGS += -DWCNSS_QTI_AOSP
+endif
