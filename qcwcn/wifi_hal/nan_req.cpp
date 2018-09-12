@@ -25,11 +25,17 @@ wifi_error NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *p
     wifi_error ret;
     ALOGV("NAN_ENABLE");
     size_t message_len = NAN_MAX_ENABLE_REQ_SIZE;
+    int freq_24g;
 
     if (pReq == NULL) {
         cleanup();
         return WIFI_ERROR_INVALID_ARGS;
     }
+
+    if (pReq->config_24g_channel == 0)
+        freq_24g = 2437;
+    else
+        freq_24g = pReq->channel_24g_val;
 
     message_len += \
         (
@@ -117,8 +123,8 @@ wifi_error NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *p
           sizeof(pReq->hop_count_force_val)) : 0 \
         ) + \
         (
-          pReq->config_24g_channel ? (SIZEOF_TLV_HDR + \
-          sizeof(u32)) : 0 \
+          /* always include 24g channel/freq */
+          SIZEOF_TLV_HDR +  sizeof(u32) \
         ) + \
         (
           pReq->config_5g_channel ? (SIZEOF_TLV_HDR + \
@@ -288,11 +294,9 @@ wifi_error NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *p
                       sizeof(pReq->hop_count_force_val),
                       (const u8*)&pReq->hop_count_force_val, tlvs);
     }
-    if (pReq->config_24g_channel) {
-        tlvs = addTlv(NAN_TLV_TYPE_24G_CHANNEL,
+    tlvs = addTlv(NAN_TLV_TYPE_24G_CHANNEL,
                       sizeof(u32),
-                      (const u8*)&pReq->channel_24g_val, tlvs);
-    }
+                      (const u8*)&freq_24g, tlvs);
     if (pReq->config_5g_channel) {
         tlvs = addTlv(NAN_TLV_TYPE_5G_CHANNEL,
                       sizeof(u32),
@@ -352,12 +356,48 @@ wifi_error NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *p
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
 
-    //Insert the vendor specific data
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        //Insert the vendor specific data
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        if (mMsg.put_u32(QCA_WLAN_VENDOR_ATTR_NAN_SUBCMD_TYPE,
+                           QCA_WLAN_NAN_EXT_SUBCMD_TYPE_ENABLE_REQ) ||
+            mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (mMsg.put_u32(QCA_WLAN_VENDOR_ATTR_NAN_DISC_24GHZ_BAND_FREQ,
+                           freq_24g)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (pReq->config_5g_channel) {
+            if (mMsg.put_u32(QCA_WLAN_VENDOR_ATTR_NAN_DISC_5GHZ_BAND_FREQ,
+                               pReq->config_5g_channel)) {
+                ALOGE("%s: put attr error", __func__);
+                cleanup();
+                return WIFI_ERROR_INVALID_ARGS;
+            }
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -385,11 +425,32 @@ wifi_error NanCommand::putNanDisable(transaction_id id)
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
 
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (mMsg.put_u32(QCA_WLAN_VENDOR_ATTR_NAN_SUBCMD_TYPE,
+                           QCA_WLAN_NAN_EXT_SUBCMD_TYPE_DISABLE_REQ) ||
+            mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -645,11 +706,29 @@ wifi_error NanCommand::putNanConfig(transaction_id id, const NanConfigRequest *p
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
 
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -863,11 +942,29 @@ wifi_error NanCommand::putNanPublish(transaction_id id, const NanPublishRequest 
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
 
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -901,11 +998,30 @@ wifi_error NanCommand::putNanPublishCancel(transaction_id id, const NanPublishCa
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
 
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -1123,11 +1239,30 @@ wifi_error NanCommand::putNanSubscribe(transaction_id id,
 
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -1161,11 +1296,30 @@ wifi_error NanCommand::putNanSubscribeCancel(transaction_id id,
 
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -1235,11 +1389,30 @@ wifi_error NanCommand::putNanTransmitFollowup(transaction_id id,
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
 
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -1276,11 +1449,30 @@ wifi_error NanCommand::putNanStats(transaction_id id, const NanStatsRequest *pRe
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
 
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -1332,11 +1524,30 @@ wifi_error NanCommand::putNanTCA(transaction_id id, const NanTCARequest *pReq)
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
 
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -1399,11 +1610,30 @@ wifi_error NanCommand::putNanBeaconSdfPayload(transaction_id id,
     mVendorData = (char *)pFwReq;
     mDataLen = message_len;
 
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -1668,11 +1898,30 @@ wifi_error NanCommand::putNanCapabilities(transaction_id id)
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
 
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;
@@ -1711,12 +1960,31 @@ wifi_error NanCommand::putNanDebugCommand(NanDebugParams debug,
     mVendorData = (char*)pFwReq;
     mDataLen = message_len;
 
-    /* Write the TLVs to the message. */
-    ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("%s: put_bytes Error:%d",__func__, ret);
-        cleanup();
-        return ret;
+    ret = WIFI_SUCCESS;
+    if (mSubcmd == QCA_NL80211_VENDOR_SUBCMD_NAN) {
+        /* Write the TLVs to the message. */
+        ret = mMsg.put_bytes(NL80211_ATTR_VENDOR_DATA, mVendorData, mDataLen);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: put_bytes Error:%d",__func__, ret);
+            cleanup();
+            return ret;
+        }
+    } else {
+        struct nlattr *nl_data;
+
+        nl_data = attr_start(NL80211_ATTR_VENDOR_DATA);
+
+        if (!nl_data) {
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        if (mMsg.put_bytes(QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA,
+                             mVendorData, mDataLen)) {
+            ALOGE("%s: put attr error", __func__);
+            cleanup();
+            return WIFI_ERROR_INVALID_ARGS;
+        }
+        attr_end(nl_data);
     }
     hexdump(mVendorData, mDataLen);
     return ret;

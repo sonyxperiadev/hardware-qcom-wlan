@@ -154,6 +154,7 @@ typedef struct hal_info_s {
     wifi_capa capa;
     struct cld80211_ctx *cldctx;
     bool apf_enabled;
+    bool support_nan_ext_cmd;
 } hal_info;
 
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
