@@ -355,7 +355,7 @@ void setup_wlan_config_file()
 			ALOGE("Failed to get group wifi %s", strerror(errno));
 	}
 
-	property_set("wlan.driver.config", WLAN_INI_FILE_DEST);
+	property_set("vendor.wlan.driver.config", WLAN_INI_FILE_DEST);
 
 out:
 	close(rfd);
@@ -363,7 +363,7 @@ out:
 	return;
 
 out_nocopy:
-	property_set("wlan.driver.config", WLAN_INI_FILE_DEST);
+	property_set("vendor.wlan.driver.config", WLAN_INI_FILE_DEST);
 	return;
 }
 unsigned int convert_string_to_hex(char* string)
@@ -495,7 +495,7 @@ fail:
 
 void setup_wlan_driver_ath_prop()
 {
-	property_set("wlan.driver.ath", WLAN_DRIVER_ATH_DEFAULT_VAL);
+	property_set("vendor.wlan.driver.ath", WLAN_DRIVER_ATH_DEFAULT_VAL);
 }
 
 #ifdef WCNSS_QMI
