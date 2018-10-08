@@ -88,6 +88,10 @@ ifeq ($(TARGET_BUILD_VARIANT),userdebug)
 LOCAL_CFLAGS += "-DLOG_NDEBUG=0"
 endif
 
+ifneq ($(TARGET_USES_AOSP), true)
+LOCAL_CFLAGS += -DWCNSS_QTI_AOSP
+endif
+
 # gscan.cpp: address of array 'cached_results[i].results' will always evaluate to 'true'
 LOCAL_CLANG_CFLAGS := -Wno-pointer-bool-conversion
 
