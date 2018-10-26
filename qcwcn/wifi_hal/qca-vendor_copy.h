@@ -47,7 +47,10 @@ enum qca_radiotap_vendor_ids {
  *
  * @QCA_NL80211_VENDOR_SUBCMD_NAN: NAN command/event which is used to pass
  *	NAN Request/Response and NAN Indication messages. These messages are
- *	interpreted between the framework and the firmware component.
+ *	interpreted between the framework and the firmware component. While
+ *	sending the command from userspace to the driver, payload is not
+ *	encapsulated inside any attribute. Attribute QCA_WLAN_VENDOR_ATTR_NAN
+ *	is used when receiving vendor events in userspace from the driver.
  *
  * @QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_SET_KEY: Set key operation that can be
  *	used to configure PMK to the driver even when not connected. This can
@@ -450,6 +453,13 @@ enum qca_radiotap_vendor_ids {
  *	and STA MAC addresses added by the user. This command is also used to
  *	fetch the statistics of unassociated stations. The attributes used with
  *	this command are defined in enum qca_wlan_vendor_attr_bss_filter.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_NAN_EXT: An extendable version of NAN vendor
+ *	command. The earlier command for NAN, QCA_NL80211_VENDOR_SUBCMD_NAN,
+ *	carried a payload which was a binary blob of data. The command was not
+ *	extendable to send more information. The newer version carries the
+ *	legacy blob encapsulated within an attribute and can be extended with
+ *	additional vendor attributes that can enhance the NAN command interface.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -609,13 +619,17 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION = 169,
 	/* Frame filter operations for other BSSs/unassociated STAs */
 	QCA_NL80211_VENDOR_SUBCMD_BSS_FILTER = 170,
+	QCA_NL80211_VENDOR_SUBCMD_NAN_EXT = 171,
 };
 
 enum qca_wlan_vendor_attr {
 	QCA_WLAN_VENDOR_ATTR_INVALID = 0,
 	/* used by QCA_NL80211_VENDOR_SUBCMD_DFS_CAPABILITY */
 	QCA_WLAN_VENDOR_ATTR_DFS     = 1,
-	/* used by QCA_NL80211_VENDOR_SUBCMD_NAN */
+	/* Used only when driver sends vendor events to the userspace under the
+	 * command QCA_NL80211_VENDOR_SUBCMD_NAN. Not used when userspace sends
+	 * commands to the driver.
+	 */
 	QCA_WLAN_VENDOR_ATTR_NAN     = 2,
 	/* used by QCA_NL80211_VENDOR_SUBCMD_STATS_EXT */
 	QCA_WLAN_VENDOR_ATTR_STATS_EXT     = 3,
@@ -3513,8 +3527,13 @@ enum qca_wlan_vendor_attr_gscan_results {
 
 	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_BUCKETS_SCANNED = 45,
 
-	/* Unsigned 32bit value; a GSCAN Capabilities attribute. */
-	QCA_WLAN_VENDOR_ATTR_CAPABILITIES_MAX_NUM_BLACKLISTED_BSSID = 46,
+	/* Unsigned 32-bit value; a GSCAN Capabilities attribute.
+	 * This is used to limit the maximum number of BSSIDs while sending
+	 * the vendor command QCA_NL80211_VENDOR_SUBCMD_ROAM with attributes
+	 * QCA_WLAN_VENDOR_ATTR_ROAM_SUBCMD_SET_BLACKLIST_BSSID and
+	 * QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_SET_BSSID_PARAMS_NUM_BSSID.
+	 */
+	QCA_WLAN_VENDOR_ATTR_GSCAN_MAX_NUM_BLACKLISTED_BSSID = 46,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_AFTER_LAST,
@@ -4916,6 +4935,10 @@ enum qca_wlan_vendor_attr_ndp_params {
 	 * and ndp confirm.
 	 */
 	QCA_WLAN_VENDOR_ATTR_NDP_TRANSPORT_PROTOCOL = 29,
+	/* Unsigned 8-bit value indicating if NDP remote peer supports NAN NDPE.
+	 * 1:support 0:not support
+	 */
+	QCA_WLAN_VENDOR_ATTR_PEER_NDPE_SUPPORT = 30,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_NDP_PARAMS_AFTER_LAST,
@@ -5356,6 +5379,24 @@ enum qca_wlan_he_ltf_cfg {
 	QCA_WLAN_HE_LTF_4X = 3,
 };
 
+/**
+ * enum qca_wlan_he_mac_padding_dur - HE trigger frame MAC padding duration
+ *
+ * Indicates the HE trigger frame MAC padding duration value.
+ *
+ * @QCA_WLAN_HE_NO_ADDITIONAL_PROCESS_TIME: no additional time required to
+ * process the trigger frame.
+ * @QCA_WLAN_HE_8US_OF_PROCESS_TIME: indicates the 8us of processing time for
+ * trigger frame.
+ * @QCA_WLAN_HE_16US_OF_PROCESS_TIME: indicates the 16us of processing time for
+ * trigger frame.
+ */
+enum qca_wlan_he_mac_padding_dur {
+	QCA_WLAN_HE_NO_ADDITIONAL_PROCESS_TIME = 0,
+	QCA_WLAN_HE_8US_OF_PROCESS_TIME = 1,
+	QCA_WLAN_HE_16US_OF_PROCESS_TIME = 2,
+};
+
 /* Attributes for data used by
  * QCA_NL80211_VENDOR_SUBCMD_WIFI_TEST_CONFIGURATION
  */
@@ -5416,10 +5457,10 @@ enum qca_wlan_vendor_attr_wifi_test_config {
 	 */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADD_DEL_BA_SESSION = 7,
 
-	/* 8-bit unsigned value to configure the buffer size in addba
+	/* 16-bit unsigned value to configure the buffer size in addba
 	 * request and response frames.
 	 * This attribute is used to configure the testbed device.
-	 * The range of the value is 0 to 255.
+	 * The range of the value is 0 to 256.
 	 */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ADDBA_BUFF_SIZE = 8,
 
@@ -5454,6 +5495,71 @@ enum qca_wlan_vendor_attr_wifi_test_config {
 	 * 1-enable, 0-disable.
 	 */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_ENABLE_TX_BEAMFORMEE = 13,
+
+	/* 8-bit unsigned value to configure the tx beamformee number
+	 * of space-time streams.
+	 * This attribute is used to configure the testbed device.
+	 * The range of the value is 0 to 8.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_TX_BEAMFORMEE_NSTS = 14,
+
+	/* 8-bit unsigned value to configure the MU EDCA params for given AC
+	 * This attribute is used to configure the testbed device.
+	 * Uses the enum qca_wlan_ac_type values.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MU_EDCA_AC = 15,
+
+	/* 8-bit unsigned value to configure the MU EDCA AIFSN for given AC
+	 * To configure MU EDCA AIFSN value, MU EDCA access category value
+	 * is required to process the command.
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MU_EDCA_AIFSN = 16,
+
+	/* 8-bit unsigned value to configure the MU EDCA ECW min value for
+	 * given AC.
+	 * To configure MU EDCA ECW min value, MU EDCA access category value
+	 * is required to process the command.
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MU_EDCA_ECWMIN = 17,
+
+	/* 8-bit unsigned value to configure the MU EDCA ECW max value for
+	 * given AC.
+	 * To configure MU EDCA ECW max value, MU EDCA access category value
+	 * is required to process the command.
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MU_EDCA_ECWMAX = 18,
+
+	/* 8-bit unsigned value to configure the MU EDCA timer for given AC
+	 * To configure MU EDCA timer value, MU EDCA access category value
+	 * is required to process the command.
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MU_EDCA_TIMER = 19,
+
+	/* 8-bit unsigned value to configure the HE trigger frame MAC padding
+	 * duration.
+	 * This attribute is used to configure the testbed device.
+	 * Uses the enum qca_wlan_he_mac_padding_dur values.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_MAC_PADDING_DUR = 20,
+
+	/* 8-bit unsigned value to override the MU EDCA params to defaults
+	 * regardless of the AP beacon MU EDCA params. If it is enabled use
+	 * the default values else use the MU EDCA params from AP beacon.
+	 * This attribute is used to configure the testbed device.
+	 * 1-enable, 0-disable.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_OVERRIDE_MU_EDCA = 21,
+
+	/* 8-bit unsigned value to configure the support for receiving
+	 * an MPDU that contains an operating mode control subfield.
+	 * This attribute is used to configure the testbed device.
+	 * 1-enable, 0-disable.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_HE_OM_CTRL_SUPP = 22,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_AFTER_LAST,
@@ -5558,6 +5664,54 @@ enum qca_wlan_vendor_bss_filter_sta_stats {
 	QCA_WLAN_VENDOR_BSS_FILTER_STA_STATS_AFTER_LAST,
 	QCA_WLAN_VENDOR_BSS_FILTER_STA_STATS_MAX =
 	QCA_WLAN_VENDOR_BSS_FILTER_STA_STATS_AFTER_LAST - 1
+};
+
+/* enum qca_wlan_nan_subcmd_type - Type of NAN command used by attribute
+ * QCA_WLAN_VENDOR_ATTR_NAN_SUBCMD_TYPE as a part of vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_NAN_EXT.
+ */
+enum qca_wlan_nan_ext_subcmd_type {
+	/* Subcmd of type NAN Enable Request */
+	QCA_WLAN_NAN_EXT_SUBCMD_TYPE_ENABLE_REQ = 1,
+	/* Subcmd of type NAN Disable Request */
+	QCA_WLAN_NAN_EXT_SUBCMD_TYPE_DISABLE_REQ = 2,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_nan_params - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_NAN_EXT.
+ */
+enum qca_wlan_vendor_attr_nan_params {
+	QCA_WLAN_VENDOR_ATTR_NAN_INVALID = 0,
+	/* Carries NAN command for firmware component. Every vendor command
+	 * QCA_NL80211_VENDOR_SUBCMD_NAN_EXT must contain this attribute with a
+	 * payload containing the NAN command. NLA_BINARY attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_NAN_CMD_DATA = 1,
+	/* Indicates the type of NAN command sent with
+	 * QCA_NL80211_VENDOR_SUBCMD_NAN_EXT. enum qca_wlan_nan_ext_subcmd_type
+	 * describes the possible range of values. This attribute is mandatory
+	 * if the command being issued is either
+	 * QCA_WLAN_NAN_EXT_SUBCMD_TYPE_ENABLE_REQ or
+	 * QCA_WLAN_NAN_EXT_SUBCMD_TYPE_DISABLE_REQ. NLA_U32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_NAN_SUBCMD_TYPE = 2,
+	/* Frequency (in MHz) of primary NAN discovery social channel in 2.4 GHz
+	 * band. This attribute is mandatory when command type is
+	 * QCA_WLAN_NAN_EXT_SUBCMD_TYPE_ENABLE_REQ. NLA_U32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_NAN_DISC_24GHZ_BAND_FREQ = 3,
+	/* Frequency (in MHz) of secondary NAN discovery social channel in 5 GHz
+	 * band. This attribute is optional and should be included when command
+	 * type is QCA_WLAN_NAN_EXT_SUBCMD_TYPE_ENABLE_REQ and NAN discovery
+	 * has to be started on 5GHz along with 2.4GHz. NLA_U32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_NAN_DISC_5GHZ_BAND_FREQ = 4,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_NAN_PARAMS_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_NAN_PARAMS_MAX =
+		QCA_WLAN_VENDOR_ATTR_NAN_PARAMS_AFTER_LAST - 1
 };
 
 #endif /* QCA_VENDOR_H */

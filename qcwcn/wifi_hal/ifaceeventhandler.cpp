@@ -549,13 +549,13 @@ wifi_error WifihalGeneric::wifiParseCapabilities(struct nlattr **tbVendor)
         mCapa->roaming_capa.max_whitelist_size = mCapa->gscan_capa.max_number_of_white_listed_ssid;
     }
 
-    if (!tbVendor[QCA_WLAN_VENDOR_ATTR_CAPABILITIES_MAX_NUM_BLACKLISTED_BSSID]) {
+    if (!tbVendor[QCA_WLAN_VENDOR_ATTR_GSCAN_MAX_NUM_BLACKLISTED_BSSID]) {
         ALOGE("%s: QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_CAPABILITIES_MAX"
             "_NUM_BLACKLIST_BSSID not found. Set to 0.", __FUNCTION__);
         mCapa->roaming_capa.max_blacklist_size = 0;
     } else {
         mCapa->roaming_capa.max_blacklist_size = nla_get_u32(tbVendor[
-                                      QCA_WLAN_VENDOR_ATTR_CAPABILITIES_MAX_NUM_BLACKLISTED_BSSID]);
+                                      QCA_WLAN_VENDOR_ATTR_GSCAN_MAX_NUM_BLACKLISTED_BSSID]);
     }
     return WIFI_SUCCESS;
 }
