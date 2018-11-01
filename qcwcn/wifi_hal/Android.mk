@@ -23,7 +23,7 @@ ifeq ($(TARGET_BUILD_VARIANT),userdebug)
 LOCAL_CFLAGS += "-DLOG_NDEBUG=0"
 endif
 
-ifneq ($(TARGET_USES_AOSP), true)
+ifneq ($(TARGET_USES_AOSP_FOR_WLAN), true)
 LOCAL_CFLAGS += -DWCNSS_QTI_AOSP
 endif
 
@@ -92,7 +92,7 @@ ifeq ($(TARGET_BUILD_VARIANT),userdebug)
 LOCAL_CFLAGS += "-DLOG_NDEBUG=0"
 endif
 
-ifneq ($(TARGET_USES_AOSP), true)
+ifneq ($(TARGET_USES_AOSP_FOR_WLAN), true)
 LOCAL_CFLAGS += -DWCNSS_QTI_AOSP
 endif
 
