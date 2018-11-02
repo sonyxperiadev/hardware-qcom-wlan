@@ -52,6 +52,7 @@
 #include "cpp_bindings.h"
 #include "ifaceeventhandler.h"
 #include "wifiloggercmd.h"
+#include "tcp_params_update.h"
 
 /*
  BUGBUG: normally, libnl allocates ports for all connections it makes; but
@@ -91,6 +92,9 @@ static wifi_error wifi_configure_nd_offload(wifi_interface_handle iface,
 wifi_error wifi_get_wake_reason_stats(wifi_interface_handle iface,
                              WLAN_DRIVER_WAKE_REASON_CNT *wifi_wake_reason_cnt);
 static int wifi_is_nan_ext_cmd_supported(wifi_interface_handle handle);
+
+wifi_error
+	wifi_init_tcp_param_change_event_handler(wifi_interface_handle iface);
 
 /* Initialize/Cleanup */
 
@@ -734,6 +738,12 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
+    ret = wifi_init_tcp_param_change_event_handler(iface_handle);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Initializing TCP param change event Handler Failed");
+        goto unload;
+    }
+
     ALOGV("Initialized Wifi HAL Successfully; vendor cmd = %d Supported"
             " features : %x", NL80211_CMD_VENDOR, info->supported_feature_set);
 
@@ -767,6 +777,7 @@ unload:
             wifi_logger_ring_buffers_deinit(info);
             cleanupGscanHandlers(info);
             cleanupRSSIMonitorHandler(info);
+	    cleanupTCPParamCommand(info);
             free(info->event_cb);
             if (info->driver_supported_features.flags) {
                 free(info->driver_supported_features.flags);
@@ -848,6 +859,7 @@ static void internal_cleaned_up_handler(wifi_handle handle)
     wifi_logger_ring_buffers_deinit(info);
     cleanupGscanHandlers(info);
     cleanupRSSIMonitorHandler(info);
+    cleanupTCPParamCommand(info);
 
     if (info->num_event_cb)
         ALOGE("%d events were leftover without being freed",
