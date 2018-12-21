@@ -831,6 +831,7 @@ int NanCommand::getNanReceivePostDiscoveryVal(const u8 *pInValue,
             memcpy(pRxDisc->infrastructure_ssid_val, outputTlv.value,
                    outputTlv.length);
             pRxDisc->infrastructure_ssid_len = outputTlv.length;
+            break;
         default:
             ALOGV("Unhandled TLV Type:%d", outputTlv.type);
             break;
