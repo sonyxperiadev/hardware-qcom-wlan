@@ -1017,11 +1017,6 @@ wifi_error nan_data_request_initiator(transaction_id id,
             (char *)msg->service_name, msg->service_name_len))
             goto cleanup;
     }
-    if (msg->nan_ipv6_addr_present) {
-        if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_IPV6_ADDR,
-            (char *)msg->nan_ipv6_intf_addr, NAN_IPV6_ADDR_LEN))
-            goto cleanup;
-    }
     nanCommand->attr_end(nlData);
 
     ret = nanCommand->requestEvent();
@@ -1139,22 +1134,6 @@ wifi_error nan_data_indication_response(transaction_id id,
             (char *)msg->service_name, msg->service_name_len))
             goto cleanup;
     }
-    if (msg->nan_ipv6_addr_present) {
-        if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_IPV6_ADDR,
-            (char *)msg->nan_ipv6_intf_addr, NAN_IPV6_ADDR_LEN))
-            goto cleanup;
-    }
-    if (msg->nan_transport_port != 0) {
-        if (nanCommand->put_u16(QCA_WLAN_VENDOR_ATTR_NDP_TRANSPORT_PORT,
-            msg->nan_transport_port))
-            goto cleanup;
-    }
-    if (msg->nan_transport_proto != 0xFF) {
-        if (nanCommand->put_u8(QCA_WLAN_VENDOR_ATTR_NDP_TRANSPORT_PROTOCOL,
-            msg->nan_transport_proto))
-            goto cleanup;
-    }
-
     nanCommand->attr_end(nlData);
 
     ret = nanCommand->requestEvent();

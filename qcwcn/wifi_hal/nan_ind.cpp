@@ -1103,16 +1103,6 @@ int NanCommand::getNdpRequest(struct nlattr **tb_vendor,
     } else {
         ALOGD("%s: NDP App Info not present", __FUNCTION__);
     }
-
-    if (tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_IPV6_ADDR]) {
-        len = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_IPV6_ADDR]);
-        len = ((sizeof(event->nan_ipv6_intf_addr) <= len) ? sizeof(event->nan_ipv6_intf_addr) : len);
-        memcpy(&event->nan_ipv6_intf_addr[0], nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_IPV6_ADDR]), len);
-        event->nan_ipv6_addr_present = 1;
-    } else {
-        event->nan_ipv6_addr_present = 0;
-        ALOGD("%s: NDP IPV6 address not present", __FUNCTION__);
-    }
     return WIFI_SUCCESS;
 }
 
@@ -1217,33 +1207,6 @@ int NanCommand::getNdpConfirm(struct nlattr **tb_vendor,
             ALOGD("%s: No. Spatial Stream = %d", __FUNCTION__, pChInfo->nss);
         }
     }
-
-    if (tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_IPV6_ADDR]) {
-        len = nla_len(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_IPV6_ADDR]);
-        len = ((sizeof(event->nan_ipv6_intf_addr) <= len) ? sizeof(event->nan_ipv6_intf_addr) : len);
-        memcpy(&event->nan_ipv6_intf_addr[0], nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_IPV6_ADDR]), len);
-        event->nan_ipv6_addr_present = 1;
-    } else {
-        event->nan_ipv6_addr_present = 0;
-        ALOGD("%s: NDP IPV6 address not present", __FUNCTION__);
-    }
-
-    if (tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_TRANSPORT_PORT]) {
-        event->nan_transport_port = nla_get_u16(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_TRANSPORT_PORT]);
-        ALOGD("%s: NDP IPV6 transport port is %d", __FUNCTION__, event->nan_transport_port);
-    } else {
-        event->nan_transport_port = 0;
-        ALOGD("%s: NDP IPV6 transport port not present", __FUNCTION__);
-    }
-
-    if (tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_TRANSPORT_PROTOCOL]) {
-        event->nan_transport_proto = nla_get_u8(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_TRANSPORT_PROTOCOL]);
-        ALOGD("%s: NDP IPV6 transport protocol is %d", __FUNCTION__, event->nan_transport_proto);
-    } else {
-        event->nan_transport_proto = 0xff;
-        ALOGD("%s: NDP IPV6 transport protocol not present", __FUNCTION__);
-    }
-
     return WIFI_SUCCESS;
 }
 
