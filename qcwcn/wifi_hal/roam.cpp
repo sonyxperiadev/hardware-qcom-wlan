@@ -65,11 +65,6 @@ wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
 
-    if (params.num_bssid == 0) {
-        ALOGV("%s, return success as num_bssid is 0", __FUNCTION__);
-        return WIFI_SUCCESS;
-    }
-
     if (!(info->supported_feature_set & WIFI_FEATURE_GSCAN)) {
         ALOGE("%s: GSCAN is not supported by driver",
             __FUNCTION__);
@@ -162,11 +157,6 @@ wifi_error wifi_set_ssid_white_list(wifi_request_id id, wifi_interface_handle if
     char ssid[MAX_SSID_LENGTH + 1];
 
     ALOGV("%s: Number of SSIDs : %d", __FUNCTION__, num_networks);
-
-    if (num_networks == 0) {
-         ALOGV("%s, return success as num_networks is 0", __FUNCTION__);
-         return WIFI_SUCCESS;
-    }
 
     roamCommand = new RoamCommand(
                                 wifiHandle,
