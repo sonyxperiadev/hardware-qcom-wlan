@@ -460,6 +460,27 @@ enum qca_radiotap_vendor_ids {
  *	extendable to send more information. The newer version carries the
  *	legacy blob encapsulated within an attribute and can be extended with
  *	additional vendor attributes that can enhance the NAN command interface.
+ * @QCA_NL80211_VENDOR_SUBCMD_ROAM_SCAN_EVENT: Event to indicate scan triggered
+ *	or stopped within driver/firmware in order to initiate roaming. The
+ *	attributes used with this event are defined in enum
+ *	qca_wlan_vendor_attr_roam_scan. Some drivers may not send these events
+ *	in few cases, e.g., if the host processor is sleeping when this event
+ *	is generated in firmware.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_PEER_CFR_CAPTURE_CFG: This command is used to
+ *	configure parameters per peer to capture Channel Frequency Response
+ *	(CFR) and enable Periodic CFR capture. The attributes for this command
+ *	are defined in enum qca_wlan_vendor_peer_cfr_capture_attr.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_THROUGHPUT_CHANGE_EVENT: Event to indicate changes
+ *	in throughput dynamically. The driver estimates the throughput based on
+ *	number of packets being transmitted/received per second and indicates
+ *	the changes in throughput to user space. Userspace tools can use this
+ *	information to configure kernel's TCP parameters in order to achieve
+ *	peak throughput. Optionally, the driver will also send guidance on
+ *	modifications to kernel's TCP parameters which can be referred by
+ *	userspace tools. The attributes used with this event are defined in enum
+ *	qca_wlan_vendor_attr_throughput_change.
  */
 enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_UNSPEC = 0,
@@ -620,6 +641,9 @@ enum qca_nl80211_vendor_subcmds {
 	/* Frame filter operations for other BSSs/unassociated STAs */
 	QCA_NL80211_VENDOR_SUBCMD_BSS_FILTER = 170,
 	QCA_NL80211_VENDOR_SUBCMD_NAN_EXT = 171,
+	QCA_NL80211_VENDOR_SUBCMD_ROAM_SCAN_EVENT = 172,
+	QCA_NL80211_VENDOR_SUBCMD_PEER_CFR_CAPTURE_CFG = 173,
+	QCA_NL80211_VENDOR_SUBCMD_THROUGHPUT_CHANGE_EVENT = 174,
 };
 
 enum qca_wlan_vendor_attr {
@@ -5712,6 +5736,177 @@ enum qca_wlan_vendor_attr_nan_params {
 	QCA_WLAN_VENDOR_ATTR_NAN_PARAMS_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_NAN_PARAMS_MAX =
 		QCA_WLAN_VENDOR_ATTR_NAN_PARAMS_AFTER_LAST - 1
+};
+
+/**
+ * enum qca_wlan_roam_scan_event_type - Type of roam scan event
+ *
+ * Indicates the type of roam scan event sent by firmware/driver.
+ *
+ * @QCA_WLAN_ROAM_SCAN_TRIGGER_EVENT: Roam scan trigger event type.
+ * @QCA_WLAN_ROAM_SCAN_STOP_EVENT: Roam scan stopped event type.
+ */
+enum qca_wlan_roam_scan_event_type {
+	QCA_WLAN_ROAM_SCAN_TRIGGER_EVENT = 0,
+	QCA_WLAN_ROAM_SCAN_STOP_EVENT = 1,
+};
+
+/**
+ * enum qca_wlan_roam_scan_trigger_reason - Roam scan trigger reason
+ *
+ * Indicates the reason for triggering roam scan by firmware/driver.
+ *
+ * @QCA_WLAN_ROAM_SCAN_TRIGGER_REASON_LOW_RSSI: Due to low RSSI of current AP.
+ * @QCA_WLAN_ROAM_SCAN_TRIGGER_REASON_HIGH_PER: Due to high packet error rate.
+ */
+enum qca_wlan_roam_scan_trigger_reason {
+	QCA_WLAN_ROAM_SCAN_TRIGGER_REASON_LOW_RSSI = 0,
+	QCA_WLAN_ROAM_SCAN_TRIGGER_REASON_HIGH_PER = 1,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_roam_scan - Vendor subcmd attributes to report
+ * roam scan related details from driver/firmware to user space. enum values
+ * are used for NL attributes sent with
+ * %QCA_NL80211_VENDOR_SUBCMD_ROAM_SCAN_EVENT sub command.
+ */
+enum qca_wlan_vendor_attr_roam_scan {
+	QCA_WLAN_VENDOR_ATTR_ROAM_SCAN_INVALID = 0,
+	/* Encapsulates type of roam scan event being reported. enum
+	 * qca_wlan_roam_scan_event_type describes the possible range of
+	 * values. u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_ROAM_SCAN_EVENT_TYPE = 1,
+	/* Encapsulates reason for triggering roam scan. enum
+	 * qca_wlan_roam_scan_trigger_reason describes the possible range of
+	 * values. u32 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_ROAM_SCAN_TRIGGER_REASON = 2,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_ROAM_SCAN_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_ROAM_SCAN_MAX =
+	QCA_WLAN_VENDOR_ATTR_ROAM_SCAN_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_vendor_cfr_method - QCA vendor CFR methods used by
+ * attribute QCA_WLAN_VENDOR_ATTR_PEER_CFR_METHOD as part of vendor
+ * command QCA_NL80211_VENDOR_SUBCMD_PEER_CFR_CAPTURE_CFG.
+ */
+enum qca_wlan_vendor_cfr_method {
+	/* CFR method using QOS Null frame */
+	QCA_WLAN_VENDOR_CFR_METHOD_QOS_NULL = 0,
+};
+
+/**
+ * enum qca_wlan_vendor_peer_cfr_capture_attr - Used by the vendor command
+ * QCA_NL80211_VENDOR_SUBCMD_PEER_CFR_CAPTURE_CFG to configure peer
+ * Channel Frequency Response capture parameters and enable periodic CFR
+ * capture.
+ */
+enum qca_wlan_vendor_peer_cfr_capture_attr {
+	QCA_WLAN_VENDOR_ATTR_PEER_CFR_CAPTURE_INVALID = 0,
+	/* 6-byte MAC address of the peer.
+	 * This attribute is mandatory.
+	 */
+	QCA_WLAN_VENDOR_ATTR_CFR_PEER_MAC_ADDR = 1,
+	/* Enable peer CFR Capture, flag attribute.
+	 * This attribute is mandatory to enable peer CFR capture.
+	 * If this attribute is not present, peer CFR capture is disabled.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PEER_CFR_ENABLE = 2,
+	/* BW of measurement, attribute uses the values in enum nl80211_chan_width
+	 * Supported values: 20, 40, 80, 80+80, 160.
+	 * Note that all targets may not support all bandwidths.
+	 * u8 attribute. This attribute is mandatory if attribute
+	 * QCA_WLAN_VENDOR_ATTR_PEER_CFR_ENABLE is used.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PEER_CFR_BANDWIDTH = 3,
+	/* Periodicity of CFR measurement in msec.
+	 * Periodicity should be a multiple of Base timer.
+	 * Current Base timer value supported is 10 msecs (default).
+	 * 0 for one shot capture. u32 attribute.
+	 * This attribute is mandatory if attribute
+	 * QCA_WLAN_VENDOR_ATTR_PEER_CFR_ENABLE is used.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PEER_CFR_PERIODICITY = 4,
+	/* Method used to capture Channel Frequency Response.
+	 * Attribute uses the values defined in enum qca_wlan_vendor_cfr_method.
+	 * u8 attribute. This attribute is mandatory if attribute
+	 * QCA_WLAN_VENDOR_ATTR_PEER_CFR_ENABLE is used.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PEER_CFR_METHOD = 5,
+	/* Enable periodic CFR capture, flag attribute.
+	 * This attribute is mandatory to enable Periodic CFR capture.
+	 * If this attribute is not present, periodic CFR capture is disabled.
+	 */
+	QCA_WLAN_VENDOR_ATTR_PERIODIC_CFR_CAPTURE_ENABLE = 6,
+
+	/* Keep last */
+	QCA_WLAN_VENDOR_ATTR_PEER_CFR_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_PEER_CFR_MAX =
+	QCA_WLAN_VENDOR_ATTR_PEER_CFR_AFTER_LAST - 1,
+};
+
+/**
+ * enum qca_wlan_throughput_level - Current throughput level
+ *
+ * Indicates the current level of throughput calculated by the driver. The
+ * driver may choose different thresholds to decide whether the throughput level
+ * is low or medium or high based on variety of parameters like physical link
+ * capacity of the current connection, the number of packets being dispatched
+ * per second, etc. The throughput level events might not be consistent with the
+ * actual current throughput value being observed.
+ *
+ * @QCA_WLAN_THROUGHPUT_LEVEL_LOW: Low level of throughput
+ * @QCA_WLAN_THROUGHPUT_LEVEL_MEDIUM: Medium level of throughput
+ * @QCA_WLAN_THROUGHPUT_LEVEL_HIGH: High level of throughput
+ */
+enum qca_wlan_throughput_level {
+	QCA_WLAN_THROUGHPUT_LEVEL_LOW = 0,
+	QCA_WLAN_THROUGHPUT_LEVEL_MEDIUM = 1,
+	QCA_WLAN_THROUGHPUT_LEVEL_HIGH = 2,
+};
+
+/**
+ * enum qca_wlan_vendor_attr_throughput_change - Vendor subcmd attributes to
+ * report throughput changes from the driver to user space. enum values are used
+ * for netlink attributes sent with
+ * %QCA_NL80211_VENDOR_SUBCMD_THROUGHPUT_CHANGE_EVENT sub command.
+ */
+enum qca_wlan_vendor_attr_throughput_change {
+	QCA_WLAN_VENDOR_ATTR_THROUGHPUT_CHANGE_INVALID = 0,
+	/* Indicates the direction of throughput in which the change is being
+	 * reported. u8 attribute. Value is 0 for TX and 1 for RX.
+	 */
+	QCA_WLAN_VENDOR_ATTR_THROUGHPUT_CHANGE_DIRECTION = 1,
+	/* Indicates the newly observed throughput level. enum
+	 * qca_wlan_throughput_level describes the possible range of values.
+	 * u8 attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_THROUGHPUT_CHANGE_THROUGHPUT_LEVEL = 2,
+	/* Indicates the driver's guidance on the new value to be set to
+	 * kernel's TCP parameter tcp_limit_output_bytes. u32 attribute. The
+	 * driver may optionally include this attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_THROUGHPUT_CHANGE_TCP_LIMIT_OUTPUT_BYTES = 3,
+	/* Indicates the driver's guidance on the new value to be set to
+	 * kernel's TCP parameter tcp_adv_win_scale. s8 attribute. Possible
+	 * values are from -31 to 31. The driver may optionally include this
+	 * attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_THROUGHPUT_CHANGE_TCP_ADV_WIN_SCALE = 4,
+	/* Indicates the driver's guidance on the new value to be set to
+	 * kernel's TCP parameter tcp_delack_seg. u32 attribute. The driver may
+	 * optionally include this attribute.
+	 */
+	QCA_WLAN_VENDOR_ATTR_THROUGHPUT_CHANGE_TCP_DELACK_SEG = 5,
+
+	/* keep last */
+	QCA_WLAN_VENDOR_ATTR_THROUGHPUT_CHANGE_AFTER_LAST,
+	QCA_WLAN_VENDOR_ATTR_THROUGHPUT_CHANGE_MAX =
+	QCA_WLAN_VENDOR_ATTR_THROUGHPUT_CHANGE_AFTER_LAST - 1,
 };
 
 #endif /* QCA_VENDOR_H */
