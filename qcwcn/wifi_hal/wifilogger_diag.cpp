@@ -44,6 +44,8 @@
 #include "wifilogger_diag.h"
 #include "wifilogger_vendor_tag_defs.h"
 #include "pkt_stats.h"
+#include <errno.h>
+#include "wifi_hal_ctrl.h"
 
 static uint32_t get_le32(const uint8_t *pos)
 {
@@ -2579,7 +2581,9 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
         genlh = (struct genlmsghdr *)nlmsg_data(nlh);
         if (genlh->cmd == ANI_NL_MSG_PUMAC ||
             genlh->cmd == ANI_NL_MSG_LOG ||
-            genlh->cmd == ANI_NL_MSG_CNSS_DIAG) {
+            genlh->cmd == ANI_NL_MSG_CNSS_DIAG ||
+            genlh->cmd == WLAN_NL_MSG_OEM)
+        {
             cmd = genlh->cmd;
             int result = nla_parse(attrs, CLD80211_ATTR_MAX, genlmsg_attrdata(genlh, 0),
                     genlmsg_attrlen(genlh, 0), NULL);
@@ -2596,6 +2600,59 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
             if (!clh) {
                 ALOGE("Invalid data received from driver");
                 return WIFI_SUCCESS;
+            }
+            if((info->wifihal_ctrl_sock.s > 0) && (genlh->cmd == WLAN_NL_MSG_OEM)) {
+               wifihal_ctrl_event_t *ctrl_evt;
+               wifihal_mon_sock_t *reg;
+
+               ctrl_evt = (wifihal_ctrl_event_t *)malloc(sizeof(*ctrl_evt) + nlh->nlmsg_len);
+
+               if(ctrl_evt == NULL)
+               {
+                 ALOGE("Memory allocation failure");
+                 return WIFI_ERROR_OUT_OF_MEMORY;
+               }
+               memset((char *)ctrl_evt, 0, sizeof(*ctrl_evt) + nlh->nlmsg_len);
+
+               ctrl_evt->family_name = CLD80211_FAMILY;
+               ctrl_evt->cmd_id = WLAN_NL_MSG_OEM;
+               ctrl_evt->data_len = nlh->nlmsg_len;
+               memcpy(ctrl_evt->data, (char *)nlh,  ctrl_evt->data_len);
+
+               //! Send oem data to all the registered clients
+
+               list_for_each_entry(reg, &info->monitor_sockets, list) {
+
+                   if(reg == NULL)
+                      break;
+
+                   if (reg->family_name != CLD80211_FAMILY || reg->cmd_id != WLAN_NL_MSG_OEM)
+                       continue;
+
+                   /* found match! */
+                   /* Indicate the received OEM msg to respective client
+                      it is responsibility of the registered client to check
+                      the oem_msg is meant for them or not based on oem_msg sub type */
+                   if (sendto(info->wifihal_ctrl_sock.s, (char *)ctrl_evt,
+                              sizeof(*ctrl_evt) + ctrl_evt->data_len, 0,
+                              (struct sockaddr *)&reg->monsock, reg->monsock_len) < 0)
+                   {
+                     int _errno = errno;
+                     ALOGE("socket send failed : %d",_errno);
+
+                     if (_errno == ENOBUFS || _errno == EAGAIN) {
+                         /*
+                          * The socket send buffer could be full. This
+                          * may happen if client programs are not
+                          * receiving their pending messages. Close and
+                          * reopen the socket as a workaround to avoid
+                          * getting stuck being unable to send any new
+                          * responses.
+                          */
+                     }
+                   }
+               }
+               free(ctrl_evt);
             }
         }
     } else {

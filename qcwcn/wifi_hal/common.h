@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
@@ -52,6 +53,8 @@
 #define RECV_BUF_SIZE           (4096)
 #define DEFAULT_EVENT_CB_SIZE   (64)
 #define NUM_RING_BUFS           5
+
+#define WIFI_HAL_CTRL_IFACE     "/dev/socket/wifihal/wifihal_ctrlsock"
 
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
@@ -105,11 +108,18 @@ struct gscan_event_handlers_s;
 struct rssi_monitor_event_handler_s;
 struct cld80211_ctx;
 
+struct ctrl_sock {
+    int s;
+    struct sockaddr_un local;
+};
+
 typedef struct hal_info_s {
 
     struct nl_sock *cmd_sock;                       // command socket object
     struct nl_sock *event_sock;                     // event socket object
     struct nl_sock *user_sock;                      // user socket object
+    struct ctrl_sock wifihal_ctrl_sock;             // ctrl sock object
+    struct list_head monitor_sockets;               // list of monitor sockets
     int nl80211_family_id;                          // family id for 80211 driver
 
     bool in_event_loop;                             // Indicates that event loop is active
