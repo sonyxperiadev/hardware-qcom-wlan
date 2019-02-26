@@ -65,6 +65,7 @@
 #define WIFI_HAL_CMD_SOCK_PORT       644
 #define WIFI_HAL_EVENT_SOCK_PORT     645
 
+#define MAX_HW_VER_LENGTH 100
 /*
  * Defines for wifi_wait_for_driver_ready()
  * Specify durations between polls and max wait time
@@ -500,6 +501,8 @@ wifi_error wifi_initialize(wifi_handle *handle)
     struct nl_cb *cb = NULL;
     int status = 0;
     int index;
+    char hw_ver_type[MAX_HW_VER_LENGTH];
+    char *hw_name = NULL;
 
     ALOGI("Initializing wifi");
     hal_info *info = (hal_info *)malloc(sizeof(hal_info));
@@ -675,6 +678,24 @@ wifi_error wifi_initialize(wifi_handle *handle)
                          &info->supported_logger_feature_set);
     if (ret != WIFI_SUCCESS)
         ALOGE("Failed to get supported logger feature set: %d", ret);
+
+    ret =  wifi_get_firmware_version(iface_handle, hw_ver_type,
+                                     MAX_HW_VER_LENGTH);
+    if (ret == WIFI_SUCCESS) {
+        hw_name = strstr(hw_ver_type, "HW:");
+        if (hw_name) {
+            hw_name += strlen("HW:");
+            if (strncmp(hw_name, "QCA6174", 7) == 0)
+               info->pkt_log_ver = PKT_LOG_V1;
+            else
+               info->pkt_log_ver = PKT_LOG_V2;
+        } else {
+           info->pkt_log_ver = PKT_LOG_V0;
+        }
+        ALOGV("%s: hardware version type %d", __func__, info->pkt_log_ver);
+    } else {
+        ALOGE("Failed to get supported logger feature set: %d", ret);
+    }
 
     ret = get_firmware_bus_max_size_supported(iface_handle);
     if (ret != WIFI_SUCCESS) {
