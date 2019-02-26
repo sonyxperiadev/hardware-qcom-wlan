@@ -1322,6 +1322,38 @@ static wifi_error update_stats_to_ring_buf(hal_info *info,
     return WIFI_SUCCESS;
 }
 
+static u8 cck_ratecode_mapping(u8 rate)
+{
+   u8 rate_code = 0;
+
+   switch (rate) {
+      case 0x1:
+           rate_code = 0x3;
+           break;
+      case 0x2:
+      case 0x5:
+           rate_code = 0x2;
+           break;
+      case 0x3:
+      case 0x6:
+           rate_code = 0x1;
+           break;
+      case 0x4:
+      case 0x7:
+           rate_code = 0x0;
+           break;
+   }
+   return rate_code;
+}
+
+static u8 ofdm_ratecode_mapping(u8 rate)
+{
+   u8 rate_code = 0;
+
+   rate_code = rate - 8;
+   return rate_code;
+}
+
 static u16 get_rate_v1(u16 mcs_r)
 {
     MCS mcs;
@@ -1505,6 +1537,136 @@ static wifi_error populate_rx_aggr_stats(hal_info *info)
     info->rx_buf_size_occupied = 0;
 
     return WIFI_SUCCESS;
+}
+
+static wifi_error parse_rx_stats_v2(hal_info *info, u8 *buf, u16 size)
+{
+    wifi_error status = WIFI_SUCCESS;
+    rb_pkt_stats_t_v1 *rx_stats_rcvd = (rb_pkt_stats_t_v1 *)buf;
+    wifi_ring_buffer_entry *pRingBufferEntry;
+    u32 len_ring_buffer_entry = 0;
+
+    if (size < sizeof(rb_pkt_stats_t)) {
+        ALOGE("%s Unexpected rx stats event length: %d", __FUNCTION__, size);
+        memset(info->rx_aggr_pkts, 0, info->rx_buf_size_occupied);
+        memset(&info->aggr_stats, 0, sizeof(rx_aggr_stats));
+        info->rx_buf_size_occupied = 0;
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    len_ring_buffer_entry = sizeof(wifi_ring_buffer_entry)
+                            + sizeof(wifi_ring_per_packet_status_entry)
+                            + RX_HTT_HDR_STATUS_LEN_V1;
+
+    if (len_ring_buffer_entry + info->rx_buf_size_occupied
+            > info->rx_buf_size_allocated) {
+        wifi_ring_buffer_entry *temp;
+        temp = (wifi_ring_buffer_entry *)realloc(info->rx_aggr_pkts,
+                len_ring_buffer_entry + info->rx_buf_size_occupied);
+        if (temp == NULL) {
+            ALOGE("%s: Failed to reallocate memory", __FUNCTION__);
+            free(info->rx_aggr_pkts);
+            info->rx_aggr_pkts = NULL;
+            return WIFI_ERROR_OUT_OF_MEMORY;
+        }
+        info->rx_aggr_pkts = temp;
+        memset((u8 *)info->rx_aggr_pkts + info->rx_buf_size_allocated, 0,
+                len_ring_buffer_entry + info->rx_buf_size_occupied
+                - info->rx_buf_size_allocated);
+        info->rx_buf_size_allocated =
+            len_ring_buffer_entry + info->rx_buf_size_occupied;
+    }
+
+    pRingBufferEntry = (wifi_ring_buffer_entry *)((u8 *)info->rx_aggr_pkts
+            + info->rx_buf_size_occupied);
+
+    info->rx_buf_size_occupied += len_ring_buffer_entry;
+
+    /* Fill size of the entry in rb entry which can be used while populating
+     * the data. Actual size that needs to be sent to ring buffer is only pps
+     * entry size
+     */
+    pRingBufferEntry->entry_size = len_ring_buffer_entry;
+    wifi_ring_per_packet_status_entry *rb_pkt_stats =
+        (wifi_ring_per_packet_status_entry *)(pRingBufferEntry + 1);
+
+    memset(rb_pkt_stats, 0, sizeof(wifi_ring_per_packet_status_entry));
+
+    /* Peer tx packet and it is an Rx packet for us */
+    rb_pkt_stats->flags |= PER_PACKET_ENTRY_FLAGS_DIRECTION_TX;
+
+    if (!((rx_stats_rcvd->mpdu_end.overflow_err) ||
+          (rx_stats_rcvd->attention.fcs_err) ||
+          (rx_stats_rcvd->attention.mpdu_length_err) ||
+          (rx_stats_rcvd->attention.msdu_length_err) ||
+          (rx_stats_rcvd->attention.tkip_mic_err) ||
+          (rx_stats_rcvd->attention.decrypt_err)))
+        rb_pkt_stats->flags |= PER_PACKET_ENTRY_FLAGS_TX_SUCCESS;
+
+    rb_pkt_stats->flags |= PER_PACKET_ENTRY_FLAGS_80211_HEADER;
+
+    if (rx_stats_rcvd->mpdu_start.encrypted)
+        rb_pkt_stats->flags |= PER_PACKET_ENTRY_FLAGS_PROTECTED;
+
+    if (rx_stats_rcvd->attention.first_mpdu) {
+        MCS *mcs = &info->aggr_stats.RxMCS;
+        u32 ht_vht_sig;
+
+        /* Flush the cached stats as this is the first MPDU. */
+        memset(&info->aggr_stats, 0, sizeof(rx_aggr_stats));
+        if (rx_stats_rcvd->ppdu_start.preamble_type == PREAMBLE_L_SIG_RATE) {
+            if (rx_stats_rcvd->ppdu_start.l_sig_rate_select) {
+                mcs->mcs_s.preamble = WIFI_HW_RATECODE_PREAM_CCK;
+                mcs->mcs_s.rate = cck_ratecode_mapping(rx_stats_rcvd->ppdu_start.l_sig_rate);
+            } else {
+                mcs->mcs_s.preamble = WIFI_HW_RATECODE_PREAM_OFDM;
+                mcs->mcs_s.rate = ofdm_ratecode_mapping(rx_stats_rcvd->ppdu_start.l_sig_rate);
+            }
+            /*BW is 0 for legacy cases*/
+        } else if (rx_stats_rcvd->ppdu_start.preamble_type ==
+                   PREAMBLE_VHT_SIG_A_1) {
+            ht_vht_sig = rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_1;
+            mcs->mcs_s.nss = ((ht_vht_sig >> 3) & 0x3);
+            //mcs->mcs_s.nss = (ht_vht_sig & BITMASK(7)) >> 3;
+            mcs->mcs_s.preamble = WIFI_HW_RATECODE_PREAM_HT;
+            mcs->mcs_s.rate = ((ht_vht_sig & BITMASK(7)) % 8) & 0xF;
+            mcs->mcs_s.bw = ((ht_vht_sig >> 7) & 1);
+            mcs->mcs_s.short_gi =
+                    ((rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_2 >> 7) & 1);
+        } else if (rx_stats_rcvd->ppdu_start.preamble_type ==
+                   PREAMBLE_VHT_SIG_A_2) {
+            ht_vht_sig = rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_1;
+            mcs->mcs_s.nss = ((ht_vht_sig >> 10) & 0x3);
+            mcs->mcs_s.preamble = WIFI_HW_RATECODE_PREAM_VHT;
+            mcs->mcs_s.rate =
+                (rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_2 >> 4) & BITMASK(4);
+            mcs->mcs_s.bw = (ht_vht_sig & 3);
+            mcs->mcs_s.short_gi =
+                             (rx_stats_rcvd->ppdu_start.ht_sig_vht_sig_a_2 & 1);
+        }
+
+        info->aggr_stats.last_transmit_rate
+            = get_rate_v1(info->aggr_stats.RxMCS.mcs);
+
+        info->aggr_stats.rssi = rx_stats_rcvd->ppdu_start.rssi_comb;
+        info->aggr_stats.tid = rx_stats_rcvd->mpdu_start.tid;
+    }
+    rb_pkt_stats->link_layer_transmit_sequence
+        = rx_stats_rcvd->mpdu_start.seq_num;
+
+    memcpy(&rb_pkt_stats->data[0], &rx_stats_rcvd->rx_hdr_status[0],
+        RX_HTT_HDR_STATUS_LEN_V1);
+
+    if ((rx_stats_rcvd->attention.last_mpdu
+         && rx_stats_rcvd->msdu_end.last_msdu)
+        || (rx_stats_rcvd->attention.first_mpdu
+         && rx_stats_rcvd->attention.last_mpdu)) {
+        info->aggr_stats.timestamp = rx_stats_rcvd->ppdu_end.wb_timestamp_lower_32;
+
+        status = populate_rx_aggr_stats(info);
+    }
+
+    return status;
 }
 
 static wifi_error parse_rx_stats(hal_info *info, u8 *buf, u16 size)
@@ -2231,7 +2393,27 @@ static wifi_error parse_stats_record_v2(hal_info *info,
 {
     wifi_error status = WIFI_SUCCESS;
 
-    if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_SW_EVENT) {
+    if (pkt_stats_header->log_type == PKTLOG_TYPE_RX_STAT) {
+        /* Ignore the event if it doesn't carry RX descriptor */
+        if (pkt_stats_header->flags & PKT_INFO_FLG_RX_RXDESC_MASK)
+            status = parse_rx_stats_v2(info,
+                                    (u8 *)(pkt_stats_header + 1),
+                                    pkt_stats_header->size);
+        else
+            status = WIFI_SUCCESS;
+    } else if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_DUMP_V2) {
+        pthread_mutex_lock(&info->pkt_fate_stats_lock);
+        if (info->fate_monitoring_enabled) {
+            if (pkt_stats_header->flags & PKT_INFO_FLG_PKT_DUMP_V2)
+                status = parse_pkt_fate_stats(info,
+                                              (u8 *)pkt_stats_header + sizeof(wh_pktlog_hdr_v2_t),
+                                              pkt_stats_header->size);
+            else
+                status = WIFI_SUCCESS;
+        } else
+            status = WIFI_SUCCESS;
+        pthread_mutex_unlock(&info->pkt_fate_stats_lock);
+    } else if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_SW_EVENT) {
         status = parse_stats_sw_event(info, pkt_stats_header);
     } else
         ALOGE("%s: invalid log_type %d",__FUNCTION__, pkt_stats_header->log_type);

@@ -186,6 +186,24 @@ struct rx_mpdu_end {
     u32 fcs_err                         :  1; //[31]
 } __attribute__((packed));
 
+/* structure implemented w.r.t PKT_LOG_V2 Version */
+struct rx_msdu_start_v1 {
+    u32 reserved1[2];
+    u32 reserved2                       :  8; //[7:0]
+    u32 decap_format                    :  2; //[9:8]
+    u32 reserved3                       : 22; //[31:10]
+    u32 reserved4[2];
+} __attribute__((packed));
+
+struct rx_msdu_end_v1 {
+    u32 reserved1[4];
+    u32 reserved2                       : 15; //[14:0]
+    u32 last_msdu                       :  1; //[15]
+    u32 reserved3                       : 16; //[31:16]
+    u32 reserved4[9];
+} __attribute__((packed));
+/************************************************************/
+
 #define PREAMBLE_L_SIG_RATE     0x04
 #define PREAMBLE_VHT_SIG_A_1    0x08
 #define PREAMBLE_VHT_SIG_A_2    0x0c
@@ -223,9 +241,18 @@ struct rx_ppdu_end {
     u32 reserved2[5];
 } __attribute__((packed));
 
+struct rx_ppdu_end_V1 {
+    u32 reserved1[18];
+    u32 wb_timestamp_lower_32;
+    u32 reserved2[18];
+} __attribute__((packed));
+
 #define MAX_MSDUS_PER_MPDU 3
 #define MAX_RXMPDUS_PER_AMPDU 64
 #define RX_HTT_HDR_STATUS_LEN 64
+/* RX Data length is 256 for PKT_LOG_V2 Version */
+#define RX_HTT_HDR_STATUS_LEN_V1 256
+
 typedef struct {
     struct rx_attention attention;
     u32 reserved1;
@@ -237,6 +264,20 @@ typedef struct {
     struct rx_ppdu_end   ppdu_end;
     char rx_hdr_status[RX_HTT_HDR_STATUS_LEN];
 }__attribute__((packed)) rb_pkt_stats_t;
+
+/* structure implemented w.r.t PKT_LOG_V2 Version */
+typedef struct {
+    struct rx_attention attention;
+    u32 reserved1[2];
+    struct rx_mpdu_start    mpdu_start;
+    struct rx_msdu_start_v1 msdu_start;
+    struct rx_msdu_end_v1   msdu_end;
+    struct rx_mpdu_end      mpdu_end;
+    struct rx_ppdu_start    ppdu_start;
+    struct rx_ppdu_end_V1    ppdu_end;
+    char rx_hdr_status[RX_HTT_HDR_STATUS_LEN_V1];
+}__attribute__((packed)) rb_pkt_stats_t_v1;
+/************************************************************/
 
 /*Tx stats specific structures. */
 struct ppdu_status {
