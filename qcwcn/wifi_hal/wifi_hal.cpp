@@ -1401,6 +1401,7 @@ cleanup:
 
 wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
                                                wifi_interface_handle iface,
+                                               u16 ether_type,
                                                u8 *ip_packet,
                                                u16 ip_packet_len,
                                                u8 *src_mac_addr,
@@ -1419,6 +1420,7 @@ wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
         return ret;
     }
 
+    ALOGV("ether type 0x%04x\n", ether_type);
     ALOGV("ip packet length : %u\nIP Packet:", ip_packet_len);
     hexdump(ip_packet, ip_packet_len);
     ALOGV("Src Mac Address: " MAC_ADDR_STR "\nDst Mac Address: " MAC_ADDR_STR
@@ -1439,6 +1441,12 @@ wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
     ret = vCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_REQUEST_ID,
             id);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    ret = vCommand->put_u16(
+            QCA_WLAN_VENDOR_ATTR_OFFLOADED_PACKETS_ETHER_PROTO_TYPE,
+            ether_type);
     if (ret != WIFI_SUCCESS)
         goto cleanup;
 
