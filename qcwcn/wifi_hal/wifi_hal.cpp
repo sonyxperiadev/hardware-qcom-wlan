@@ -881,9 +881,6 @@ static void internal_cleaned_up_handler(wifi_handle handle)
 
 void wifi_cleanup(wifi_handle handle, wifi_cleaned_up_handler handler)
 {
-    int bytes = 0;
-    char buf[4];
-
     if (!handle) {
         ALOGE("Handle is null");
         return;
@@ -892,20 +889,11 @@ void wifi_cleanup(wifi_handle handle, wifi_cleaned_up_handler handler)
     hal_info *info = getHalInfo(handle);
     info->cleaned_up_handler = handler;
 
-    bytes = TEMP_FAILURE_RETRY(write(info->exit_sockets[0], "E", 1));
-    if (bytes > 0) {
-        memset(buf, 0, sizeof(buf));
-        TEMP_FAILURE_RETRY(read(info->exit_sockets[0], buf, sizeof(buf)));
-        if (strncmp(buf, "S", 1) == 0) {
-            ALOGI("wifi_cleanup: recv success for eventloop exit.");
-        }
-    }
+    TEMP_FAILURE_RETRY(write(info->exit_sockets[0], "E", 1));
 
     // Ensure wifi_event_loop() exits by setting clean_up to true.
     info->clean_up = true;
     ALOGI("Sent msg on exit sock to unblock poll()");
-
-    internal_cleaned_up_handler(handle);
 }
 
 static int internal_pollin_handler(wifi_handle handle, struct nl_sock *sock)
@@ -942,7 +930,6 @@ static bool exit_event_handler(int fd) {
     TEMP_FAILURE_RETRY(read(fd, buf, sizeof(buf)));
     ALOGI("exit_event_handler, buf=%s", buf);
     if (strncmp(buf, "E", 1) == 0) {
-       TEMP_FAILURE_RETRY(write(fd, "S", 1));
        return true;
     }
 
@@ -996,6 +983,7 @@ void wifi_event_loop(wifi_handle handle)
         }
         rb_timerhandler(info);
     } while (!info->clean_up);
+    internal_cleaned_up_handler(handle);
     ALOGI("wifi_event_loop() exits success");
 }
 
