@@ -443,60 +443,64 @@ wifi_error wifi_set_nud_stats(wifi_interface_handle iface,
     ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_GW_IPV4, gw_addr);
     if (ret != WIFI_SUCCESS)
         goto cleanup;
-    /*start the packet info attributes in nested*/
-    nl_pktInfo = NUDCommand->attr_start(QCA_ATTR_NUD_STATS_SET_DATA_PKT_INFO);
-    if (!nl_pktInfo)
-        goto cleanup;
-    else {
-        ALOGV(" pkt_type %d domain_name :%s"
-              " src_port %d dst_port :%d"
-              " ipv4_address :%x ipv6_address %s",
-              pktstats.pkt_Type, pktstats.domain_name,
-              pktstats.src_port, pktstats.dst_port,
-              pktstats.ipv4_addr.s_addr,pktstats.ipv6_addr);
 
-        for (int i=0; i < MAX_INFO ; i++) {
-            /*add the packet type attributes*/
-            struct nlattr *tb_tmp;
-            tb_tmp = NUDCommand->attr_start(i);
+    if (mData.pkt_Type) {
+       /*start the packet info attributes in nested*/
+       nl_pktInfo = NUDCommand->attr_start(QCA_ATTR_NUD_STATS_SET_DATA_PKT_INFO);
+       if (!nl_pktInfo)
+           goto cleanup;
+       else {
+           ALOGV(" pkt_type %d domain_name :%s"
+                 " src_port %d dst_port :%d"
+                 " ipv4_address :%x ipv6_address %s",
+                 pktstats.pkt_Type, pktstats.domain_name,
+                 pktstats.src_port, pktstats.dst_port,
+                 pktstats.ipv4_addr.s_addr,pktstats.ipv6_addr);
 
-            ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_TYPE,mData.pkt_Type);
-            if (ret != WIFI_SUCCESS)
-                goto cleanup;
+           for (int i=0; i < MAX_INFO ; i++) {
+               /*add the packet type attributes*/
+               struct nlattr *tb_tmp;
+               tb_tmp = NUDCommand->attr_start(i);
 
-            /*add the domain name attributes*/
-            ret = NUDCommand->put_string(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DNS_DOMAIN_NAME,
-                                         mData.domain_name);
-            if (ret != WIFI_SUCCESS)
-                goto cleanup;
+               ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_TYPE,mData.pkt_Type);
+               if (ret != WIFI_SUCCESS)
+                   goto cleanup;
 
-            /*add the source port attributes*/
-            ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_SRC_PORT,
-                                      mData.src_port);
-            if (ret != WIFI_SUCCESS)
-                goto cleanup;
+               if (mData.domain_name) {
+                   /*add the domain name attributes*/
+                   ret = NUDCommand->put_string(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DNS_DOMAIN_NAME,
+                                                mData.domain_name);
+                   if (ret != WIFI_SUCCESS)
+                       goto cleanup;
+               }
+               /*add the source port attributes*/
+               ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_SRC_PORT,
+                                         mData.src_port);
+               if (ret != WIFI_SUCCESS)
+                   goto cleanup;
 
-            /*add the dest port attributes*/
-            ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DEST_PORT,
-                                      mData.dst_port);
-            if (ret != WIFI_SUCCESS)
-                goto cleanup;
+               /*add the dest port attributes*/
+               ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DEST_PORT,
+                                         mData.dst_port);
+               if (ret != WIFI_SUCCESS)
+                   goto cleanup;
 
-            /*add the ipv4 address attributes*/
-            ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DEST_IPV4,
-                                      mData.ipv4_addr.s_addr);
-            if (ret != WIFI_SUCCESS)
-                goto cleanup;
+               /*add the ipv4 address attributes*/
+               ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DEST_IPV4,
+                                         mData.ipv4_addr.s_addr);
+               if (ret != WIFI_SUCCESS)
+                   goto cleanup;
 
-            /*add the ipv6 address attributes*/
-            ret = NUDCommand->put_ipv6_addr(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DEST_IPV6,
-                                            mData.ipv6_addr);
-            if (ret != WIFI_SUCCESS)
-                goto cleanup;
-            NUDCommand->attr_end(tb_tmp);
-        }
+               /*add the ipv6 address attributes*/
+               ret = NUDCommand->put_ipv6_addr(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_DEST_IPV6,
+                                               mData.ipv6_addr);
+               if (ret != WIFI_SUCCESS)
+                   goto cleanup;
+               NUDCommand->attr_end(tb_tmp);
+           }
+       }
+       NUDCommand->attr_end(nl_pktInfo);
     }
-    NUDCommand->attr_end(nl_pktInfo);
     NUDCommand->attr_end(nl_data);
 
     ret = NUDCommand->requestResponse();
@@ -589,32 +593,33 @@ wifi_error wifi_clear_nud_stats(wifi_interface_handle iface,
     nl_data = NUDCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nl_data)
         goto cleanup;
-    /*set the packet info attributes in nested*/
-    nl_pktInfo = NUDCommand->attr_start(QCA_ATTR_NUD_STATS_SET_DATA_PKT_INFO);
-    if (!nl_pktInfo)
-        goto cleanup;
-    else {
-        ALOGV(" %s: pkt_type %d domain_name :%s"
-              " src_port %d dst_port :%d"
-              " ipv4_address :%x ipv6_address %s",
-              __FUNCTION__,mData.pkt_Type, mData.domain_name,
-              mData.src_port, mData.dst_port,
-              mData.ipv4_addr.s_addr,mData.ipv6_addr);
+    if (mData.pkt_Type) {
+       /*set the packet info attributes in nested*/
+       nl_pktInfo = NUDCommand->attr_start(QCA_ATTR_NUD_STATS_SET_DATA_PKT_INFO);
+       if (!nl_pktInfo)
+           goto cleanup;
+       else {
+           ALOGV(" %s: pkt_type %d domain_name :%s"
+                 " src_port %d dst_port :%d"
+                 " ipv4_address :%x ipv6_address %s",
+                 __FUNCTION__,mData.pkt_Type, mData.domain_name,
+                 mData.src_port, mData.dst_port,
+                 mData.ipv4_addr.s_addr,mData.ipv6_addr);
 
-        for (int i=0; i < MAX_INFO ; i++) {
-            /*add the packet type attributes*/
-            struct nlattr *tb_tmp;
-            tb_tmp = NUDCommand->attr_start(i);
+           for (int i=0; i < MAX_INFO ; i++) {
+               /*add the packet type attributes*/
+               struct nlattr *tb_tmp;
+               tb_tmp = NUDCommand->attr_start(i);
 
-            ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_TYPE,mData.pkt_Type);
-            if (ret != WIFI_SUCCESS)
-                goto cleanup;
+               ret = NUDCommand->put_u32(QCA_ATTR_NUD_STATS_DATA_PKT_INFO_TYPE,mData.pkt_Type);
+               if (ret != WIFI_SUCCESS)
+                   goto cleanup;
 
-            NUDCommand->attr_end(tb_tmp);
-        }
+               NUDCommand->attr_end(tb_tmp);
+           }
+       }
+       NUDCommand->attr_end(nl_pktInfo);
     }
-    NUDCommand->attr_end(nl_pktInfo);
-
     NUDCommand->attr_end(nl_data);
 
     ret = NUDCommand->requestResponse();
