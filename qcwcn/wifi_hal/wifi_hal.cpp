@@ -694,7 +694,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
         }
         ALOGV("%s: hardware version type %d", __func__, info->pkt_log_ver);
     } else {
-        ALOGE("Failed to get supported logger feature set: %d", ret);
+        ALOGE("Failed to get firmware version: %d", ret);
     }
 
     ret = get_firmware_bus_max_size_supported(iface_handle);

@@ -2464,52 +2464,62 @@ static wifi_error parse_stats_record_v1(hal_info *info,
 static wifi_error parse_stats(hal_info *info, u8 *data, u32 buflen)
 {
     wh_pktlog_hdr_t *pkt_stats_header;
-    wh_pktlog_hdr_v2_t *pkt_stats_header_t;
+    wh_pktlog_hdr_v2_t *pkt_stats_header_v2_t;
     wifi_error status = WIFI_SUCCESS;
 
     do {
+        u32 record_len;
+
         if (buflen < sizeof(wh_pktlog_hdr_t)) {
             status = WIFI_ERROR_INVALID_ARGS;
             break;
         }
 
         pkt_stats_header = (wh_pktlog_hdr_t *)data;
+        pkt_stats_header_v2_t = (wh_pktlog_hdr_v2_t *)data;
 
-        if (buflen < (sizeof(wh_pktlog_hdr_t) + pkt_stats_header->size)) {
+        if (info->pkt_log_ver == PKT_LOG_V2) {
+            if (buflen < sizeof(wh_pktlog_hdr_v2_t)) {
+                status = WIFI_ERROR_INVALID_ARGS;
+                break;
+            }
+            record_len = (sizeof(wh_pktlog_hdr_v2_t) + pkt_stats_header_v2_t->size);
+        } else {
+            if (pkt_stats_header->flags & PKT_INFO_FLG_PKT_DUMP_V2){
+                if (buflen < sizeof(wh_pktlog_hdr_v2_t)) {
+                    status = WIFI_ERROR_INVALID_ARGS;
+                    break;
+                }
+                record_len = (sizeof(wh_pktlog_hdr_v2_t) + pkt_stats_header_v2_t->size);
+            } else {
+                record_len = (sizeof(wh_pktlog_hdr_t) + pkt_stats_header->size);
+            }
+        }
+
+        if (buflen < record_len) {
             status = WIFI_ERROR_INVALID_ARGS;
             break;
         }
         /* Pkt_log_V2 based packet parsing */
         if (info->pkt_log_ver == PKT_LOG_V2) {
-           pkt_stats_header_t = (wh_pktlog_hdr_v2_t *)data;
-           status = parse_stats_record_v2(info, pkt_stats_header_t);
-           if (status != WIFI_SUCCESS) {
-               ALOGE("Failed to parse the stats type : %d",
-                     pkt_stats_header_t->log_type);
-               return status;
-           }
+            status = parse_stats_record_v2(info, pkt_stats_header_v2_t);
+            if (status != WIFI_SUCCESS) {
+                ALOGE("Failed to parse the stats type : %d",
+                     pkt_stats_header_v2_t->log_type);
+                return status;
+            }
         /* Pkt_log_V1 based packet parsing */
         } else {
-           status = parse_stats_record_v1(info, pkt_stats_header);
-           if (status != WIFI_SUCCESS) {
-               ALOGE("Failed to parse the stats type : %d",
+            status = parse_stats_record_v1(info, pkt_stats_header);
+            if (status != WIFI_SUCCESS) {
+                ALOGE("Failed to parse the stats type : %d",
                      pkt_stats_header->log_type);
-               return status;
-           }
+                return status;
+            }
         }
+        data += record_len;
+        buflen -= record_len;
 
-        if (info->pkt_log_ver == PKT_LOG_V1) {
-           if (pkt_stats_header->flags & PKT_INFO_FLG_PKT_DUMP_V2){
-               data += (sizeof(wh_pktlog_hdr_v2_t) + pkt_stats_header->size);
-               buflen -= (sizeof(wh_pktlog_hdr_v2_t) + pkt_stats_header->size);
-           } else {
-               data += (sizeof(wh_pktlog_hdr_t) + pkt_stats_header->size);
-               buflen -= (sizeof(wh_pktlog_hdr_t) + pkt_stats_header->size);
-           }
-        } else if (info->pkt_log_ver == PKT_LOG_V2) {
-            data += (sizeof(wh_pktlog_hdr_v2_t) + pkt_stats_header->size);
-            buflen -= (sizeof(wh_pktlog_hdr_v2_t) + pkt_stats_header->size);
-        }
     } while (buflen > 0);
 
     return status;
