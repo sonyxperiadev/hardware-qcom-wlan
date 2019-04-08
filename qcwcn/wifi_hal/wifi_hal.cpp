@@ -1401,6 +1401,7 @@ cleanup:
 
 wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
                                                wifi_interface_handle iface,
+                                               u16 /* ether_type */,
                                                u8 *ip_packet,
                                                u16 ip_packet_len,
                                                u8 *src_mac_addr,
