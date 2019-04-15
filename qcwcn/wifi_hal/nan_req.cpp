@@ -1664,7 +1664,7 @@ wifi_error NanCommand::requestEvent()
 {
     wifi_error res;
     int status;
-    struct nl_cb * cb;
+    struct nl_cb * cb = NULL;
 
     cb = nl_cb_alloc(NL_CB_DEFAULT);
     if (!cb) {
@@ -1699,6 +1699,7 @@ wifi_error NanCommand::requestEvent()
 
     res = mapKernelErrortoWifiHalError(status);
 out:
+    nl_cb_put(cb);
     //free the VendorData
     if (mVendorData) {
         free(mVendorData);
