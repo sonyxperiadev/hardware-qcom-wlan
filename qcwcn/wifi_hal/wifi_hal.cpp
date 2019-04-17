@@ -493,7 +493,6 @@ static int wifi_get_iface_id(hal_info *info, const char *iface)
 
 wifi_error wifi_initialize(wifi_handle *handle)
 {
-    int err = 0;
     wifi_error ret = WIFI_SUCCESS;
     wifi_interface_handle iface_handle;
     struct nl_sock *cmd_sock = NULL;
@@ -550,11 +549,11 @@ wifi_error wifi_initialize(wifi_handle *handle)
         goto unload;
     }
 
-    err = 1;
+    info->event_sock_arg = 1;
     nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
-    nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &err);
-    nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &err);
-    nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &err);
+    nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &info->event_sock_arg);
+    nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &info->event_sock_arg);
+    nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &info->event_sock_arg);
 
     nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, internal_valid_message_handler,
             info);

@@ -133,6 +133,7 @@ typedef struct hal_info_s {
     u32 supported_logger_feature_set;
     // add other details
     int user_sock_arg;
+    int event_sock_arg;
     struct rb_info rb_infos[NUM_RING_BUFS];
     void (*on_ring_buffer_data) (char *ring_name, char *buffer, int buffer_size,
           wifi_ring_buffer_status *status);
