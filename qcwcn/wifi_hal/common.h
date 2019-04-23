@@ -197,9 +197,8 @@ wifi_error cleanupRSSIMonitorHandler(hal_info *info);
 lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities);
 
 wifi_error wifi_start_sending_offloaded_packet(wifi_request_id id,
-        wifi_interface_handle iface, u16 ether_type, u8 *ip_packet,
-        u16 ip_packet_len, u8 *src_mac_addr, u8 *dst_mac_addr,
-        u32 period_msec);
+        wifi_interface_handle iface, u8 *ip_packet, u16 ip_packet_len,
+        u8 *src_mac_addr, u8 *dst_mac_addr, u32 period_msec);
 wifi_error wifi_stop_sending_offloaded_packet(wifi_request_id id,
         wifi_interface_handle iface);
 wifi_error wifi_start_rssi_monitoring(wifi_request_id id, wifi_interface_handle
