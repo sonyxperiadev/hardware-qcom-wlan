@@ -110,7 +110,7 @@ static wifi_error update_connectivity_ring_buf(hal_info *info,
                               RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
     rbe->type = ENTRY_TYPE_CONNECT_EVENT;
     gettimeofday(&time,NULL);
-    rbe->timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+    rbe->timestamp = (u64)time.tv_usec + (u64)time.tv_sec * 1000 * 1000;
 
     /* Write if verbose level and handler are set */
     if (info->rb_infos[CONNECTIVITY_EVENTS_RB_ID].verbose_level >= 1 &&
@@ -783,7 +783,7 @@ wifi_error process_firmware_prints(hal_info *info, u8 *buf, u16 length)
     rb_entry_hdr.flags = RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
     rb_entry_hdr.type = ENTRY_TYPE_DATA;
     gettimeofday(&time, NULL);
-    rb_entry_hdr.timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+    rb_entry_hdr.timestamp = (u64)time.tv_usec + (u64)time.tv_sec * 1000 * 1000;
 
     /* Write if verbose and handler is set */
     if (info->rb_infos[FIRMWARE_PRINTS_RB_ID].verbose_level >= 1 &&
@@ -1202,7 +1202,7 @@ static wifi_error process_wakelock_event(hal_info *info, u8* buf, int length)
                               RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
     pRingBufferEntry->type = ENTRY_TYPE_POWER_EVENT;
     gettimeofday(&time, NULL);
-    pRingBufferEntry->timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+    pRingBufferEntry->timestamp = (u64)time.tv_usec + (u64)time.tv_sec * 1000 * 1000;
 
     /* Write if verbose and handler is set */
     if (info->rb_infos[POWER_EVENTS_RB_ID].verbose_level >= 1 &&
@@ -1309,7 +1309,7 @@ static wifi_error update_stats_to_ring_buf(hal_info *info,
                               RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
     pRingBufferEntry->type = ENTRY_TYPE_PKT;
     gettimeofday(&time,NULL);
-    pRingBufferEntry->timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+    pRingBufferEntry->timestamp = (u64)time.tv_usec + (u64)time.tv_sec * 1000 * 1000;
 
     // Write if verbose and handler is set
     if ((info->rb_infos[PKT_STATS_RB_ID].verbose_level >= VERBOSE_DEBUG_PROBLEM)
@@ -2110,7 +2110,7 @@ wifi_error write_per_packet_stats_to_rb(hal_info *info, u8 *buf, u16 length)
     rb_entry_hdr.flags = RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
     rb_entry_hdr.type = ENTRY_TYPE_PKT;
     gettimeofday(&time, NULL);
-    rb_entry_hdr.timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+    rb_entry_hdr.timestamp = (u64)time.tv_usec + (u64)time.tv_sec * 1000 * 1000;
 
     /* Write if verbose and handler is set */
     if (info->rb_infos[PKT_STATS_RB_ID].verbose_level >= 3 &&
@@ -2537,7 +2537,7 @@ wifi_error process_driver_prints(hal_info *info, u8 *buf, u16 length)
     rb_entry_hdr.flags = RING_BUFFER_ENTRY_FLAGS_HAS_TIMESTAMP;
     rb_entry_hdr.type = ENTRY_TYPE_DATA;
     gettimeofday(&time, NULL);
-    rb_entry_hdr.timestamp = time.tv_usec + time.tv_sec * 1000 * 1000;
+    rb_entry_hdr.timestamp = (u64)time.tv_usec + (u64)time.tv_sec * 1000 * 1000;
 
     /* Write if verbose and handler is set */
     if (info->rb_infos[DRIVER_PRINTS_RB_ID].verbose_level >= 1 &&
