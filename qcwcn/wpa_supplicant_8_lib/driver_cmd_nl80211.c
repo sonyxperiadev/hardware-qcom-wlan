@@ -22,7 +22,10 @@
 #include "driver_nl80211.h"
 #include "wpa_supplicant_i.h"
 #include "config.h"
-#ifdef ANDROID
+#ifdef LINUX_EMBEDDED
+#include <sys/ioctl.h>
+#endif
+#if defined(ANDROID) || defined(LINUX_EMBEDDED)
 #include "android_drv.h"
 #endif
 #include "driver_cmd_nl80211_extn.h"
