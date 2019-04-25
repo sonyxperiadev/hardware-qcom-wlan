@@ -732,12 +732,26 @@ wifi_error wifi_set_latency_mode(wifi_interface_handle iface,
                                  wifi_latency_mode mode)
 {
     int requestId, ret = 0;
+    u16 level;
     WiFiConfigCommand *wifiConfigCommand;
     struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
 
     ALOGD("%s: %d", __FUNCTION__, mode);
+
+    switch (mode) {
+    case WIFI_LATENCY_MODE_NORMAL:
+        level = QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_NORMAL;
+        break;
+    case WIFI_LATENCY_MODE_LOW:
+        level = QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_ULTRALOW;
+        break;
+    default:
+        ALOGI("%s: Unsupported latency mode=%d, resetting to NORMAL!", __FUNCTION__, mode);
+        level = QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL_NORMAL;
+        break;
+    }
 
     requestId = get_requestid();
 
@@ -777,7 +791,7 @@ wifi_error wifi_set_latency_mode(wifi_interface_handle iface,
     }
 
     if (wifiConfigCommand->put_u16(
-        QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL, mode)) {
+        QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL, level)) {
         ALOGE("%s: failed to put vendor data. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
