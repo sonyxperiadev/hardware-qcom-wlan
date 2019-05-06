@@ -159,6 +159,7 @@ typedef struct hal_info_s {
     u32 prev_seq_no;
     // pointer to structure having various gscan_event_handlers
     struct gscan_event_handlers_s *gscan_handlers;
+    struct tcp_param_cmd_handler_s *tcp_param_handler;
     /* mutex for the log_handler access*/
     pthread_mutex_t lh_lock;
     /* mutex for the alert_handler access*/

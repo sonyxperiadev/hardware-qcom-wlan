@@ -85,6 +85,7 @@ LOCAL_SRC_FILES := \
 	rssi_monitor.cpp \
 	roam.cpp \
 	radio_mode.cpp \
+	tcp_params_update.cpp \
 	wifihal_vendor.cpp
 
 LOCAL_MODULE := libwifi-hal-qcom
@@ -156,6 +157,7 @@ LOCAL_SRC_FILES := \
 	rssi_monitor.cpp \
 	roam.cpp \
 	radio_mode.cpp \
+	tcp_params_update.cpp \
 	wifihal_vendor.cpp
 
 LOCAL_CFLAGS += -Wall -Werror
