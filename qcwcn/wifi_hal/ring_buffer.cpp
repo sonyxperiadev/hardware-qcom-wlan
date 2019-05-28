@@ -70,9 +70,9 @@ typedef struct ring_buf_cb {
     void (*threshold_cb)(void *);
     void *cb_ctx;
 
-    u32 total_bytes_written;
-    u32 total_bytes_read;
-    u32 total_bytes_overwritten;
+    u64 total_bytes_written;
+    u64 total_bytes_read;
+    u64 total_bytes_overwritten;
     u32 cur_valid_bytes;
     enum rb_bool threshold_reached;
 } rbc_t;
