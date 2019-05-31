@@ -982,7 +982,7 @@ static void internal_cleaned_up_handler(wifi_handle handle)
 {
     hal_info *info = getHalInfo(handle);
     wifi_cleaned_up_handler cleaned_up_handler = info->cleaned_up_handler;
-    wifihal_mon_sock_t *reg;
+    wifihal_mon_sock_t *reg, *tmp;
 
     if (info->cmd_sock != 0) {
         nl_socket_free(info->cmd_sock);
@@ -997,7 +997,8 @@ static void internal_cleaned_up_handler(wifi_handle handle)
         info->wifihal_ctrl_sock.s = 0;
     }
 
-   list_for_each_entry(reg, &info->monitor_sockets, list) {
+   list_for_each_entry_safe(reg, tmp, &info->monitor_sockets, list) {
+        del_from_list(&reg->list);
         if(reg) {
            free(reg);
         }
