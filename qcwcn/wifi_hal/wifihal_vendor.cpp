@@ -393,9 +393,11 @@ void NUDStatsCommand::GetPktInfo(struct nlattr **tbvendor)
                pkt_stats = (cmdData *)realloc(pkt_stats,sizeof(cmdData) * (nbuff + 1));
 
             mpktInfo = pkt_stats;
-            memcpy(&pkt_stats[nbuff], &pktstats,sizeof(cmdData));
-            nbuff++;
-            mnumStats = nbuff;
+            if (pkt_stats != NULL) {
+                memcpy(&pkt_stats[nbuff], &pktstats,sizeof(cmdData));
+                nbuff++;
+                mnumStats = nbuff;
+            }
        }
 }
 

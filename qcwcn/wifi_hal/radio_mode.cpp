@@ -186,9 +186,11 @@ int RADIOModeCommand::handleEvent(WifiEvent &event)
                                mode_info.iface_info = (wifi_iface_info *)
                                          realloc(mode_info.iface_info, (num_of_iface + 1) * sizeof(wifi_iface_info));
 
-                            memcpy(&mode_info.iface_info[num_of_iface], &miface_info, sizeof(wifi_iface_info));
-                            num_of_iface++;
-                            mode_info.num_iface = num_of_iface;
+                            if (mode_info.iface_info != NULL) {
+                                memcpy(&mode_info.iface_info[num_of_iface], &miface_info, sizeof(wifi_iface_info));
+                                num_of_iface++;
+                                mode_info.num_iface = num_of_iface;
+                            }
                        }
                     }
                     if (!num_of_mac)
@@ -198,8 +200,10 @@ int RADIOModeCommand::handleEvent(WifiEvent &event)
                        mwifi_iface_mac_info = (wifi_mac_info *)
                           realloc(mwifi_iface_mac_info, (num_of_mac + 1) * (sizeof(wifi_mac_info)));
 
-                    memcpy(&mwifi_iface_mac_info[num_of_mac], &mode_info, sizeof(wifi_mac_info));
-                    num_of_mac++;
+                    if (mwifi_iface_mac_info != NULL) {
+                        memcpy(&mwifi_iface_mac_info[num_of_mac], &mode_info, sizeof(wifi_mac_info));
+                        num_of_mac++;
+                    }
                 }
             }
 
