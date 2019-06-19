@@ -2291,9 +2291,12 @@ static wifi_error parse_stats_sw_event(hal_info *info,
     u8 *data;
     u8 *node_pkt_data;
     wh_pktlog_hdr_v2_t *pkt_stats_node_header;
-    int node_pkt_type,pkt_sub_type,node_pkt_len,i;
+    int node_pkt_type,pkt_sub_type,i;
+    int node_pkt_len = 0;
     wifi_error status = WIFI_SUCCESS;
     node_pkt_stats node_pkt_t;
+    node_pkt_t.bmap_enqueued = 0;
+    node_pkt_t.bmap_failed = 0;
     wifi_ring_buffer_entry *pRingBufferEntry =
         (wifi_ring_buffer_entry *)info->pkt_stats->tx_stats;
 
@@ -2623,9 +2626,6 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                //! Send oem data to all the registered clients
 
                list_for_each_entry(reg, &info->monitor_sockets, list) {
-
-                   if(reg == NULL)
-                      break;
 
                    if (reg->family_name != CLD80211_FAMILY || reg->cmd_id != WLAN_NL_MSG_OEM)
                        continue;
