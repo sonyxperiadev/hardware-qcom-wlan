@@ -999,9 +999,7 @@ static void internal_cleaned_up_handler(wifi_handle handle)
 
    list_for_each_entry_safe(reg, tmp, &info->monitor_sockets, list) {
         del_from_list(&reg->list);
-        if(reg) {
-           free(reg);
-        }
+        free(reg);
     }
 
     if (info->interfaces) {
@@ -1239,9 +1237,6 @@ static int register_monitor_sock(wifi_handle handle, wifihal_ctrl_req_t *ctrl_ms
 
          list_for_each_entry(reg, &info->monitor_sockets, list) {
 
-           if(reg == NULL)
-              break;
-
            int mlen = min(match_len, reg->match_len);
 
            if (reg->match_len == 0)
@@ -1290,8 +1285,6 @@ static int register_monitor_sock(wifi_handle handle, wifihal_ctrl_req_t *ctrl_ms
          //! if sock is not present, return error -2.
          //! if sock is present,  and cmd_id does not match, return error -2.
          //! if sock is present, and cmd_id matches, delete entry and return 0.
-         if(reg == NULL)
-            break;
 
          if (ctrl_msg->monsock_len != reg->monsock_len)
              continue;
@@ -1607,9 +1600,6 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
        buff = (char *)nla_data(nlattrs[NL80211_ATTR_FRAME]) + 24; //! Size of Wlan80211FrameHeader
 
        list_for_each_entry(reg, &info->monitor_sockets, list) {
-
-                 if(reg == NULL)
-                    break;
 
                  if (memcmp(reg->match, buff, reg->match_len))
                      continue;
