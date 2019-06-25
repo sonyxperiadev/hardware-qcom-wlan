@@ -1154,7 +1154,7 @@ static int send_nl_data(wifi_handle handle, wifihal_ctrl_req_t *ctrl_msg)
        ALOGE("%s: nl_send_auto_complete - failed : %d \n", __FUNCTION__, retval);
        goto nl_out;
      }
-
+     ALOGI("%s: sent gennl msg of len: %d to driver\n", __FUNCTION__, ctrl_msg->data_len);
      retval = internal_pollin_handler(handle, info->event_sock);
   }
   else if (ctrl_msg->family_name == CLD80211_FAMILY)
@@ -1173,7 +1173,7 @@ static int send_nl_data(wifi_handle handle, wifihal_ctrl_req_t *ctrl_msg)
         ALOGE("%s: send cld80211 message - failed\n", __FUNCTION__);
         goto nl_out;
       }
-      ALOGD("%s: sent cld80211 message for pid %d\n", __FUNCTION__, getpid());
+      ALOGI("%s: sent cld80211 msg of len: %d to driver\n", __FUNCTION__, ctrl_msg->data_len);
     }
     else
     {
@@ -1606,6 +1606,7 @@ static int internal_valid_message_handler(nl_msg *msg, void *arg)
 
                  /* found match! */
                  /* Indicate the received Action frame to respective client */
+                 ALOGI("send gennl msg of len : %d to apps", ctrl_evt->data_len);
                  if (sendto(info->wifihal_ctrl_sock.s, (char *)ctrl_evt,
                             sizeof(*ctrl_evt) + ctrl_evt->data_len,
                             0, (struct sockaddr *)&reg->monsock, reg->monsock_len) < 0)

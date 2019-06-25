@@ -2634,6 +2634,7 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                    /* Indicate the received OEM msg to respective client
                       it is responsibility of the registered client to check
                       the oem_msg is meant for them or not based on oem_msg sub type */
+                   ALOGI("send oem msg of len : %d to apps",ctrl_evt->data_len);
                    if (sendto(info->wifihal_ctrl_sock.s, (char *)ctrl_evt,
                               sizeof(*ctrl_evt) + ctrl_evt->data_len, 0,
                               (struct sockaddr *)&reg->monsock, reg->monsock_len) < 0)
