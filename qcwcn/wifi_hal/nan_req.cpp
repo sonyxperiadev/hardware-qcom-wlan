@@ -380,7 +380,7 @@ wifi_error NanCommand::putNanEnable(transaction_id id, const NanEnableRequest *p
 
         if (pReq->config_5g_channel) {
             if (mMsg.put_u32(QCA_WLAN_VENDOR_ATTR_NAN_DISC_5GHZ_BAND_FREQ,
-                               pReq->config_5g_channel)) {
+                               pReq->channel_5g_val)) {
                 ALOGE("%s: put attr error", __func__);
                 cleanup();
                 return WIFI_ERROR_INVALID_ARGS;
