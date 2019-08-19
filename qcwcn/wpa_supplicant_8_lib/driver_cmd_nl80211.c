@@ -74,12 +74,22 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 				  size_t buf_len )
 {
 	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct wpa_driver_nl80211_data *drv = NULL;
 	struct wpa_driver_nl80211_data *driver;
 	struct ifreq ifr;
 	android_wifi_priv_cmd priv_cmd;
 	int ret = 0, status = 0;
 	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL};
+
+	if (bss) {
+		drv = bss->drv;
+	} else {
+		if (os_strncasecmp(cmd, "SET_AP_SUSPEND", 14)) {
+			wpa_printf(MSG_ERROR, "%s: bss is NULL for cmd %s\n",
+				   __func__, cmd);
+			return -EINVAL;
+		}
+	}
 
 	if (wpa_driver_oem_initialize(&oem_cb_table) !=
 		WPA_DRIVER_OEM_STATUS_FAILURE) {
