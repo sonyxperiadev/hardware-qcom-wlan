@@ -48,6 +48,8 @@ TCPParamCommand::TCPParamCommand(wifi_handle handle, int id,
 		ALOGE("%s: Unable to register Vendor Handler Vendor Id=0x%x subcmd=%u",
 						__FUNCTION__, vendor_id, subcmd);
 	}
+	memset(def_tcp_limit_output_bytes, 0, SIZE_TCP_PARAM);
+	memset(def_tcp_adv_win_scale, 0, SIZE_TCP_PARAM);
 	def_tcp_limit_output_bytes_valid = false;
 	def_tcp_adv_win_scale_valid = false;
 }
