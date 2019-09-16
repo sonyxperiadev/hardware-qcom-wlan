@@ -2421,6 +2421,11 @@ static wifi_error parse_stats_record_v2(hal_info *info,
         pthread_mutex_unlock(&info->pkt_fate_stats_lock);
     } else if (pkt_stats_header->log_type == PKTLOG_TYPE_PKT_SW_EVENT) {
         status = parse_stats_sw_event(info, pkt_stats_header);
+    } else if (pkt_stats_header->log_type == PKTLOG_TYPE_TX_STAT ||
+               pkt_stats_header->log_type == PKTLOG_TYPE_RX_STATBUF ||
+               pkt_stats_header->log_type == PKTLOG_TYPE_LITE_T2H ||
+               pkt_stats_header->log_type == PKTLOG_TYPE_LITE_RX) {
+        //TODO Parsing of per packet log.
     } else
         ALOGE("%s: invalid log_type %d",__FUNCTION__, pkt_stats_header->log_type);
 

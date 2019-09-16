@@ -53,6 +53,10 @@
 
 /* Based on pkt log V2, this type of event will triggered */
 #define PKTLOG_TYPE_PKT_SW_EVENT    10
+#define PKTLOG_TYPE_RX_STATBUF      22   //Full Rx pktlog stats
+#define PKTLOG_TYPE_LITE_T2H        23   //PPDU Level Tx pktlog stats
+#define PKTLOG_TYPE_LITE_RX         24   //PPDU Level Rx pktlog stats
+
 
 #define PKT_INFO_FLG_TX_LOCAL_S          0x1
 #define PKT_INFO_FLG_RX_HOST_RXD         0x2
