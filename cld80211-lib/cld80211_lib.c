@@ -457,7 +457,7 @@ int cld80211_recv(struct cld80211_ctx *ctx, int timeout, bool recv_multi_msg,
 }
 
 
-struct cld80211_ctx * cld80211_init()
+struct cld80211_ctx * cld80211_init(void)
 {
 	struct cld80211_ctx *ctx;
 

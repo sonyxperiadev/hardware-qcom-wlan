@@ -75,7 +75,7 @@ enum cld80211_attr {
  * Retuns valid sock only if socket creation is succesful and cld80211
  * family is present, returns NULL otherwise
  */
-struct cld80211_ctx *cld80211_init();
+struct cld80211_ctx *cld80211_init(void);
 
 /**
  * free the socket created in cld80211_init()
