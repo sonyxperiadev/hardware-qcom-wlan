@@ -106,6 +106,12 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		/* else proceed with legacy handling as below */
 	}
 
+	if (!drv) {
+		wpa_printf(MSG_ERROR, "%s: drv is NULL for cmd %s\n",
+			   __func__, cmd);
+		return -EINVAL;
+	}
+
 	if (os_strcasecmp(cmd, "START") == 0) {
 		dl_list_for_each(driver, &drv->global->interfaces, struct wpa_driver_nl80211_data, list) {
 			linux_set_iface_flags(drv->global->ioctl_sock, driver->first_bss->ifname, 1);
