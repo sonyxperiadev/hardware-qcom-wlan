@@ -1374,6 +1374,7 @@ int NanCommand::handleEvent(WifiEvent &event)
         //error case should not happen print log
         ALOGE("%s: Wrong NAN subcmd received %d", __FUNCTION__, mSubcmd);
     }
+    mNanVendorEvent = NULL;
     return NL_SKIP;
 }
 
