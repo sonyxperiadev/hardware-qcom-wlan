@@ -2426,9 +2426,9 @@ static wifi_error parse_stats_record_v2(hal_info *info,
                pkt_stats_header->log_type == PKTLOG_TYPE_LITE_T2H ||
                pkt_stats_header->log_type == PKTLOG_TYPE_LITE_RX) {
         //TODO Parsing of per packet log.
-    } else
-        ALOGE("%s: invalid log_type %d",__FUNCTION__, pkt_stats_header->log_type);
-
+    } else {
+        //No Parsing on Default packet log type.
+    }
     return status;
 }
 
