@@ -88,11 +88,25 @@ wifi_error wifi_rtt_range_request(wifi_request_id id,
 {
     wifi_error ret;
     lowi_cb_table_t *lowiWifiHalApi = NULL;
+    hal_info *info = NULL;
 
     if (iface == NULL) {
         ALOGE("wifi_rtt_range_request: NULL iface pointer provided."
             " Exit.");
         return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    wifi_handle wifiHandle = getWifiHandle(iface);
+    info = getHalInfo(wifiHandle);
+    if (!info)
+    {
+        ALOGE("%s: hal_info is null ", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_D2AP_RTT)) {
+        ALOGE("%s: RTT is not supported by driver", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
     }
 
     if (rtt_config == NULL) {
