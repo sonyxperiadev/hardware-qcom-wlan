@@ -2388,6 +2388,10 @@ static wifi_error parse_stats_sw_event(hal_info *info,
            pkt_stats_len = (pkt_stats_len - (sizeof(wh_pktlog_hdr_v2_t) + node_pkt_len));
            data = (u8*) (data + sizeof(wh_pktlog_hdr_v2_t) + node_pkt_len);
            info->pkt_stats->tx_stats_events = 0;
+        } else {
+            //TODO parsing of unknown packet sub type
+            status = WIFI_ERROR_INVALID_ARGS;
+            break;
         }
     } while (pkt_stats_len > 0);
     return status;
