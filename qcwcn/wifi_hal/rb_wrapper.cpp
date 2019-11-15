@@ -117,7 +117,7 @@ void push_out_rb_data(void *cb_ctx)
     wifi_ring_buffer_status rbs;
     wifi_ring_buffer_data_handler handler;
 
-    while (1) {
+    while (info && !info->clean_up) {
         size_t length = 0;
         u8 *buf;
 
