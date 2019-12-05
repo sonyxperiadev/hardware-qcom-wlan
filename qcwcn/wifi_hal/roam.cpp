@@ -308,6 +308,26 @@ wifi_error wifi_configure_roaming(wifi_interface_handle iface, wifi_roaming_conf
               info->capa.roaming_capa.max_whitelist_size);
         return WIFI_ERROR_NOT_SUPPORTED;
     }
+
+    // Framework is always sending SSID length as 32 though null terminated lengths
+    // are lesser. Thus update correct lengths before sending to driver.
+    for (int i = 0; i < roaming_config->num_whitelist_ssid; i++) {
+        int j;
+
+        for (j = 0; j < roaming_config->whitelist_ssid[i].length; j++) {
+            if (roaming_config->whitelist_ssid[i].ssid_str[j] == '\0')
+                break;
+        }
+
+        if (roaming_config->whitelist_ssid[i].length == j)
+            continue;
+
+        ALOGI("%s: ssid_str %s reported length = %d , null terminated length = %d", __FUNCTION__,
+              roaming_config->whitelist_ssid[i].ssid_str,
+              roaming_config->whitelist_ssid[i].length, j);
+        roaming_config->whitelist_ssid[i].length = j;
+    }
+
     ret = wifi_set_ssid_white_list(requestId, iface, roaming_config->num_whitelist_ssid,
                                    roaming_config->whitelist_ssid);
     if (ret != WIFI_SUCCESS)
