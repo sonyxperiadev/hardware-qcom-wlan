@@ -727,6 +727,9 @@ wifi_error wifi_virtual_interface_create(wifi_handle handle,
         case WIFI_INTERFACE_TYPE_P2P:    /* IfaceType:P2P */
             type = NL80211_IFTYPE_P2P_DEVICE;
             break;
+        case WIFI_INTERFACE_TYPE_NAN:    /* IfaceType:NAN */
+            type = NL80211_IFTYPE_NAN;
+            break;
         default:
             ALOGE("%s: Wrong interface type %u", __FUNCTION__, iface_type);
             ret = WIFI_ERROR_UNKNOWN;
