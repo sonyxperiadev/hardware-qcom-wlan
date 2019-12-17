@@ -1512,7 +1512,7 @@ static wifi_error populate_rx_aggr_stats(hal_info *info)
     wifi_ring_per_packet_status_entry *pps_entry;
     u32 index = 0;
 
-    while ((info && !info->clean_up) && (index < info->rx_buf_size_occupied)) {
+    while (!info->clean_up && (index < info->rx_buf_size_occupied)) {
         pps_entry = (wifi_ring_per_packet_status_entry *)(pRingBufferEntry + 1);
 
         pps_entry->MCS = info->aggr_stats.RxMCS.mcs;
@@ -2397,7 +2397,7 @@ static wifi_error parse_stats_sw_event(hal_info *info,
             status = WIFI_ERROR_INVALID_ARGS;
             break;
         }
-    } while ((info && !info->clean_up) && (pkt_stats_len > 0));
+    } while (!info->clean_up && (pkt_stats_len > 0));
     return status;
 }
 
@@ -2539,7 +2539,7 @@ static wifi_error parse_stats(hal_info *info, u8 *data, u32 buflen)
         data += record_len;
         buflen -= record_len;
 
-    } while ((info && !info->clean_up) && (buflen > 0));
+    } while (!info->clean_up && (buflen > 0));
 
     return status;
 }
