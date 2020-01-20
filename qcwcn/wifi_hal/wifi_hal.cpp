@@ -1138,6 +1138,12 @@ static int send_nl_data(wifi_handle handle, wifihal_ctrl_req_t *ctrl_msg)
        goto nl_out;
     }
 
+    if (ctrl_msg->data_len > nlmsg_get_max_size(msg))
+    {
+        ALOGE("%s: Invalid ctrl msg length \n", __FUNCTION__);
+        retval = -1;
+        goto nl_out;
+    }
     memcpy((char *)msg->nm_nlh, (char *)ctrl_msg->data, ctrl_msg->data_len);
 
    if(ctrl_msg->family_name == GENERIC_NL_FAMILY)
