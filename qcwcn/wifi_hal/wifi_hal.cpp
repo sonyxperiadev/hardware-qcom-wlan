@@ -583,6 +583,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
 #ifdef WCNSS_QTI_AOSP
     fn->wifi_set_latency_mode = wifi_set_latency_mode;
 #endif
+    fn->wifi_set_thermal_mitigation_mode = wifi_set_thermal_mitigation_mode;
 
     return WIFI_SUCCESS;
 }
