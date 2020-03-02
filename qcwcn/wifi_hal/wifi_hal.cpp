@@ -578,8 +578,9 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_radio_mode_change_handler = wifi_set_radio_mode_change_handler;
     /* Customers will uncomment when they want to set qpower*/
     //fn->wifi_set_qpower = wifi_set_qpower;
+    fn->wifi_virtual_interface_create = wifi_virtual_interface_create;
+    fn->wifi_virtual_interface_delete = wifi_virtual_interface_delete;
 #ifdef WCNSS_QTI_AOSP
-    fn->wifi_add_or_remove_virtual_intf = wifi_add_or_remove_virtual_intf;
     fn->wifi_set_latency_mode = wifi_set_latency_mode;
 #endif
 
@@ -1064,6 +1065,8 @@ void wifi_cleanup(wifi_handle handle, wifi_cleaned_up_handler handler)
 
     hal_info *info = getHalInfo(handle);
     info->cleaned_up_handler = handler;
+    // Remove the dynamically created interface during wifi cleanup.
+    wifi_cleanup_dynamic_ifaces(handle);
 
     TEMP_FAILURE_RETRY(write(info->exit_sockets[0], "E", 1));
 
