@@ -33,6 +33,9 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string>
+#include <net/if.h>
+#include <vector>
 #include "wificonfigcommand.h"
 
 /* Implementation of the API functions exposed in wifi_config.h */
@@ -668,63 +671,125 @@ out:
     return res;
 }
 
-#ifdef WCNSS_QTI_AOSP
-wifi_error wifi_add_or_remove_virtual_intf(wifi_interface_handle iface,
-                                           const char* ifname, u32 iface_type,
-                                           bool create)
+
+
+static std::vector<std::string> added_ifaces;
+
+static bool is_dynamic_interface(const char * ifname)
+{
+    for (const auto& iface : added_ifaces) {
+        if (iface == std::string(ifname))
+            return true;
+    }
+    return false;
+}
+
+void wifi_cleanup_dynamic_ifaces(wifi_handle handle)
+{
+    int len = added_ifaces.size();
+    while (len--) {
+        wifi_virtual_interface_delete(handle, added_ifaces.front().c_str());
+    }
+    added_ifaces.clear(); // could be redundent. But to be on safe side.
+}
+
+wifi_error wifi_virtual_interface_create(wifi_handle handle,
+                                         const char* ifname,
+                                         wifi_interface_type iface_type)
 {
     wifi_error ret;
     WiFiConfigCommand *wifiConfigCommand;
-    interface_info *ifaceInfo = getIfaceInfo(iface);
-    wifi_handle wifiHandle = getWifiHandle(iface);
+    u32 wlan0_id = if_nametoindex("wlan0");
+    if (!handle || !wlan0_id) {
+        ALOGE("%s: Error wifi_handle NULL or wlan0 not present", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
 
-    ALOGD("%s: ifname=%s create=%u", __FUNCTION__, ifname, create);
+    ALOGD("%s: ifname=%s create", __FUNCTION__, ifname);
+    // Do not create interface if already exist.
+    if (if_nametoindex(ifname))
+        return WIFI_SUCCESS;
 
-    wifiConfigCommand = new WiFiConfigCommand(wifiHandle, get_requestid(), 0, 0);
+    wifiConfigCommand = new WiFiConfigCommand(handle, get_requestid(), 0, 0);
     if (wifiConfigCommand == NULL) {
         ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
-    if (create) {
-        nl80211_iftype type;
-        switch(iface_type) {
-            case 0:    /* IfaceType:STA */
-                type = NL80211_IFTYPE_STATION;
-                break;
-            case 1:    /* IfaceType:AP */
-                type = NL80211_IFTYPE_AP;
-                break;
-            case 2:    /* IfaceType:P2P */
-                type = NL80211_IFTYPE_P2P_DEVICE;
-                break;
-            default:
-                ALOGE("%s: Wrong interface type %u", __FUNCTION__, iface_type);
-                ret = WIFI_ERROR_UNKNOWN;
-                goto done;
-                break;
-        }
-        wifiConfigCommand->create_generic(NL80211_CMD_NEW_INTERFACE);
-        wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX, ifaceInfo->id);
-        wifiConfigCommand->put_string(NL80211_ATTR_IFNAME, ifname);
-        wifiConfigCommand->put_u32(NL80211_ATTR_IFTYPE, type);
-    } else {
-        wifiConfigCommand->create_generic(NL80211_CMD_DEL_INTERFACE);
-        wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX, if_nametoindex(ifname));
+    nl80211_iftype type;
+    switch(iface_type) {
+        case WIFI_INTERFACE_TYPE_STA:    /* IfaceType:STA */
+            type = NL80211_IFTYPE_STATION;
+            break;
+        case WIFI_INTERFACE_TYPE_AP:    /* IfaceType:AP */
+            type = NL80211_IFTYPE_AP;
+            break;
+        case WIFI_INTERFACE_TYPE_P2P:    /* IfaceType:P2P */
+            type = NL80211_IFTYPE_P2P_DEVICE;
+            break;
+        default:
+            ALOGE("%s: Wrong interface type %u", __FUNCTION__, iface_type);
+            ret = WIFI_ERROR_UNKNOWN;
+            goto done;
+            break;
     }
-
+    wifiConfigCommand->create_generic(NL80211_CMD_NEW_INTERFACE);
+    wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX, wlan0_id);
+    wifiConfigCommand->put_string(NL80211_ATTR_IFNAME, ifname);
+    wifiConfigCommand->put_u32(NL80211_ATTR_IFTYPE, type);
     /* Send the NL msg. */
     wifiConfigCommand->waitForRsp(false);
     ret = wifiConfigCommand->requestEvent();
-    if (ret != WIFI_SUCCESS) {
-        ALOGE("wifi_add_or_remove_virtual_intf: requestEvent Error:%d", ret);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: requestEvent Error:%d", __FUNCTION__,ret);
     }
+    // Update dynamic interface list
+    added_ifaces.push_back(std::string(ifname));
 
 done:
     delete wifiConfigCommand;
     return ret;
 }
 
+wifi_error wifi_virtual_interface_delete(wifi_handle handle,
+                                         const char* ifname)
+{
+    wifi_error ret;
+    WiFiConfigCommand *wifiConfigCommand;
+    u32 wlan0_id = if_nametoindex("wlan0");
+
+    if (!handle || !wlan0_id) {
+        ALOGE("%s: Error wifi_handle NULL or wlan0 not present", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ALOGD("%s: ifname=%s delete", __FUNCTION__, ifname);
+    if (if_nametoindex(ifname) && !is_dynamic_interface(ifname)) {
+         // Do not remove interface if it was not added dynamically.
+         return WIFI_SUCCESS;
+    }
+    wifiConfigCommand = new WiFiConfigCommand(handle, get_requestid(), 0, 0);
+    if (wifiConfigCommand == NULL) {
+        ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+    wifiConfigCommand->create_generic(NL80211_CMD_DEL_INTERFACE);
+    wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX, if_nametoindex(ifname));
+    /* Send the NL msg. */
+    wifiConfigCommand->waitForRsp(false);
+    ret = wifiConfigCommand->requestEvent();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__,ret);
+    }
+    // Update dynamic interface list
+    added_ifaces.erase(std::remove(added_ifaces.begin(), added_ifaces.end(), std::string(ifname)),
+                           added_ifaces.end());
+
+    delete wifiConfigCommand;
+    return ret;
+}
+
+#ifdef WCNSS_QTI_AOSP
 /**
  * Set latency level
  */
