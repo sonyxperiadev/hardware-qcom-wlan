@@ -2614,14 +2614,14 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                     clh = (tAniCLDHdr *)nla_data(tb_vendor[CLD80211_ATTR_DATA]);
                 }
             }
-            if (!clh) {
-                ALOGE("Invalid data received from driver");
-                return WIFI_SUCCESS;
-            }
             if((info->wifihal_ctrl_sock.s > 0) && (genlh->cmd == WLAN_NL_MSG_OEM)) {
                wifihal_ctrl_event_t *ctrl_evt;
                wifihal_mon_sock_t *reg;
 
+               if (!(tb_vendor[CLD80211_ATTR_DATA] || tb_vendor[CLD80211_ATTR_CMD])) {
+                   ALOGE("Invalid oem data received from driver");
+                   return WIFI_SUCCESS;
+               }
                ctrl_evt = (wifihal_ctrl_event_t *)malloc(sizeof(*ctrl_evt) + nlh->nlmsg_len);
 
                if(ctrl_evt == NULL)
@@ -2668,6 +2668,7 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                    }
                }
                free(ctrl_evt);
+               return WIFI_SUCCESS;
             }
         }
     } else {
@@ -2675,6 +2676,10 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
         cmd = wnl->nlh.nlmsg_type;
     }
 
+    if (!clh) {
+         ALOGE("Invalid data received from driver");
+         return WIFI_SUCCESS;
+    }
     /* Check nlmsg_type also to avoid processing unintended msgs */
     if (cmd == ANI_NL_MSG_PUMAC) {
         if (!info->cldctx) {
