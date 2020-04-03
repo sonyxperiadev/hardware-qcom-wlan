@@ -798,6 +798,57 @@ void wifi_cleanup_dynamic_ifaces(wifi_handle handle)
     added_ifaces.clear(); // could be redundent. But to be on safe side.
 }
 
+static wifi_error wifi_set_interface_mode(wifi_handle handle,
+                                   const char* ifname,
+                                   u32 iface_type)
+{
+    wifi_error ret;
+    WiFiConfigCommand *wifiConfigCommand;
+
+    ALOGD("%s: ifname=%s iface_type=%u", __FUNCTION__, ifname, iface_type);
+
+    wifiConfigCommand = new WiFiConfigCommand(handle, get_requestid(), 0, 0);
+    if (wifiConfigCommand == NULL) {
+        ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    nl80211_iftype type;
+    switch(iface_type) {
+        case WIFI_INTERFACE_TYPE_STA:    /* IfaceType:STA */
+            type = NL80211_IFTYPE_STATION;
+            break;
+        case WIFI_INTERFACE_TYPE_AP:    /* IfaceType:AP */
+            type = NL80211_IFTYPE_AP;
+            break;
+        case WIFI_INTERFACE_TYPE_P2P:    /* IfaceType:P2P */
+            type = NL80211_IFTYPE_P2P_DEVICE;
+            break;
+        case WIFI_INTERFACE_TYPE_NAN:    /* IfaceType:NAN */
+            type = NL80211_IFTYPE_NAN;
+            break;
+        default:
+            ALOGE("%s: Wrong interface type %u", __FUNCTION__, iface_type);
+            ret = WIFI_ERROR_UNKNOWN;
+            goto done;
+            break;
+    }
+    wifiConfigCommand->create_generic(NL80211_CMD_SET_INTERFACE);
+    wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX, if_nametoindex(ifname));
+    wifiConfigCommand->put_u32(NL80211_ATTR_IFTYPE, type);
+
+    /* Send the NL msg. */
+    wifiConfigCommand->waitForRsp(false);
+    ret = wifiConfigCommand->requestEvent();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
+    }
+
+done:
+    delete wifiConfigCommand;
+    return ret;
+}
+
 wifi_error wifi_virtual_interface_create(wifi_handle handle,
                                          const char* ifname,
                                          wifi_interface_type iface_type)
@@ -810,10 +861,12 @@ wifi_error wifi_virtual_interface_create(wifi_handle handle,
         return WIFI_ERROR_UNKNOWN;
     }
 
+    // Already exists and set interface mode only
+    if (if_nametoindex(ifname) != 0) {
+        return wifi_set_interface_mode(handle, ifname, iface_type);
+    }
+
     ALOGD("%s: ifname=%s create", __FUNCTION__, ifname);
-    // Do not create interface if already exist.
-    if (if_nametoindex(ifname))
-        return WIFI_SUCCESS;
 
     wifiConfigCommand = new WiFiConfigCommand(handle, get_requestid(), 0, 0);
     if (wifiConfigCommand == NULL) {
