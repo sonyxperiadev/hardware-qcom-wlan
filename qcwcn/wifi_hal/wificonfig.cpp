@@ -533,6 +533,111 @@ cleanup:
     return ret;
 }
 
+wifi_error wifi_set_thermal_mitigation_mode(wifi_handle handle,
+                                            wifi_thermal_mode mode,
+                                            u32 completion_window)
+{
+    wifi_error ret;
+    WiFiConfigCommand *wifiConfigCommand;
+    struct nlattr *nlData;
+    u32 qca_vendor_thermal_level;
+    hal_info *info = getHalInfo(handle);
+
+    if (!info || info->num_interfaces < 1) {
+         ALOGE("%s: Error wifi_handle NULL or base wlan interface not present",
+               __FUNCTION__);
+         return WIFI_ERROR_UNKNOWN;
+    }
+
+    wifiConfigCommand = new WiFiConfigCommand(
+                            handle,
+                            1,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_THERMAL_CMD);
+    if (wifiConfigCommand == NULL) {
+        ALOGE("%s: Error, Failed to create wifiConfigCommand", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = wifiConfigCommand->create();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to create thermal vendor command, Error:%d", ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    if (wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX,
+                                   info->interfaces[0]->id)) {
+        ALOGE("%s: Failed to put iface id", __FUNCTION__);
+         goto cleanup;
+    }
+
+    nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ALOGE("%s: Failed in attr_start for VENDOR_DATA, Error:%d",
+              __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    if (wifiConfigCommand->put_u32(QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_VALUE,
+                             QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_SET_LEVEL)) {
+        ALOGE("Failed to put THERMAL_LEVEL command type");
+        goto cleanup;
+    }
+
+    switch(mode) {
+        case WIFI_MITIGATION_NONE:
+            qca_vendor_thermal_level = QCA_WLAN_VENDOR_THERMAL_LEVEL_NONE;
+            break;
+        case WIFI_MITIGATION_LIGHT:
+            qca_vendor_thermal_level = QCA_WLAN_VENDOR_THERMAL_LEVEL_LIGHT;
+            break;
+        case WIFI_MITIGATION_MODERATE:
+            qca_vendor_thermal_level = QCA_WLAN_VENDOR_THERMAL_LEVEL_MODERATE;
+            break;
+        case WIFI_MITIGATION_SEVERE:
+            qca_vendor_thermal_level = QCA_WLAN_VENDOR_THERMAL_LEVEL_SEVERE;
+            break;
+        case WIFI_MITIGATION_CRITICAL:
+            qca_vendor_thermal_level = QCA_WLAN_VENDOR_THERMAL_LEVEL_CRITICAL;
+            break;
+        case WIFI_MITIGATION_EMERGENCY:
+            qca_vendor_thermal_level = QCA_WLAN_VENDOR_THERMAL_LEVEL_EMERGENCY;
+            break;
+        default:
+            ALOGE("Unknown thermal mitigation level %d", mode);
+            ret = WIFI_ERROR_UNKNOWN;
+            goto cleanup;
+    }
+
+    if (wifiConfigCommand->put_u32(
+                             QCA_WLAN_VENDOR_ATTR_THERMAL_LEVEL,
+                             qca_vendor_thermal_level)) {
+        ALOGE("Failed to put thermal level");
+        goto cleanup;
+    }
+
+    if (wifiConfigCommand->put_u32(
+                             QCA_WLAN_VENDOR_ATTR_THERMAL_COMPLETION_WINDOW,
+                             completion_window)) {
+        ALOGE("Failed to put thermal completion window");
+        goto cleanup;
+    }
+    wifiConfigCommand->attr_end(nlData);
+
+    wifiConfigCommand->waitForRsp(false);
+    ret = wifiConfigCommand->requestEvent();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to set thermal level with Error: %d", ret);
+        goto cleanup;
+    }
+
+cleanup:
+    delete wifiConfigCommand;
+    return ret;
+}
+
 WiFiConfigCommand::WiFiConfigCommand(wifi_handle handle,
                                      int id, u32 vendor_id,
                                      u32 subcmd)
