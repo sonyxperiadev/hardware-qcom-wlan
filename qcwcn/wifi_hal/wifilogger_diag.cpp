@@ -2613,7 +2613,11 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                 if (tb_vendor[CLD80211_ATTR_DATA]) {
                     clh = (tAniCLDHdr *)nla_data(tb_vendor[CLD80211_ATTR_DATA]);
                 }
+            } else {
+                ALOGE("Invalid data received");
+                return WIFI_SUCCESS;
             }
+
             if((info->wifihal_ctrl_sock.s > 0) && (genlh->cmd == WLAN_NL_MSG_OEM)) {
                wifihal_ctrl_event_t *ctrl_evt;
                wifihal_mon_sock_t *reg;
