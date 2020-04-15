@@ -326,7 +326,7 @@ struct nl_msg *cld80211_msg_alloc(struct cld80211_ctx *ctx, int cmd,
 			0, 0, cmd, /* version = */ 0);
 
 	*nla_data = nla_nest_start(nlmsg, CLD80211_ATTR_VENDOR_DATA);
-	if (!nla_data)
+	if (!*nla_data)
 		goto cleanup;
 
 	return nlmsg;
