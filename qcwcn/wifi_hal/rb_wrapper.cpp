@@ -106,7 +106,11 @@ wifi_error ring_buffer_write(struct rb_info *rb_info, u8 *buf, size_t length,
         return WIFI_ERROR_UNKNOWN;
     }
 
-    rb_info->written_records += no_of_records;
+    if (rb_info->written_records < (UINT_MAX - 1))
+        rb_info->written_records += no_of_records;
+    else
+        rb_info->written_records = 0;
+
     return WIFI_SUCCESS;
 }
 

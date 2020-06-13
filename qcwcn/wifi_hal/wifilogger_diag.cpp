@@ -849,10 +849,10 @@ static wifi_error process_beacon_received_event(hal_info *info,
     return status;
 }
 
-static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u16 length)
+static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u32 length)
 {
-    u16 count = 0, id;
-    u16 payloadlen = 0;
+    u32 count = 0, id;
+    u32 payloadlen = 0;
     u16 hdr_size = 0;
     wifi_error status;
     fw_diag_msg_fixed_hdr_t *diag_msg_fixed_hdr;
@@ -2814,7 +2814,7 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
         diag_fw_type = event_hdr->diag_type;
         if (diag_fw_type == DIAG_TYPE_FW_MSG) {
             dbglog_slot *slot;
-            u16 length = 0;
+            u32 length = 0;
 
             slot = (dbglog_slot *)buf;
             if (nlh->nlmsg_len < (NLMSG_HDRLEN + sizeof(dbglog_slot) +
