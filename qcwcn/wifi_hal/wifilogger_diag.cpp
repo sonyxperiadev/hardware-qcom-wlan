@@ -2617,6 +2617,10 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                 ALOGE("Invalid data received");
                 return WIFI_SUCCESS;
             }
+            if (genlh->cmd != WLAN_NL_MSG_OEM && !clh) {
+                ALOGE("Invalid data received from driver");
+                return WIFI_SUCCESS;
+            }
 
             if((info->wifihal_ctrl_sock.s > 0) && (genlh->cmd == WLAN_NL_MSG_OEM)) {
                wifihal_ctrl_event_t *ctrl_evt;
@@ -2680,10 +2684,6 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
         cmd = wnl->nlh.nlmsg_type;
     }
 
-    if (!clh) {
-         ALOGE("Invalid data received from driver");
-         return WIFI_SUCCESS;
-    }
     /* Check nlmsg_type also to avoid processing unintended msgs */
     if (cmd == ANI_NL_MSG_PUMAC) {
         if (!info->cldctx) {
