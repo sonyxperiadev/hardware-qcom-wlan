@@ -14,6 +14,8 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <net/if.h>
+#include <netlink/genl/genl.h>
+#include <netlink/genl/ctrl.h>
 #include <netlink/object-api.h>
 #include <linux/pkt_sched.h>
 
@@ -34,6 +36,45 @@
 #define WPA_PS_DISABLED		1
 #define UNUSED(x)	(void)(x)
 
+
+/* ============ nl80211 driver extensions ===========  */
+static int wpa_driver_cmd_set_tx_power(struct i802_bss *bss, char *cmd)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	char *endptr = NULL;
+	int ret;
+	int dbm, mbm;
+
+	wpa_printf(MSG_INFO, "%s enter: dbm=%s", __FUNCTION__, cmd);
+
+	dbm = strtol(cmd, &endptr, 10);
+	if (*endptr || dbm < 0) {
+		wpa_printf(MSG_ERROR, "%s: invalid dbm %d", __FUNCTION__, dbm);
+		return -EINVAL;
+	}
+	mbm = dbm * 100;
+	if (mbm < 0) { // integer overflow
+		wpa_printf(MSG_ERROR, "%s: invalid mbm %d", __FUNCTION__, mbm);
+		return -EINVAL;
+	}
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_SET_WIPHY)) ||
+	    nla_put_u32(msg, NL80211_ATTR_WIPHY_TX_POWER_SETTING,
+		NL80211_TX_POWER_LIMITED) ||
+	    nla_put_u32(msg, NL80211_ATTR_WIPHY_TX_POWER_LEVEL, mbm)) {
+		nlmsg_free(msg);
+		return -ENOBUFS;
+	}
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (!ret)
+		return 0;
+
+	wpa_printf(MSG_ERROR, "%s: Failed set_tx_power dbm=%d, ret=%d",
+		   __FUNCTION__, dbm, ret);
+	return ret;
+}
 
 /* Return type for setBand*/
 enum {
@@ -124,6 +165,8 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		if (!ret)
 			ret = os_snprintf(buf, buf_len,
 					  "Macaddr = " MACSTR "\n", MAC2STR(macaddr));
+	} else if (os_strncasecmp(cmd, "SET_TXPOWER ", 12) == 0) {
+		return wpa_driver_cmd_set_tx_power(priv, cmd + 12);
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));
