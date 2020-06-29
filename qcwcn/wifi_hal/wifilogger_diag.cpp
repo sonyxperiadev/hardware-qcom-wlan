@@ -47,6 +47,7 @@
 #include <errno.h>
 #include "wifi_hal_ctrl.h"
 
+#define MAX_EVENT_REASON_CODE 1024
 static uint32_t get_le32(const uint8_t *pos)
 {
     return pos[0] | (pos[1] << 8) | (pos[2] << 16) | (pos[3] << 24);
@@ -1247,11 +1248,17 @@ static void process_wlan_data_stall_event(hal_info *info,
                                           int length)
 {
    wlan_data_stall_event_t *event;
+   int reason_code = 0;
 
    ALOGV("Received Data Stall Event from Driver");
    event = (wlan_data_stall_event_t *)buf;
    ALOGE("Received Data Stall event, sending alert %d", event->reason);
-   send_alert(info, DATA_STALL_OFFSET_REASON_CODE + event->reason);
+   if(event->reason >= MAX_EVENT_REASON_CODE)
+       reason_code = 0;
+   else
+       reason_code = event->reason;
+
+   send_alert(info, DATA_STALL_OFFSET_REASON_CODE + reason_code);
 }
 
 static void process_wlan_low_resource_failure(hal_info *info,
