@@ -39,6 +39,41 @@
 #include <string.h>
 #include <net/if.h>
 
+/* Used to handle radio command events from driver/firmware. */
+typedef struct radio_event_handler_s {
+    RADIOModeCommand* mRADIOModeCommandInstance;
+} radio_event_handlers;
+
+wifi_error initializeRadioHandler(hal_info *info)
+{
+    info->radio_handlers = (radio_event_handlers *)malloc(
+            sizeof(radio_event_handlers));
+    if (info->radio_handlers) {
+        memset(info->radio_handlers, 0, sizeof(radio_event_handlers));
+    } else {
+        ALOGE("%s: Allocation of radio event handlers failed",
+                __FUNCTION__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+    return WIFI_SUCCESS;
+}
+
+wifi_error cleanupRadioHandler(hal_info *info) {
+    radio_event_handlers* event_handlers;
+    if (info && info->radio_handlers) {
+        event_handlers = (radio_event_handlers*) info->radio_handlers;
+        if (event_handlers->mRADIOModeCommandInstance) {
+            delete event_handlers->mRADIOModeCommandInstance;
+        }
+        memset(event_handlers, 0, sizeof(radio_event_handlers));
+        free(info->radio_handlers);
+        info->radio_handlers = NULL;
+        return WIFI_SUCCESS;
+    }
+    ALOGE ("%s: info or info->radio_handlers NULL", __FUNCTION__);
+    return WIFI_ERROR_UNKNOWN;
+}
+
 /* Used to handle radio mode command events from driver/firmware.*/
 void RADIOModeCommand::setCallbackHandler(wifi_radio_mode_change_handler handler)
 {
@@ -71,8 +106,6 @@ RADIOModeCommand::~RADIOModeCommand()
 RADIOModeCommand* RADIOModeCommand::instance(wifi_handle handle,
                                              wifi_request_id id)
 {
-    RADIOModeCommand* mRADIOModeCommandInstance;
-
     if (handle == NULL) {
         ALOGE("Interface Handle is invalid");
         return NULL;
@@ -82,10 +115,20 @@ RADIOModeCommand* RADIOModeCommand::instance(wifi_handle handle,
         ALOGE("hal_info is invalid");
         return NULL;
     }
-    mRADIOModeCommandInstance = new RADIOModeCommand(handle, id,
-                OUI_QCA,
+    RADIOModeCommand* instance = info->radio_handlers->mRADIOModeCommandInstance;
+    if (instance) {
+        if (handle != getWifiHandle(instance->mInfo)) {
+            ALOGV("%s - Handle different, update the handle", __FUNCTION__);
+            instance->mInfo = (hal_info *)handle;
+        }
+        instance->setReqId(id);
+    } else {
+        info->radio_handlers->mRADIOModeCommandInstance =
+            new RADIOModeCommand(handle, id, OUI_QCA,
                 QCA_NL80211_VENDOR_SUBCMD_WLAN_MAC_INFO);
-    return mRADIOModeCommandInstance;
+        instance = info->radio_handlers->mRADIOModeCommandInstance;
+    }
+    return instance;
 }
 
 /* This function will be the main handler for incoming event.

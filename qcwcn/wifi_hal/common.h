@@ -172,6 +172,7 @@ typedef struct hal_info_s {
     /* mutex for the packet fate stats shared resource protection */
     pthread_mutex_t pkt_fate_stats_lock;
     struct rssi_monitor_event_handler_s *rssi_handlers;
+    struct radio_event_handler_s *radio_handlers;
     wifi_capa capa;
     struct cld80211_ctx *cldctx;
     bool apf_enabled;
@@ -196,6 +197,8 @@ wifi_error initializeGscanHandlers(hal_info *info);
 wifi_error cleanupGscanHandlers(hal_info *info);
 wifi_error initializeRSSIMonitorHandler(hal_info *info);
 wifi_error cleanupRSSIMonitorHandler(hal_info *info);
+wifi_error initializeRadioHandler(hal_info *info);
+wifi_error cleanupRadioHandler(hal_info *info);
 
 lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities);
 
