@@ -96,12 +96,12 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		ret = oem_cb_table.wpa_driver_driver_cmd_oem_cb(
 				priv, cmd, buf, buf_len, &status);
 		if (ret == WPA_DRIVER_OEM_STATUS_SUCCESS ) {
-			return 0;
+			return strlen(buf);
 		} else if ((ret == WPA_DRIVER_OEM_STATUS_FAILURE) &&
 							 (status != 0)) {
 			wpa_printf(MSG_DEBUG, "%s: Received error: %d",
 					__func__, ret);
-			return ret;
+			return -1;
 		}
 		/* else proceed with legacy handling as below */
 	}
