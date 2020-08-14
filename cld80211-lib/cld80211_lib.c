@@ -282,6 +282,8 @@ int cld80211_add_mcast_group(struct cld80211_ctx *ctx, const char* mcgroup)
 
 int cld80211_remove_mcast_group(struct cld80211_ctx *ctx, const char* mcgroup)
 {
+	// Drop membership is not a necessary cleanup action so comment it out.
+#if 0
 	if (!ctx || !mcgroup) {
 		ALOGE("%s: ctx/mcgroup is NULL: %s", getprogname(), __func__);
 		return 0;
@@ -299,7 +301,7 @@ int cld80211_remove_mcast_group(struct cld80211_ctx *ctx, const char* mcgroup)
 		      " ret: %d", getprogname(), mcgroup, errno, ret);
 		return ret;
 	}
-
+#endif
 	return 0;
 }
 
