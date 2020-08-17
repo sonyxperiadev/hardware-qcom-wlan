@@ -837,6 +837,10 @@ static wifi_error get_wifi_radio_stats(wifi_radio_stat *stats,
             return WIFI_ERROR_INVALID_ARGS;
         }
         pChStats->cca_busy_time          = nla_get_u32(tb2[QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_CCA_BUSY_TIME]);
+
+        if (tb2[QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_RX_TIME])
+            pChStats->cca_busy_time -= nla_get_u32(tb2[QCA_WLAN_VENDOR_ATTR_LL_STATS_CHANNEL_RX_TIME]);
+
     }
     return WIFI_SUCCESS;
 }
