@@ -963,8 +963,14 @@ wifi_error wifi_set_latency_mode(wifi_interface_handle iface,
     struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(wifiHandle);
 
     ALOGD("%s: %d", __FUNCTION__, mode);
+
+    if (!(info->supported_feature_set & WIFI_FEATURE_SET_LATENCY_MODE)) {
+        ALOGE("%s: Latency Mode is not supported by driver", __FUNCTION__);
+        return WIFI_ERROR_NOT_SUPPORTED;
+    };
 
     switch (mode) {
     case WIFI_LATENCY_MODE_NORMAL:
