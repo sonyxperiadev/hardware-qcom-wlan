@@ -855,9 +855,9 @@ wifi_error wifi_virtual_interface_create(wifi_handle handle,
 {
     wifi_error ret;
     WiFiConfigCommand *wifiConfigCommand;
-    u32 wlan0_id = if_nametoindex("wlan0");
-    if (!handle || !wlan0_id) {
-        ALOGE("%s: Error wifi_handle NULL or wlan0 not present", __FUNCTION__);
+    hal_info *info = getHalInfo(handle);
+    if (!info || info->num_interfaces < 1) {
+        ALOGE("%s: Error wifi_handle NULL or base wlan interface not present", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
@@ -895,7 +895,7 @@ wifi_error wifi_virtual_interface_create(wifi_handle handle,
             break;
     }
     wifiConfigCommand->create_generic(NL80211_CMD_NEW_INTERFACE);
-    wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX, wlan0_id);
+    wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX,info->interfaces[0]->id);
     wifiConfigCommand->put_string(NL80211_ATTR_IFNAME, ifname);
     wifiConfigCommand->put_u32(NL80211_ATTR_IFTYPE, type);
     /* Send the NL msg. */
@@ -917,10 +917,8 @@ wifi_error wifi_virtual_interface_delete(wifi_handle handle,
 {
     wifi_error ret;
     WiFiConfigCommand *wifiConfigCommand;
-    u32 wlan0_id = if_nametoindex("wlan0");
-
-    if (!handle || !wlan0_id) {
-        ALOGE("%s: Error wifi_handle NULL or wlan0 not present", __FUNCTION__);
+    if (!handle) {
+        ALOGE("%s: Error wifi_handle NULL", __FUNCTION__);
         return WIFI_ERROR_UNKNOWN;
     }
 
