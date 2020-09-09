@@ -174,8 +174,8 @@ void wifihal_ctrl_close(struct wifihal_ctrl *ctrl)
     free(ctrl);
 }
 
-int wifihal_ctrl_request(struct wifihal_ctrl *ctrl, const char *cmd, size_t cmd_len,
-                         char *reply, size_t *reply_len)
+int wifihal_ctrl_request2(struct wifihal_ctrl *ctrl, const char *cmd, size_t cmd_len,
+                         char *reply, size_t *reply_len, time_t sec, suseconds_t usec)
 {
     struct timeval tv;
     int counter = 0, res;
@@ -211,8 +211,8 @@ retry_send:
      free(cmd_buf);
 
      for (;;) {
-        tv.tv_sec = 10;
-        tv.tv_usec = 0;
+        tv.tv_sec = sec;
+        tv.tv_usec = usec;
         FD_ZERO(&rfds);
         FD_SET(ctrl->s, &rfds);
         res = select(ctrl->s + 1, &rfds, NULL, NULL, &tv);
@@ -231,4 +231,11 @@ retry_send:
         }
      }
      return 0;
+}
+
+
+int wifihal_ctrl_request(struct wifihal_ctrl *ctrl, const char *cmd, size_t cmd_len,
+                         char *reply, size_t *reply_len)
+{
+    return wifihal_ctrl_request2(ctrl, cmd, cmd_len, reply, reply_len, 1, 0);
 }
