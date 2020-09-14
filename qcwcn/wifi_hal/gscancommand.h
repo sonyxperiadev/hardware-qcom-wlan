@@ -46,10 +46,10 @@ typedef struct{
 typedef struct{
     u8  more_data;
     u32 num_cached_results;
-    u32 cachedResultsStartingIndex; /* Used in filling cached scan results */
+    int cachedResultsStartingIndex; /* Used in filling cached scan results */
     int lastProcessedScanId; /* Last scan id in gscan cached results block */
-    u32 wifiScanResultsStartingIndex; /* For the lastProcessedScanId */
-    u32 max;                /* max num of cached results specified by caller */
+    int wifiScanResultsStartingIndex; /* For the lastProcessedScanId */
+    int max;                /* max num of cached results specified by caller */
     wifi_cached_scan_results *cached_results;
 } GScanGetCachedResultsRspParams;
 

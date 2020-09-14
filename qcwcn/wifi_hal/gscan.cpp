@@ -1385,11 +1385,11 @@ wifi_error GScanCommand:: gscan_get_cached_results(
                                       wifi_cached_scan_results *cached_results,
                                       struct nlattr **tb_vendor)
 {
-    u32 j = 0;
+    int j = 0;
     struct nlattr *scanResultsInfo, *wifiScanResultsInfo;
     int rem = 0, remResults = 0;
     u32 len = 0, numScanResults = 0;
-    u32 i = mGetCachedResultsRspParams->cachedResultsStartingIndex;
+    int i = mGetCachedResultsRspParams->cachedResultsStartingIndex;
     ALOGV("%s: starting counter: %d", __FUNCTION__, i);
 
     for (scanResultsInfo = (struct nlattr *) nla_data(tb_vendor[
@@ -1649,7 +1649,7 @@ wifi_error GScanCommand:: gscan_get_cached_results(
            i++;
        }
        /* Increment starting index of filling cached results received */
-       if (mGetCachedResultsRspParams->num_cached_results)
+       if (mGetCachedResultsRspParams->num_cached_results <= 1024)
            mGetCachedResultsRspParams->cachedResultsStartingIndex =
                mGetCachedResultsRspParams->num_cached_results - 1;
     return WIFI_SUCCESS;
