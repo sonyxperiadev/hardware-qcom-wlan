@@ -40,7 +40,6 @@
 #define UNUSED(x)	(void)(x)
 #define NL80211_ATTR_MAX_INTERNAL 256
 
-
 /* ============ nl80211 driver extensions ===========  */
 static int wpa_driver_cmd_set_ani_level(struct i802_bss *bss, int mode, int ofdmlvl)
 {
@@ -1181,6 +1180,62 @@ static int wpa_driver_handle_get_sta_info(struct i802_bss *bss, char *cmd,
 	return wpa_driver_get_all_sta_info(bss, buf, buf_len, status);
 }
 
+static int thermal_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	int *param = arg;
+	struct nlattr *nl_vendor;
+	struct nlattr *tb_vendor[QCA_WLAN_VENDOR_ATTR_MAX + 1];
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+	    genlmsg_attrlen(gnlh, 0), NULL);
+
+	nl_vendor = tb[NL80211_ATTR_VENDOR_DATA];
+	if (!nl_vendor || nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_MAX,
+	    nla_data(nl_vendor), nla_len(nl_vendor), NULL)) {
+		wpa_printf(MSG_ERROR, "%s: No vendor data found", __func__);
+		return NL_SKIP;
+	}
+
+	if (tb_vendor[QCA_WLAN_VENDOR_ATTR_THERMAL_GET_TEMPERATURE_DATA])
+		*param = (int) nla_get_u32(
+		    tb_vendor[QCA_WLAN_VENDOR_ATTR_THERMAL_GET_TEMPERATURE_DATA]);
+	else if (tb_vendor[QCA_WLAN_VENDOR_ATTR_THERMAL_LEVEL])
+		*param = (int) nla_get_u32(
+		    tb_vendor[QCA_WLAN_VENDOR_ATTR_THERMAL_LEVEL]);
+	else
+		wpa_printf(MSG_ERROR, "%s: failed to parse data", __func__);
+
+	return NL_SKIP;
+}
+
+static int wpa_driver_cmd_get_thermal_info(struct i802_bss *bss, int *result, int attr)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg = NULL;
+	struct nlattr *params = NULL;
+	int ret = 0;
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_THERMAL_CMD) ||
+	    !(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+	    nla_put_u32(msg, QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_VALUE, attr)) {
+		nlmsg_free(msg);
+		return -1;
+	}
+
+	nla_nest_end(msg, params);
+	ret = send_and_recv_msgs(drv, msg, thermal_info_handler, result);
+	if (!ret)
+		return 0;
+	wpa_printf(MSG_ERROR, "%s: Failed get thermal info, ret=%d(%s)",
+				__func__, ret, strerror(-ret));
+	return ret;
+}
+
 int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 				  size_t buf_len )
 {
@@ -1327,6 +1382,22 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 			ofdmlvl = strtol(endptr, NULL, 10);
 		}
 		return wpa_driver_cmd_set_ani_level(priv, mode, ofdmlvl);
+	} else if (os_strncasecmp(cmd, "GET_THERMAL_INFO", 16) == 0) {
+		int temperature = -1;
+		int thermal_state = -1;
+		int ret, ret2;
+
+		ret = wpa_driver_cmd_get_thermal_info(priv, &temperature,
+		    QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_GET_TEMPERATURE);
+		if (ret)
+			return -1;
+		ret2 = wpa_driver_cmd_get_thermal_info(priv, &thermal_state,
+		    QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_GET_LEVEL);
+		if (ret2)
+			return -1;
+
+		snprintf(buf, buf_len, "%d %d", temperature, thermal_state);
+		return strlen(buf);
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));
