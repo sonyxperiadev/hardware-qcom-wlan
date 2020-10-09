@@ -1168,60 +1168,9 @@ int WifiLoggerCommand::handleResponse(WifiEvent &reply) {
                       (struct nlattr *)mVendorData,
                       mDataLen, NULL);
 
-            if (!tbVendor[
-                    QCA_WLAN_VENDOR_ATTR_WAKE_STATS_TOTAL_CMD_EVENT_WAKE]) {
-                mGetWakeStats->total_cmd_event_wake = 0;
-            } else {
-                mGetWakeStats->total_cmd_event_wake = nla_get_u32(
-                    tbVendor[QCA_WLAN_VENDOR_ATTR_WAKE_STATS_TOTAL_CMD_EVENT_WAKE]);
-            }
+            mGetWakeStats->cmd_event_wake_cnt_used = 0;
 
-            if (mGetWakeStats->total_cmd_event_wake &&
-                    mGetWakeStats->cmd_event_wake_cnt) {
-                if (!tbVendor[
-                    QCA_WLAN_VENDOR_ATTR_WAKE_STATS_CMD_EVENT_WAKE_CNT_PTR]) {
-                    mGetWakeStats->cmd_event_wake_cnt_used = 0;
-                } else {
-                    len = nla_len(tbVendor[
-                            QCA_WLAN_VENDOR_ATTR_WAKE_STATS_CMD_EVENT_WAKE_CNT_PTR]);
-                    mGetWakeStats->cmd_event_wake_cnt_used =
-                            (len < mGetWakeStats->cmd_event_wake_cnt_sz) ? len :
-                                        mGetWakeStats->cmd_event_wake_cnt_sz;
-                    memcpy(mGetWakeStats->cmd_event_wake_cnt,
-                        nla_data(tbVendor[
-                            QCA_WLAN_VENDOR_ATTR_WAKE_STATS_CMD_EVENT_WAKE_CNT_PTR]),
-                        (mGetWakeStats->cmd_event_wake_cnt_used * sizeof(int)));
-                }
-            } else
-                mGetWakeStats->cmd_event_wake_cnt_used = 0;
-
-            if (!tbVendor[
-                    QCA_WLAN_VENDOR_ATTR_WAKE_STATS_TOTAL_DRIVER_FW_LOCAL_WAKE]) {
-                mGetWakeStats->total_driver_fw_local_wake = 0;
-            } else {
-                mGetWakeStats->total_driver_fw_local_wake = nla_get_u32(tbVendor[
-                    QCA_WLAN_VENDOR_ATTR_WAKE_STATS_TOTAL_DRIVER_FW_LOCAL_WAKE]);
-            }
-
-            if (mGetWakeStats->total_driver_fw_local_wake &&
-                    mGetWakeStats->driver_fw_local_wake_cnt) {
-                if (!tbVendor[
-                    QCA_WLAN_VENDOR_ATTR_WAKE_STATS_DRIVER_FW_LOCAL_WAKE_CNT_PTR]) {
-                    mGetWakeStats->driver_fw_local_wake_cnt_used = 0;
-                } else {
-                    len = nla_len(tbVendor[
-                        QCA_WLAN_VENDOR_ATTR_WAKE_STATS_DRIVER_FW_LOCAL_WAKE_CNT_PTR]);
-                    mGetWakeStats->driver_fw_local_wake_cnt_used =
-                        (len < mGetWakeStats->driver_fw_local_wake_cnt_sz) ? len :
-                                        mGetWakeStats->driver_fw_local_wake_cnt_sz;
-
-                    memcpy(mGetWakeStats->driver_fw_local_wake_cnt,
-                        nla_data(tbVendor[
-                            QCA_WLAN_VENDOR_ATTR_WAKE_STATS_DRIVER_FW_LOCAL_WAKE_CNT_PTR]),
-                        (mGetWakeStats->driver_fw_local_wake_cnt_used * sizeof(int)));
-                }
-            } else
-                mGetWakeStats->driver_fw_local_wake_cnt_used = 0;
+            mGetWakeStats->driver_fw_local_wake_cnt_used = 0;
 
             if (!tbVendor[QCA_WLAN_VENDOR_ATTR_WAKE_STATS_TOTAL_RX_DATA_WAKE]) {
                 ALOGE("%s: TOTAL_RX_DATA_WAKE not found", __FUNCTION__);
@@ -1473,7 +1422,6 @@ wifi_error wifi_get_wake_reason_stats(wifi_interface_handle iface,
     int requestId;
     wifi_error ret;
     WifiLoggerCommand *wifiLoggerCommand;
-    struct nlattr *nlData;
     interface_info *ifaceInfo = getIfaceInfo(iface);
     wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
@@ -1518,25 +1466,6 @@ wifi_error wifi_get_wake_reason_stats(wifi_interface_handle iface,
         goto cleanup;
 
     wifiLoggerCommand->getWakeStatsRspParams(wifi_wake_reason_cnt);
-
-    /* Add the vendor specific attributes for the NL command. */
-    nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
-        goto cleanup;
-
-    ret = wifiLoggerCommand->put_u32(
-                QCA_WLAN_VENDOR_ATTR_WAKE_STATS_CMD_EVENT_WAKE_CNT_SZ,
-                wifi_wake_reason_cnt->cmd_event_wake_cnt_sz);
-    if (ret != WIFI_SUCCESS)
-        goto cleanup;
-
-    ret = wifiLoggerCommand->put_u32(
-                QCA_WLAN_VENDOR_ATTR_WAKE_STATS_DRIVER_FW_LOCAL_WAKE_CNT_SZ,
-                wifi_wake_reason_cnt->driver_fw_local_wake_cnt_sz);
-    if (ret != WIFI_SUCCESS)
-        goto cleanup;
-
-    wifiLoggerCommand->attr_end(nlData);
 
     /* Send the msg and wait for a response. */
     ret = wifiLoggerCommand->requestResponse();

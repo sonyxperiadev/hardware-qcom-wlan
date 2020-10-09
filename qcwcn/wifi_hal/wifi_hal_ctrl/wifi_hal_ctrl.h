@@ -187,13 +187,14 @@ void wifihal_ctrl_close(struct wifihal_ctrl *ctrl);
 
 
 /**
- * wifihal_ctrl_request - Send a command to wifihal
+ * wifihal_ctrl_request2 - Send a command to wifihal
  * @ctrl: Control interface data from wifihal_ctrl_open()
- * @cmd: Command; usually, ASCII text, e.g., "PING"
+ * @cmd: Command; usually, hexadecimal data
  * @cmd_len: Length of the cmd in bytes
  * @reply: Buffer for the response
  * @reply_len: Reply buffer length
- * @msg_cb: Callback function for unsolicited messages or %NULL if not used
+ * @sec: time in secs
+ * @usec: time in micro secs
  * Returns: 0 on success, -1 on error (send or receive failed), -2 on timeout
  *
  * This function is used to send commands to wifihal. Received
@@ -202,21 +203,28 @@ void wifihal_ctrl_close(struct wifihal_ctrl *ctrl);
  * for the reply. If unsolicited messages are received, the blocking time may
  * be longer.
  *
- * msg_cb can be used to register a callback function that will be called for
- * unsolicited messages received while waiting for the command response. These
- * messages may be received if wifihal_ctrl_request() is called at the same time as
- * wifihal is sending such a message.
- * FIXME : Change the comment below.
- * This can happen only if
- * the program has used wpa_ctrl_attach() to register itself as a monitor for
- * event messages. Alternatively to msg_cb, programs can register two control
- * interface connections and use one of them for commands and the other one for
- * receiving event messages, in other words, call wpa_ctrl_attach() only for
- * the control interface connection that will be used for event messages.
+ */
+int wifihal_ctrl_request2(struct wifihal_ctrl *ctrl, const char *cmd, size_t cmd_len,
+                         char *reply, size_t *reply_len, time_t sec, suseconds_t usec);
+
+/**
+ * wifihal_ctrl_request - Send a command to wifihal
+ * @ctrl: Control interface data from wifihal_ctrl_open()
+ * @cmd: Command; usually, hexadecimal data
+ * @cmd_len: Length of the cmd in bytes
+ * @reply: Buffer for the response
+ * @reply_len: Reply buffer length
+ * Returns: 0 on success, -1 on error (send or receive failed), -2 on timeout
+ *
+ * This function is used to send commands to wifihal. Received
+ * response will be written to reply and reply_len is set to the actual length
+ * of the reply. This function will block for up to two seconds while waiting
+ * for the reply. If unsolicited messages are received, the blocking time may
+ * be longer.
+ *
  */
 int wifihal_ctrl_request(struct wifihal_ctrl *ctrl, const char *cmd, size_t cmd_len,
                          char *reply, size_t *reply_len);
-
 
 #ifdef  __cplusplus
 }
