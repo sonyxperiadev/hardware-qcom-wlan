@@ -72,6 +72,63 @@ static int wpa_driver_cmd_set_ani_level(struct i802_bss *bss, int mode, int ofdm
 	return ret;
 }
 
+static int wpa_driver_cmd_set_congestion_report(struct i802_bss *bss, char *cmd)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	struct nlattr *params = NULL;
+	char *endptr = NULL;
+	int ret;
+	int enable = -1, threshold = -1, interval = -1;
+
+	wpa_printf(MSG_INFO, "%s enter", __FUNCTION__);
+
+	enable = strtol(cmd, &endptr, 10);
+	if (enable != 0 && enable != 1) {
+		wpa_printf(MSG_ERROR, "%s: invalid enable arg %d", __FUNCTION__, enable);
+		return -EINVAL;
+	}
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+		nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+		nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+		  QCA_NL80211_VENDOR_SUBCMD_MEDIUM_ASSESS) ||
+		!(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+		nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_MEDIUM_ASSESS_TYPE,
+		  QCA_WLAN_MEDIUM_ASSESS_CONGESTION_REPORT) ||
+		nla_put_u8(msg,
+		  QCA_WLAN_VENDOR_ATTR_MEDIUM_ASSESS_CONGESTION_REPORT_ENABLE,
+		  enable)) {
+			nlmsg_free(msg);
+			return -1;
+	}
+	if (enable == 1) {
+		if (!(*endptr) ||
+		  ((threshold = strtol(endptr, &endptr, 10)) < 0 || threshold > 100) ||
+		  !(*endptr) ||
+		  ((interval = strtol(endptr, &endptr, 10)) < 1 || interval > 255)) {
+			wpa_printf(MSG_ERROR, "%s: args less or invalid", __FUNCTION__);
+			return -EINVAL;
+		}
+		if (nla_put_u8(msg,
+		  QCA_WLAN_VENDOR_ATTR_MEDIUM_ASSESS_CONGESTION_REPORT_THRESHOLD,
+		  threshold) || nla_put_u8(msg,
+		  QCA_WLAN_VENDOR_ATTR_MEDIUM_ASSESS_CONGESTION_REPORT_INTERVAL,
+		  interval)) {
+			nlmsg_free(msg);
+			return -1;
+		}
+	}
+	nla_nest_end(msg, params);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL, NULL, NULL);
+	wpa_printf(MSG_INFO, "%s: set congestion report: enable=%d, threshold=%d,"
+			"interval=%d", __FUNCTION__, enable, threshold, interval);
+	if (!ret)
+		return 0;
+	wpa_printf(MSG_ERROR, "%s: Failed set congestion report, ret=%d", __FUNCTION__, ret);
+	return ret;
+}
+
 static int wpa_driver_cmd_set_tx_power(struct i802_bss *bss, char *cmd)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -1828,6 +1885,8 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		if (!ret)
 			ret = os_snprintf(buf, buf_len,
 					  "Macaddr = " MACSTR "\n", MAC2STR(macaddr));
+	} else if (os_strncasecmp(cmd, "SET_CONGESTION_REPORT ", 22) == 0) {
+		return wpa_driver_cmd_set_congestion_report(priv, cmd + 22);
 	} else if (os_strncasecmp(cmd, "SET_TXPOWER ", 12) == 0) {
 		return wpa_driver_cmd_set_tx_power(priv, cmd + 12);
 	} else if(os_strncasecmp(cmd, "GETSTATSBSSINFO", 15) == 0) {
