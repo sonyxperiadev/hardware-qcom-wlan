@@ -8,6 +8,39 @@
  * Alternatively, this software may be distributed under the terms of BSD
  * license.
  *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted (subject to the limitations in the
+ * disclaimer below) provided that the following conditions are met:
+ *
+ *    * Redistributions of source code must retain the above copyright
+ *      notice, this list of conditions and the following disclaimer.
+ *
+ *    * Redistributions in binary form must reproduce the above
+ *      copyright notice, this list of conditions and the following
+ *      disclaimer in the documentation and/or other materials provided
+ *      with the distribution.
+ *
+ *    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *      contributors may be used to endorse or promote products derived
+ *      from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "includes.h"
@@ -61,6 +94,8 @@ struct csi_global_params {
 };
 
 static struct csi_global_params g_csi_param = {0};
+
+static wpa_driver_oem_cb_table_t *oem_cb_table = NULL;
 
 static char *get_next_arg(char *cmd)
 {
@@ -654,22 +689,28 @@ int wpa_driver_nl80211_oem_event(struct wpa_driver_nl80211_data *drv,
 					   u32 vendor_id, u32 subcmd,
 					   u8 *data, size_t len)
 {
-	int ret = -1;
-	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL, NULL};
-	if (wpa_driver_oem_initialize(&oem_cb_table) !=
-		WPA_DRIVER_OEM_STATUS_FAILURE) {
-		if(oem_cb_table.wpa_driver_nl80211_driver_oem_event) {
-			ret = oem_cb_table.wpa_driver_nl80211_driver_oem_event(drv,
-					vendor_id,subcmd, data, len);
+	int ret = -1, lib_n;
+	if (wpa_driver_oem_initialize(&oem_cb_table) != WPA_DRIVER_OEM_STATUS_FAILURE &&
+	    oem_cb_table) {
+		for (lib_n = 0;
+		     oem_cb_table[lib_n].wpa_driver_driver_cmd_oem_cb != NULL;
+		     lib_n++) {
+			if(oem_cb_table[lib_n].wpa_driver_nl80211_driver_oem_event) {
+				ret = oem_cb_table[lib_n].wpa_driver_nl80211_driver_oem_event(
+						drv, vendor_id,subcmd, data, len);
+				if (ret == WPA_DRIVER_OEM_STATUS_SUCCESS ) {
+					break;
+				}  else if (ret == WPA_DRIVER_OEM_STATUS_ENOSUPP) {
+					continue;
+				}  else if (ret == WPA_DRIVER_OEM_STATUS_FAILURE) {
+					wpa_printf(MSG_DEBUG, "%s: Received error: %d",
+						__func__, ret);
+					break;
+				}
+			}
 		}
 	}
-	if (ret == WPA_DRIVER_OEM_STATUS_SUCCESS ) {
-		return 1;
-	} else if (ret == WPA_DRIVER_OEM_STATUS_FAILURE) {
-		wpa_printf(MSG_DEBUG, "%s: Received error: %d",
-				__func__, ret);
-		return -1;
-	}
+
 	return ret;
 }
 
@@ -2325,8 +2366,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 	struct wpa_driver_nl80211_data *driver;
 	struct ifreq ifr;
 	android_wifi_priv_cmd priv_cmd;
-	int ret = 0, status = 0;
-	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL, NULL};
+	int ret = 0, status = 0, lib_n = 0;
 
 	if (bss) {
 		drv = bss->drv;
@@ -2338,17 +2378,25 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		}
 	}
 
-	if (wpa_driver_oem_initialize(&oem_cb_table) !=
-		WPA_DRIVER_OEM_STATUS_FAILURE) {
-		ret = oem_cb_table.wpa_driver_driver_cmd_oem_cb(
-				priv, cmd, buf, buf_len, &status);
-		if (ret == WPA_DRIVER_OEM_STATUS_SUCCESS ) {
-			return strlen(buf);
-		} else if ((ret == WPA_DRIVER_OEM_STATUS_FAILURE) &&
-							 (status != 0)) {
-			wpa_printf(MSG_DEBUG, "%s: Received error: %d status: %d",
-					__func__, ret, status);
-			return status;
+	if (wpa_driver_oem_initialize(&oem_cb_table) != WPA_DRIVER_OEM_STATUS_FAILURE &&
+	    oem_cb_table) {
+
+		for (lib_n = 0;
+		     oem_cb_table[lib_n].wpa_driver_driver_cmd_oem_cb != NULL;
+		     lib_n++)
+		{
+			ret = oem_cb_table[lib_n].wpa_driver_driver_cmd_oem_cb(
+					priv, cmd, buf, buf_len, &status);
+			if (ret == WPA_DRIVER_OEM_STATUS_SUCCESS ) {
+				return strlen(buf);
+			} else if (ret == WPA_DRIVER_OEM_STATUS_ENOSUPP) {
+				continue;
+			} else if ((ret == WPA_DRIVER_OEM_STATUS_FAILURE) &&
+				   (status != 0)) {
+				wpa_printf(MSG_DEBUG, "%s: Received error: %d",
+						__func__, status);
+				return status;
+			}
 		}
 		/* else proceed with legacy handling as below */
 	}
