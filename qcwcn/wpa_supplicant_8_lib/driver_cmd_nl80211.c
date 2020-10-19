@@ -179,6 +179,7 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 	struct nlattr *attr, *attr1, *attr2;
 	u8 *beacon_ies = NULL;
 	size_t beacon_ies_len = 0;
+	u8 seg0, seg1;
 
 	os_memset(&data, 0, sizeof(struct bss_info));
 
@@ -299,7 +300,15 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 			}
 			break;
 		case CHANWIDTH_80MHZ:
-			data.bw = 80;
+			seg0 = info->vht_op_info_chan_center_freq_seg0_idx;
+			seg1 = info->vht_op_info_chan_center_freq_seg1_idx;
+			if (seg1 && abs(seg1 - seg0) == 8)
+				data.bw = 160;
+			else if (seg1)
+				/* Notifying 80P80 as bandwidth = 160 */
+				data.bw = 160;
+			else
+				data.bw = 80;
 			break;
 		case CHANWIDTH_160MHZ:
 			data.bw = 160;
