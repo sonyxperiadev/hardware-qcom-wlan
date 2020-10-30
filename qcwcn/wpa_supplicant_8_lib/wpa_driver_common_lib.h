@@ -121,23 +121,6 @@ enum qca_wlan_vendor_attr_get_station {
 	QCA_WLAN_VENDOR_ATTR_GET_STATION_AFTER_LAST - 1,
 };
 
-/*
-these enum changes are temporary, shall be removed when
-updated wpa_supplicant_8/src/common/qca-vendor.h is available
-*/
-
-enum qca_roam_control_scheme_tmp{
-	QCA_ATTR_ROAM_CONTROL_SCAN_SCHEME_TRIGGERS_TMP = 13,
-};
-
-enum qca_roam_trigger_reasons_tmp {
-	QCA_ROAM_TRIGGER_REASON_USER_TRIGGER_TMP	= 1 << 8,
-	QCA_ROAM_TRIGGER_REASON_DEAUTH_TMP              = 1 << 9,
-	QCA_ROAM_TRIGGER_REASON_IDLE_TMP		= 1 << 10,
-	QCA_ROAM_TRIGGER_REASON_TX_FAILURES_TMP	        = 1 << 11,
-	QCA_ROAM_TRIGGER_REASON_EXTERNAL_SCAN_TMP	= 1 << 12,
-};
-
 /**
  * enum qca_wlan_vendor_attr_get_station_info - Station Info queried
  * through QCA_NL80211_VENDOR_SUBCMD_GET_STATION.
