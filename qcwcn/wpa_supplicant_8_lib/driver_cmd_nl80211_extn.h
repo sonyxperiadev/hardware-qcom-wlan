@@ -31,7 +31,7 @@
 #ifndef __DRIVER_CMD_NL80211_EXTN__
 #define __DRIVER_CMD_NL80211_EXTN__
 
-#include "qca-vendor.h"
+#include "qca-vendor_copy.h"
 
 #define IFNAMSIZ 16
 #define WPA_DRIVER_OEM_STATUS_SUCCESS 0
