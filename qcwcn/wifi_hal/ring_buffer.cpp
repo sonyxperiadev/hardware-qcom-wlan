@@ -483,8 +483,20 @@ u8 *rb_get_read_buf(void *ctx, size_t *length)
             /* The complete buffer can be read out */
             cur_read_len = rbc->bufs[rbc->rd_buf_no].last_wr_index;
         } else {
-            /* Read the remaining bytes in this buffer */
-            cur_read_len = rbc->bufs[rbc->rd_buf_no].last_wr_index - rbc->cur_rd_buf_idx;
+            if ( rbc->bufs[rbc->rd_buf_no].last_wr_index >= rbc->cur_rd_buf_idx) {
+                /* Read the remaining bytes in this buffer */
+                cur_read_len = rbc->bufs[rbc->rd_buf_no].last_wr_index - rbc->cur_rd_buf_idx;
+            }
+            else {
+                ALOGE("Alert: cur_read_len invalid cur_read_len = %u, cur_rd_buf_idx = %u, last_write_index = %u, read_buf_no = %u, max_num_bufs = %u", cur_read_len, rbc->cur_rd_buf_idx, rbc->bufs[rbc->rd_buf_no].last_wr_index, rbc->rd_buf_no,rbc->max_num_bufs);
+                /* Move to the next buffer */
+                rbc->bufs[rbc->rd_buf_no].full = 0;
+                rbc->rd_buf_no++;
+                if (rbc->rd_buf_no == rbc->max_num_bufs) {
+                    ALOGV("Read rolling over to the start of ring buffer");
+                    rbc->rd_buf_no = 0;
+                }
+            }
         }
     }
 

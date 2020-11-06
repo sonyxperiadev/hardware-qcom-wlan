@@ -179,6 +179,7 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 	struct nlattr *attr, *attr1, *attr2;
 	u8 *beacon_ies = NULL;
 	size_t beacon_ies_len = 0;
+	u8 seg0, seg1;
 
 	os_memset(&data, 0, sizeof(struct bss_info));
 
@@ -299,7 +300,15 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 			}
 			break;
 		case CHANWIDTH_80MHZ:
-			data.bw = 80;
+			seg0 = info->vht_op_info_chan_center_freq_seg0_idx;
+			seg1 = info->vht_op_info_chan_center_freq_seg1_idx;
+			if (seg1 && abs(seg1 - seg0) == 8)
+				data.bw = 160;
+			else if (seg1)
+				/* Notifying 80P80 as bandwidth = 160 */
+				data.bw = 160;
+			else
+				data.bw = 80;
 			break;
 		case CHANWIDTH_160MHZ:
 			data.bw = 160;
@@ -569,6 +578,90 @@ static int convert_string_to_bytes(u8 *addr, const char *text, u16 max_bytes)
 	return i;
 }
 
+/*
+ * Client can send the cell switch mode in below format
+ *
+ * SETCELLSWITCHMODE <cs mode>
+ *
+ * examples:
+ * For Default Mode   - "SETCELLSWITCHMODE 0"
+ * To Disable Roaming - "SETCELLSWITCHMODE 1"
+ * For Partial Scan   - "SETCELLSWITCHMODE 2"
+ */
+static int parse_and_populate_setcellswitchmode(struct nl_msg *nlmsg,
+						    char *cmd)
+{
+	uint32_t all_trigger_bitmap, scan_scheme_bitmap;
+	uint32_t cellswm;
+	struct nlattr *config;
+
+	cellswm = atoi(cmd);
+	if (cellswm < 0 || cellswm > 2) {
+		wpa_printf(MSG_ERROR,"Invalid cell switch mode: %d", cellswm);
+		return -1;
+	}
+	wpa_printf(MSG_DEBUG, "cell switch mode: %d", cellswm);
+
+	all_trigger_bitmap = QCA_ROAM_TRIGGER_REASON_PER |
+			     QCA_ROAM_TRIGGER_REASON_BEACON_MISS |
+			     QCA_ROAM_TRIGGER_REASON_POOR_RSSI |
+			     QCA_ROAM_TRIGGER_REASON_BETTER_RSSI |
+			     QCA_ROAM_TRIGGER_REASON_PERIODIC |
+			     QCA_ROAM_TRIGGER_REASON_DENSE |
+			     QCA_ROAM_TRIGGER_REASON_BTM |
+			     QCA_ROAM_TRIGGER_REASON_BSS_LOAD |
+			     QCA_ROAM_TRIGGER_REASON_USER_TRIGGER_TMP |
+			     QCA_ROAM_TRIGGER_REASON_DEAUTH_TMP |
+			     QCA_ROAM_TRIGGER_REASON_IDLE_TMP |
+			     QCA_ROAM_TRIGGER_REASON_TX_FAILURES_TMP |
+			     QCA_ROAM_TRIGGER_REASON_EXTERNAL_SCAN_TMP;
+
+	scan_scheme_bitmap = QCA_ROAM_TRIGGER_REASON_PER |
+			     QCA_ROAM_TRIGGER_REASON_BEACON_MISS |
+			     QCA_ROAM_TRIGGER_REASON_POOR_RSSI |
+			     QCA_ROAM_TRIGGER_REASON_BSS_LOAD |
+			     QCA_ROAM_TRIGGER_REASON_BTM;
+
+	if (nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
+		QCA_WLAN_VENDOR_ROAMING_SUBCMD_CONTROL_SET) ||
+	    nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_ROAMING_REQ_ID, 1)) {
+		wpa_printf(MSG_ERROR,"Failed to put: roam_subcmd/REQ_ID");
+	}
+
+	config = nla_nest_start(nlmsg,
+			QCA_WLAN_VENDOR_ATTR_ROAMING_PARAM_CONTROL);
+	if (config == NULL)
+		goto fail;
+
+	switch (cellswm){
+	case 0:
+		if (nla_put_u32(nlmsg, QCA_ATTR_ROAM_CONTROL_TRIGGERS, all_trigger_bitmap)) {
+			wpa_printf(MSG_ERROR,"Failed to set: ROAM_CONTROL_TRIGGERS");
+			goto fail;
+		}
+		break;
+	case 1:
+		if (nla_put_u32(nlmsg, QCA_ATTR_ROAM_CONTROL_TRIGGERS, 0)) {
+			wpa_printf(MSG_ERROR,"Failed to unset: ROAM_CONTROL_TRIGGERS");
+			goto fail;
+		}
+		break;
+	case 2:
+		if (nla_put_u32(nlmsg, QCA_ATTR_ROAM_CONTROL_TRIGGERS, all_trigger_bitmap) ||
+		    nla_put_u32(nlmsg, QCA_ATTR_ROAM_CONTROL_SCAN_SCHEME_TRIGGERS_TMP, scan_scheme_bitmap)) {
+			wpa_printf(MSG_ERROR,"Failed to set: ROAM_CONTROL_TRIGGERS_SCAN_SCHEME");
+			goto fail;
+		}
+		break;
+	}
+	nla_nest_end(nlmsg, config);
+
+	return 0;
+fail:
+	return -1;
+
+}
+
 static int populate_nlmsg(struct nl_msg *nlmsg, char *cmd,
 			  enum get_info_cmd type)
 {
@@ -583,6 +676,12 @@ static int populate_nlmsg(struct nl_msg *nlmsg, char *cmd,
 		if (nla_put_flag(nlmsg,
 				 QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO)) {
 			wpa_printf(MSG_ERROR,"Failed to put flag QCA_WLAN_VENDOR_ATTR_GET_STATION_INFO");
+			return -1;
+		}
+		break;
+	case SETCELLSWITCHMODE:
+		if (parse_and_populate_setcellswitchmode(nlmsg, cmd) != 0) {
+			wpa_printf(MSG_ERROR, "Failed to populate nlmsg");
 			return -1;
 		}
 		break;
@@ -1152,6 +1251,37 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		cmd += 15;
 		return wpa_driver_handle_get_sta_info(bss, cmd, buf, buf_len,
 						      &status);
+	} else if (os_strncasecmp(cmd, "SETCELLSWITCHMODE", 17) == 0) {
+		cmd += 17;
+		struct resp_info info;
+		struct nl_msg *nlmsg;
+
+		memset(&info, 0, sizeof(struct resp_info));
+
+		info.subcmd = QCA_NL80211_VENDOR_SUBCMD_ROAM;
+		info.cmd_type = SETCELLSWITCHMODE;
+
+		nlmsg = prepare_vendor_nlmsg(drv, bss->ifname,
+					     info.subcmd);
+		if (!nlmsg) {
+			wpa_printf(MSG_ERROR,"Failed to allocate nl message");
+			return WPA_DRIVER_OEM_STATUS_FAILURE;
+		}
+
+		if (populate_nlmsg(nlmsg, cmd, info.cmd_type)) {
+			wpa_printf(MSG_ERROR,"Failed to populate nl message");
+			nlmsg_free(nlmsg);
+			return WPA_DRIVER_OEM_STATUS_FAILURE;
+		}
+
+		status = send_nlmsg((struct nl_sock *)drv->global->nl, nlmsg,
+				     NULL, NULL);
+		if (status != 0) {
+			wpa_printf(MSG_ERROR,"Failed to send nl message with err %d", status);
+			return WPA_DRIVER_OEM_STATUS_FAILURE;
+		}
+
+		return WPA_DRIVER_OEM_STATUS_SUCCESS;
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));
