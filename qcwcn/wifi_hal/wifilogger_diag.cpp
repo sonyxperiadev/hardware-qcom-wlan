@@ -2828,17 +2828,17 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
             u32 length = 0;
 
             slot = (dbglog_slot *)buf;
+            length = get_le32((u8 *)&slot->length);
             if (nlh->nlmsg_len < (NLMSG_HDRLEN + sizeof(dbglog_slot) +
-                                        slot->length)) {
+                                        length)) {
                 ALOGE("Received CNSS_DIAG message with insufficent length: %d:"
                               " expected: %zu, %s:%d",
                       nlh->nlmsg_len,
-                      (NLMSG_HDRLEN + sizeof(dbglog_slot) +slot->length),
+                      (NLMSG_HDRLEN + sizeof(dbglog_slot) +length),
                       __FUNCTION__,
                       __LINE__);
                 return WIFI_ERROR_UNKNOWN;
             }
-            length = get_le32((u8 *)&slot->length);
             process_fw_diag_msg(info, &slot->payload[0], length);
         }
     }

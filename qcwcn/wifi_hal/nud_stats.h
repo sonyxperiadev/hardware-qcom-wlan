@@ -44,7 +44,13 @@
 #include <netlink/netlink.h>
 #include <netlink/socket.h>
 #include "wifi_hal.h"
-#include <arpa/inet.h>
+#include <bits/in_addr.h>
+
+#define INET6_ADDRSTRLEN 46
+
+extern "C" {
+	const char* inet_ntop(int __af, const void* __src, char* __dst, socklen_t __size);
+}
 
 typedef struct {
     uint16_t arp_req_count_from_netdev;

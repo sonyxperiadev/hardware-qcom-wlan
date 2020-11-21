@@ -580,9 +580,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     //fn->wifi_set_qpower = wifi_set_qpower;
     fn->wifi_virtual_interface_create = wifi_virtual_interface_create;
     fn->wifi_virtual_interface_delete = wifi_virtual_interface_delete;
-#ifdef WCNSS_QTI_AOSP
     fn->wifi_set_latency_mode = wifi_set_latency_mode;
-#endif
     fn->wifi_set_thermal_mitigation_mode = wifi_set_thermal_mitigation_mode;
 
     return WIFI_SUCCESS;
