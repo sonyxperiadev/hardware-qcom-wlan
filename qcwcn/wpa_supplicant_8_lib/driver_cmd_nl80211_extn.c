@@ -89,10 +89,14 @@ int wpa_driver_oem_initialize(wpa_driver_oem_cb_table_t **oem_cb_table)
 	char cb_sym_name[MAX_LIB_NAME_SIZE], *tmp;
 	DIR *oem_lib_dir;
 	unsigned int lib_n;
+#ifdef ANDROID
 #if __WORDSIZE == 64
 	char *oem_lib_path = "/vendor/lib64/";
 #else
 	char *oem_lib_path  = "/vendor/lib/";
+#endif
+#else
+	char *oem_lib_path  = "/usr/lib/";
 #endif
 	/* Return the callback table if it is already initialized*/
 	if (*oem_cb_table)
