@@ -42,6 +42,37 @@
 
 
 /* ============ nl80211 driver extensions ===========  */
+static int wpa_driver_cmd_set_ani_level(struct i802_bss *bss, int mode, int ofdmlvl)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg = NULL;
+	struct nlattr *params = NULL;
+	int ret = 0;
+
+	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+		nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_QCA) ||
+		nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+			QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION) ||
+		!(params = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)) ||
+		nla_put_u8(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_ANI_SETTING, mode)) {
+			nlmsg_free(msg);
+			return -1;
+	}
+	if(mode == QCA_WLAN_ANI_SETTING_FIXED) {
+		if(nla_put(msg, QCA_WLAN_VENDOR_ATTR_CONFIG_ANI_LEVEL, sizeof(int32_t), &ofdmlvl)){
+			nlmsg_free(msg);
+			return -1;
+		}
+	}
+	nla_nest_end(msg, params);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (!ret)
+		return 0;
+	wpa_printf(MSG_ERROR, "%s: Failed set_ani_level, ofdmlvl=%d, ret=%d",
+		   __FUNCTION__, ofdmlvl, ret);
+	return ret;
+}
+
 static int wpa_driver_cmd_set_tx_power(struct i802_bss *bss, char *cmd)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -1282,6 +1313,20 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		}
 
 		return WPA_DRIVER_OEM_STATUS_SUCCESS;
+	} else if (os_strncasecmp(cmd, "SET_ANI_LEVEL ", 14) == 0) {
+		char *endptr = NULL;
+		int mode = 0;
+		int ofdmlvl = 0;
+		mode = strtol(cmd + 14, &endptr, 10);
+		if (mode == 1) {
+			if(!(*endptr)) {
+				wpa_printf(MSG_ERROR, "%s: failed to set ani setting,\
+			          invalid cmd: %s\n", __func__, cmd);
+				return -EINVAL;
+			}
+			ofdmlvl = strtol(endptr, NULL, 10);
+		}
+		return wpa_driver_cmd_set_ani_level(priv, mode, ofdmlvl);
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));
