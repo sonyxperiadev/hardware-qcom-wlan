@@ -74,6 +74,7 @@ struct bss_info {
 enum get_info_cmd {
 	GETSTATSBSSINFO = 1,
 	SETCELLSWITCHMODE = 2,
+	GET_DRIVER_SUPPORTED_FEATURES = 3,
 };
 
 struct resp_info {
