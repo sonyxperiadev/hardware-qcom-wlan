@@ -64,7 +64,7 @@ static int wpa_driver_cmd_set_ani_level(struct i802_bss *bss, int mode, int ofdm
 		}
 	}
 	nla_nest_end(msg, params);
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL, NULL, NULL);
 	if (!ret)
 		return 0;
 	wpa_printf(MSG_ERROR, "%s: Failed set_ani_level, ofdmlvl=%d, ret=%d",
@@ -101,7 +101,7 @@ static int wpa_driver_cmd_set_tx_power(struct i802_bss *bss, char *cmd)
 		return -ENOBUFS;
 	}
 
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL, NULL, NULL);
 	if (!ret)
 		return 0;
 
@@ -1228,7 +1228,7 @@ static int wpa_driver_cmd_get_thermal_info(struct i802_bss *bss, int *result, in
 	}
 
 	nla_nest_end(msg, params);
-	ret = send_and_recv_msgs(drv, msg, thermal_info_handler, result);
+	ret = send_and_recv_msgs(drv, msg, thermal_info_handler, result, NULL, NULL);
 	if (!ret)
 		return 0;
 	wpa_printf(MSG_ERROR, "%s: Failed get thermal info, ret=%d(%s)",
