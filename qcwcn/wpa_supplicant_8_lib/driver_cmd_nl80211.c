@@ -2522,11 +2522,13 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 int wpa_driver_set_p2p_noa(void *priv, u8 count, int start, int duration)
 {
 	char buf[MAX_DRV_CMD_SIZE];
+	char reply_buf[MAX_DRV_CMD_SIZE];
 
 	memset(buf, 0, sizeof(buf));
+	memset(reply_buf, 0, sizeof(reply_buf));
 	wpa_printf(MSG_DEBUG, "%s: Entry", __func__);
 	snprintf(buf, sizeof(buf), "P2P_SET_NOA %d %d %d", count, start, duration);
-	return wpa_driver_nl80211_driver_cmd(priv, buf, buf, strlen(buf)+1);
+	return wpa_driver_nl80211_driver_cmd(priv, buf, reply_buf, sizeof(reply_buf));
 }
 
 int wpa_driver_get_p2p_noa(void *priv, u8 *buf, size_t len)
@@ -2539,11 +2541,13 @@ int wpa_driver_get_p2p_noa(void *priv, u8 *buf, size_t len)
 int wpa_driver_set_p2p_ps(void *priv, int legacy_ps, int opp_ps, int ctwindow)
 {
 	char buf[MAX_DRV_CMD_SIZE];
+	char reply_buf[MAX_DRV_CMD_SIZE];
 
 	memset(buf, 0, sizeof(buf));
+	memset(reply_buf, 0, sizeof(reply_buf));
 	wpa_printf(MSG_DEBUG, "%s: Entry", __func__);
 	snprintf(buf, sizeof(buf), "P2P_SET_PS %d %d %d", legacy_ps, opp_ps, ctwindow);
-	return wpa_driver_nl80211_driver_cmd(priv, buf, buf, strlen(buf) + 1);
+	return wpa_driver_nl80211_driver_cmd(priv, buf, reply_buf, sizeof(reply_buf));
 }
 
 int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
