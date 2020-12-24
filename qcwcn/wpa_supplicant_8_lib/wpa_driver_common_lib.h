@@ -30,7 +30,7 @@
 #ifndef WPA_DRIVER_COMMON_LIB
 #define WPA_DRIVER_COMMON_LIB
 
-#include "android_drv.h"	//needed?
+#include "android_drv.h"
 #define OUI_LEN		3
 #define MAX_CMD_LEN	32
 #define MAC_ADDR_LEN	6
@@ -40,6 +40,8 @@
 #define IEEE80211_HE_OPERATION_6G_OPER_MASK 0x00020000
 
 #define HE_OPER_VHT_CH_WIDTH_OFFSET 0
+#define HE_OPER_VHT_CENTER_FRQ_SEG0_OFFSET 1
+#define HE_OPER_VHT_CENTER_FRQ_SEG1_OFFSET 2
 #define HE_OPER_VHT_MAX_OFFSET 2
 
 #define HE_OPER_CO_LOCATED_MAX_OFFSET 0
@@ -100,6 +102,13 @@ struct resp_info {
 #ifndef CHANWIDTH_80P80MHZ
 #define CHANWIDTH_80P80MHZ VHT_CHANWIDTH_80P80MHZ
 #endif /* CHANWIDTH_80P80MHZ */
+
+/* HE channel widths */
+
+#define HE_CHANWIDTH_20MHZ     0
+#define HE_CHANWIDTH_40MHZ     1
+#define HE_CHANWIDTH_80MHZ     2
+#define HE_CHANWIDTH_160MHZ    3
 
 /**
  * enum qca_wlan_vendor_attr_get_station - Sub commands used by
