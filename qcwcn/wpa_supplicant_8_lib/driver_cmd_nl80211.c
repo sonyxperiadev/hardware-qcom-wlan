@@ -298,7 +298,7 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 	struct nlattr *attr, *attr1, *attr2;
 	u8 *beacon_ies = NULL;
 	size_t beacon_ies_len = 0;
-	u8 seg0, seg1;
+	u8 seg1;
 
 	os_memset(&data, 0, sizeof(struct bss_info));
 
@@ -418,12 +418,9 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 			}
 			break;
 		case CHANWIDTH_80MHZ:
-			seg0 = info->vht_op_info_chan_center_freq_seg0_idx;
 			seg1 = info->vht_op_info_chan_center_freq_seg1_idx;
-			if (seg1 && abs(seg1 - seg0) == 8)
-				data.bw = 160;
-			else if (seg1)
-				/* Notifying 80P80 as bandwidth = 160 */
+			if (seg1)
+				/* Notifying 80P80 also as bandwidth = 160 */
 				data.bw = 160;
 			else
 				data.bw = 80;
@@ -465,6 +462,27 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 		if (he_info->he_oper_params &
 		    IEEE80211_HE_OPERATION_VHT_OPER_MASK) {
 			ch_bw = opr[HE_OPER_VHT_CH_WIDTH_OFFSET];
+			switch (ch_bw) {
+			case CHANWIDTH_USE_HT:
+				/* TO DO */
+				break;
+			case CHANWIDTH_80MHZ:
+				seg1 = opr[HE_OPER_VHT_CENTER_FRQ_SEG1_OFFSET];
+				if (seg1)
+					/* Notifying 80P80 also as bandwidth = 160 */
+					data.bw = 160;
+				else
+					data.bw = 80;
+				break;
+			case CHANWIDTH_160MHZ:
+				data.bw = 160;
+				break;
+			case CHANWIDTH_80P80MHZ:
+				data.bw = 160;
+				break;
+			default:
+				break;
+			}
 			opr += (HE_OPER_VHT_MAX_OFFSET + 1);
 		}
 
@@ -477,24 +495,25 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 		    IEEE80211_HE_OPERATION_6G_OPER_MASK) {
 			ch_bw = (opr[HE_OPER_6G_PARAMS_OFFSET] &
 				 HE_OPER_6G_PARAMS_SUB_CH_BW_MASK);
+			switch (ch_bw) {
+			case HE_CHANWIDTH_20MHZ:
+				data.bw = 20;
+				break;
+			case HE_CHANWIDTH_40MHZ:
+				data.bw = 40;
+				break;
+			case HE_CHANWIDTH_80MHZ:
+				data.bw = 80;
+				break;
+			case HE_CHANWIDTH_160MHZ:
+				/* Notifying 80P80 also as bandwidth = 160 */
+				data.bw = 160;
+				break;
+			default:
+				wpa_printf(MSG_ERROR,"Invalid channel width received : %u", ch_bw);
+			}
 		}
 
-		switch (ch_bw) {
-		case CHANWIDTH_USE_HT:
-			/* TO DO */
-			break;
-		case CHANWIDTH_80MHZ:
-			data.bw = 80;
-			break;
-		case CHANWIDTH_160MHZ:
-			data.bw = 160;
-			break;
-		case CHANWIDTH_80P80MHZ:
-			data.bw = 160;
-			break;
-		default:
-			wpa_printf(MSG_ERROR,"Invalid channel width received : %u", ch_bw);
-		}
 	}
 
 parse_beacon_ies:
