@@ -1393,7 +1393,7 @@ u16 NANTLV_WriteTlv(pNanTlv pInTlv, u8 *pOutTlv)
     return writeLen;
 }
 
-u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv)
+u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv, int inBufferSize)
 {
     u16 readLen = 0;
 
@@ -1409,6 +1409,12 @@ u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv)
         return readLen;
     }
 
+    if(inBufferSize < NAN_TLV_HEADER_SIZE) {
+        ALOGE("Insufficient length to process TLV header, inBufferSize = %d",
+              inBufferSize);
+        return readLen;
+    }
+
     pOutTlv->type = *pInTlv++;
     pOutTlv->type |= *pInTlv++ << 8;
     readLen += 2;
@@ -1418,6 +1424,12 @@ u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv)
     pOutTlv->length = *pInTlv++;
     pOutTlv->length |= *pInTlv++ << 8;
     readLen += 2;
+
+    if(pOutTlv->length > inBufferSize - NAN_TLV_HEADER_SIZE) {
+        ALOGE("Insufficient length to process TLV header, inBufferSize = %d",
+              inBufferSize);
+        return readLen;
+    }
 
     ALOGV("READ TLV length %u, readLen %u", pOutTlv->length, readLen);
 

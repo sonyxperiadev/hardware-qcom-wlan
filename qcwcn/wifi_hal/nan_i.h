@@ -340,6 +340,8 @@ typedef enum
 #define NAN_WINDOW_DW   0
 #define NAN_WINDOW_FAW  1
 
+#define NAN_TLV_HEADER_SIZE 4
+
 /* NAN Error Rsp */
 typedef struct PACKED
 {
@@ -786,7 +788,7 @@ typedef struct PACKED
 
 /* Function Declarations */
 u8* addTlv(u16 type, u16 length, const u8* value, u8* pOutTlv);
-u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv);
+u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv, int inBufferSize);
 u16 NANTLV_WriteTlv(pNanTlv pInTlv, u8 *pOutTlv);
 
 /* NAN Beacon Sdf Payload Req */
