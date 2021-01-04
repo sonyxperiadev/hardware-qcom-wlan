@@ -640,11 +640,11 @@ static int parse_and_populate_setcellswitchmode(struct nl_msg *nlmsg,
 			     QCA_ROAM_TRIGGER_REASON_DENSE |
 			     QCA_ROAM_TRIGGER_REASON_BTM |
 			     QCA_ROAM_TRIGGER_REASON_BSS_LOAD |
-			     QCA_ROAM_TRIGGER_REASON_USER_TRIGGER_TMP |
-			     QCA_ROAM_TRIGGER_REASON_DEAUTH_TMP |
-			     QCA_ROAM_TRIGGER_REASON_IDLE_TMP |
-			     QCA_ROAM_TRIGGER_REASON_TX_FAILURES_TMP |
-			     QCA_ROAM_TRIGGER_REASON_EXTERNAL_SCAN_TMP;
+			     QCA_ROAM_TRIGGER_REASON_USER_TRIGGER |
+			     QCA_ROAM_TRIGGER_REASON_DEAUTH |
+			     QCA_ROAM_TRIGGER_REASON_IDLE |
+			     QCA_ROAM_TRIGGER_REASON_TX_FAILURES |
+			     QCA_ROAM_TRIGGER_REASON_EXTERNAL_SCAN;
 
 	scan_scheme_bitmap = QCA_ROAM_TRIGGER_REASON_PER |
 			     QCA_ROAM_TRIGGER_REASON_BEACON_MISS |
@@ -678,7 +678,7 @@ static int parse_and_populate_setcellswitchmode(struct nl_msg *nlmsg,
 		break;
 	case 2:
 		if (nla_put_u32(nlmsg, QCA_ATTR_ROAM_CONTROL_TRIGGERS, all_trigger_bitmap) ||
-		    nla_put_u32(nlmsg, QCA_ATTR_ROAM_CONTROL_SCAN_SCHEME_TRIGGERS_TMP, scan_scheme_bitmap)) {
+		    nla_put_u32(nlmsg, QCA_ATTR_ROAM_CONTROL_SCAN_SCHEME_TRIGGERS, scan_scheme_bitmap)) {
 			wpa_printf(MSG_ERROR,"Failed to set: ROAM_CONTROL_TRIGGERS_SCAN_SCHEME");
 			goto fail;
 		}
