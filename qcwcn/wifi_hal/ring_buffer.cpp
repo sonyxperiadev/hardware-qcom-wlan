@@ -491,6 +491,7 @@ u8 *rb_get_read_buf(void *ctx, size_t *length)
                 cur_read_len = rbc->bufs[rbc->rd_buf_no].last_wr_index - rbc->cur_rd_buf_idx;
             } else {
                 ALOGE("Alert: cur_read_len=%u invalid, rd_buf[no=%d rd_idx=%d wr_index=%d]",cur_read_len, rbc->rd_buf_no, rbc->cur_rd_buf_idx, rbc->bufs[rbc->rd_buf_no].last_wr_index);
+                rb_unlock(&rbc->rb_rw_lock);
                 return NULL;
             }
         }
