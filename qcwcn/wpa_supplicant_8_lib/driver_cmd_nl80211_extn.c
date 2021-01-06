@@ -70,6 +70,8 @@ int wpa_driver_oem_initialize(wpa_driver_oem_cb_table_t *oem_cb_table)
 	}
 	oem_cb_table->wpa_driver_driver_cmd_oem_cb =
                             oem_cb_table_local->wpa_driver_driver_cmd_oem_cb;
+	oem_cb_table->wpa_driver_nl80211_driver_oem_event =
+                            oem_cb_table_local->wpa_driver_nl80211_driver_oem_event;
 	wpa_printf(MSG_INFO, "%s: OEM lib initialized\n", __func__);
 
 	return WPA_DRIVER_OEM_STATUS_SUCCESS;
