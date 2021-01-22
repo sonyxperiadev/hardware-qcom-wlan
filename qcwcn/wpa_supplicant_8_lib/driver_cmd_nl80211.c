@@ -209,7 +209,7 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 	struct nlattr *attr, *attr1, *attr2;
 	u8 *beacon_ies = NULL;
 	size_t beacon_ies_len = 0;
-	u8 seg0, seg1;
+	u8 seg1;
 
 	os_memset(&data, 0, sizeof(struct bss_info));
 
@@ -330,12 +330,9 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 			}
 			break;
 		case CHANWIDTH_80MHZ:
-			seg0 = info->vht_op_info_chan_center_freq_seg0_idx;
 			seg1 = info->vht_op_info_chan_center_freq_seg1_idx;
-			if (seg1 && abs(seg1 - seg0) == 8)
-				data.bw = 160;
-			else if (seg1)
-				/* Notifying 80P80 as bandwidth = 160 */
+			if (seg1)
+				/* Notifying 80P80 also as bandwidth = 160 */
 				data.bw = 160;
 			else
 				data.bw = 80;
@@ -377,6 +374,27 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 		if (he_info->he_oper_params &
 		    IEEE80211_HE_OPERATION_VHT_OPER_MASK) {
 			ch_bw = opr[HE_OPER_VHT_CH_WIDTH_OFFSET];
+			switch (ch_bw) {
+			case CHANWIDTH_USE_HT:
+				/* TO DO */
+				break;
+			case CHANWIDTH_80MHZ:
+				seg1 = opr[HE_OPER_VHT_CENTER_FRQ_SEG1_OFFSET];
+				if (seg1)
+					/* Notifying 80P80 also as bandwidth = 160 */
+					data.bw = 160;
+				else
+					data.bw = 80;
+				break;
+			case CHANWIDTH_160MHZ:
+				data.bw = 160;
+				break;
+			case CHANWIDTH_80P80MHZ:
+				data.bw = 160;
+				break;
+			default:
+				break;
+			}
 			opr += (HE_OPER_VHT_MAX_OFFSET + 1);
 		}
 
@@ -389,24 +407,25 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 		    IEEE80211_HE_OPERATION_6G_OPER_MASK) {
 			ch_bw = (opr[HE_OPER_6G_PARAMS_OFFSET] &
 				 HE_OPER_6G_PARAMS_SUB_CH_BW_MASK);
+			switch (ch_bw) {
+			case HE_CHANWIDTH_20MHZ:
+				data.bw = 20;
+				break;
+			case HE_CHANWIDTH_40MHZ:
+				data.bw = 40;
+				break;
+			case HE_CHANWIDTH_80MHZ:
+				data.bw = 80;
+				break;
+			case HE_CHANWIDTH_160MHZ:
+				/* Notifying 80P80 also as bandwidth = 160 */
+				data.bw = 160;
+				break;
+			default:
+				wpa_printf(MSG_ERROR,"Invalid channel width received : %u", ch_bw);
+			}
 		}
 
-		switch (ch_bw) {
-		case CHANWIDTH_USE_HT:
-			/* TO DO */
-			break;
-		case CHANWIDTH_80MHZ:
-			data.bw = 80;
-			break;
-		case CHANWIDTH_160MHZ:
-			data.bw = 160;
-			break;
-		case CHANWIDTH_80P80MHZ:
-			data.bw = 160;
-			break;
-		default:
-			wpa_printf(MSG_ERROR,"Invalid channel width received : %u", ch_bw);
-		}
 	}
 
 parse_beacon_ies:
@@ -1448,11 +1467,13 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 int wpa_driver_set_p2p_noa(void *priv, u8 count, int start, int duration)
 {
 	char buf[MAX_DRV_CMD_SIZE];
+	char reply_buf[MAX_DRV_CMD_SIZE];
 
 	memset(buf, 0, sizeof(buf));
+	memset(reply_buf, 0, sizeof(reply_buf));
 	wpa_printf(MSG_DEBUG, "%s: Entry", __func__);
 	snprintf(buf, sizeof(buf), "P2P_SET_NOA %d %d %d", count, start, duration);
-	return wpa_driver_nl80211_driver_cmd(priv, buf, buf, strlen(buf)+1);
+	return wpa_driver_nl80211_driver_cmd(priv, buf, reply_buf, sizeof(reply_buf));
 }
 
 int wpa_driver_get_p2p_noa(void *priv, u8 *buf, size_t len)
@@ -1465,11 +1486,13 @@ int wpa_driver_get_p2p_noa(void *priv, u8 *buf, size_t len)
 int wpa_driver_set_p2p_ps(void *priv, int legacy_ps, int opp_ps, int ctwindow)
 {
 	char buf[MAX_DRV_CMD_SIZE];
+	char reply_buf[MAX_DRV_CMD_SIZE];
 
 	memset(buf, 0, sizeof(buf));
+	memset(reply_buf, 0, sizeof(reply_buf));
 	wpa_printf(MSG_DEBUG, "%s: Entry", __func__);
 	snprintf(buf, sizeof(buf), "P2P_SET_PS %d %d %d", legacy_ps, opp_ps, ctwindow);
-	return wpa_driver_nl80211_driver_cmd(priv, buf, buf, strlen(buf) + 1);
+	return wpa_driver_nl80211_driver_cmd(priv, buf, reply_buf, sizeof(reply_buf));
 }
 
 int wpa_driver_set_ap_wps_p2p_ie(void *priv, const struct wpabuf *beacon,
