@@ -562,7 +562,7 @@ int wpa_driver_nl80211_oem_event(struct wpa_driver_nl80211_data *drv,
 					   u8 *data, size_t len)
 {
 	int ret = -1;
-	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL};
+	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL, NULL};
 	if (wpa_driver_oem_initialize(&oem_cb_table) !=
 		WPA_DRIVER_OEM_STATUS_FAILURE) {
 		if(oem_cb_table.wpa_driver_nl80211_driver_oem_event) {
@@ -1333,7 +1333,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 	struct ifreq ifr;
 	android_wifi_priv_cmd priv_cmd;
 	int ret = 0, status = 0;
-	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL};
+	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL, NULL};
 
 	if (bss) {
 		drv = bss->drv;
