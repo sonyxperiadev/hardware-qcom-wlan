@@ -557,6 +557,46 @@ static int ack_handler(struct nl_msg *msg, void *arg)
 	return NL_STOP;
 }
 
+int wpa_driver_nl80211_oem_event(struct wpa_driver_nl80211_data *drv,
+					   u32 vendor_id, u32 subcmd,
+					   u8 *data, size_t len)
+{
+	int ret = -1;
+	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL};
+	if (wpa_driver_oem_initialize(&oem_cb_table) !=
+		WPA_DRIVER_OEM_STATUS_FAILURE) {
+		if(oem_cb_table.wpa_driver_nl80211_driver_oem_event) {
+			ret = oem_cb_table.wpa_driver_nl80211_driver_oem_event(drv,
+					vendor_id,subcmd, data, len);
+		}
+	}
+	if (ret == WPA_DRIVER_OEM_STATUS_SUCCESS ) {
+		return 1;
+	} else if (ret == WPA_DRIVER_OEM_STATUS_FAILURE) {
+		wpa_printf(MSG_DEBUG, "%s: Received error: %d",
+				__func__, ret);
+		return -1;
+	}
+	return ret;
+}
+
+int wpa_driver_nl80211_driver_event(struct wpa_driver_nl80211_data *drv,
+					   u32 vendor_id, u32 subcmd,
+					   u8 *data, size_t len)
+{
+	int ret = -1;
+	wpa_printf(MSG_INFO, "wpa_driver_nld80211 vendor event recieved");
+	switch(subcmd) {
+		case QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT:
+			ret = wpa_driver_nl80211_oem_event(drv, vendor_id, subcmd,
+					data, len);
+			break;
+		default:
+			wpa_printf(MSG_DEBUG, "Unsupported vendor event recieved %d",
+					subcmd);
+	}
+	return ret;
+}
 
 static int finish_handler(struct nl_msg *msg, void *arg)
 {
@@ -1293,7 +1333,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 	struct ifreq ifr;
 	android_wifi_priv_cmd priv_cmd;
 	int ret = 0, status = 0;
-	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL};
+	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL};
 
 	if (bss) {
 		drv = bss->drv;
