@@ -472,6 +472,31 @@ parse_beacon_ies:
 	return 0;
 }
 
+static int parse_get_feature_info(struct resp_info *info, struct nlattr *vendata,
+			      int datalen)
+{
+	struct nlattr *tb_vendor[NUM_QCA_WLAN_VENDOR_FEATURES + 1];
+	struct nlattr *attr;
+	char *result = NULL;
+	nla_parse(tb_vendor, NUM_QCA_WLAN_VENDOR_FEATURES,
+		  vendata, datalen, NULL);
+	attr = tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_FLAGS];
+	if (attr) {
+		int length = snprintf( NULL, 0, "%d", nla_get_u32(attr));
+		result = (char *)malloc(length + 1);
+		if (result != NULL) {
+			memset(result, 0, length + 1);
+			snprintf(result, length + 1, "%d", nla_get_u32(attr));
+			snprintf(info->reply_buf, info->reply_buf_len,
+				 "%s", result);
+			wpa_printf(MSG_DEBUG, "%s: driver supported feature info  = %s", __func__, result);
+		}
+	} else {
+		snprintf(info->reply_buf, info->reply_buf_len, "FAIL");
+		return -1;
+	}
+	return 0;
+}
 static int handle_response(struct resp_info *info, struct nlattr *vendata,
 			   int datalen)
 {
@@ -482,6 +507,10 @@ static int handle_response(struct resp_info *info, struct nlattr *vendata,
 			parse_station_info(info, vendata, datalen);
 
 		wpa_printf(MSG_INFO,"STAINFO: %s", info->reply_buf);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES:
+		os_memset(info->reply_buf, 0, info->reply_buf_len);
+		parse_get_feature_info(info, vendata, datalen);
 		break;
 	default:
 		wpa_printf(MSG_ERROR,"Unsupported response type: %d", info->subcmd);
@@ -528,6 +557,46 @@ static int ack_handler(struct nl_msg *msg, void *arg)
 	return NL_STOP;
 }
 
+int wpa_driver_nl80211_oem_event(struct wpa_driver_nl80211_data *drv,
+					   u32 vendor_id, u32 subcmd,
+					   u8 *data, size_t len)
+{
+	int ret = -1;
+	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL, NULL};
+	if (wpa_driver_oem_initialize(&oem_cb_table) !=
+		WPA_DRIVER_OEM_STATUS_FAILURE) {
+		if(oem_cb_table.wpa_driver_nl80211_driver_oem_event) {
+			ret = oem_cb_table.wpa_driver_nl80211_driver_oem_event(drv,
+					vendor_id,subcmd, data, len);
+		}
+	}
+	if (ret == WPA_DRIVER_OEM_STATUS_SUCCESS ) {
+		return 1;
+	} else if (ret == WPA_DRIVER_OEM_STATUS_FAILURE) {
+		wpa_printf(MSG_DEBUG, "%s: Received error: %d",
+				__func__, ret);
+		return -1;
+	}
+	return ret;
+}
+
+int wpa_driver_nl80211_driver_event(struct wpa_driver_nl80211_data *drv,
+					   u32 vendor_id, u32 subcmd,
+					   u8 *data, size_t len)
+{
+	int ret = -1;
+	wpa_printf(MSG_INFO, "wpa_driver_nld80211 vendor event recieved");
+	switch(subcmd) {
+		case QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT:
+			ret = wpa_driver_nl80211_oem_event(drv, vendor_id, subcmd,
+					data, len);
+			break;
+		default:
+			wpa_printf(MSG_DEBUG, "Unsupported vendor event recieved %d",
+					subcmd);
+	}
+	return ret;
+}
 
 static int finish_handler(struct nl_msg *msg, void *arg)
 {
@@ -1264,7 +1333,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 	struct ifreq ifr;
 	android_wifi_priv_cmd priv_cmd;
 	int ret = 0, status = 0;
-	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL};
+	static wpa_driver_oem_cb_table_t oem_cb_table = {NULL, NULL, NULL};
 
 	if (bss) {
 		drv = bss->drv;
@@ -1417,6 +1486,29 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 
 		snprintf(buf, buf_len, "%d %d", temperature, thermal_state);
 		return strlen(buf);
+	} else if (os_strncasecmp(cmd, "GET_DRIVER_SUPPORTED_FEATURES", 29) == 0) {
+		struct resp_info info;
+		struct nl_msg *nlmsg;
+		memset(&info, 0, sizeof(struct resp_info));
+		info.subcmd = QCA_NL80211_VENDOR_SUBCMD_GET_FEATURES;
+		os_memset(buf, 0, buf_len);
+		info.reply_buf = buf;
+		info.reply_buf_len = buf_len;
+		nlmsg = prepare_vendor_nlmsg(drv, bss->ifname,
+		                             info.subcmd);
+		if (!nlmsg) {
+		        wpa_printf(MSG_ERROR,"Failed to allocate nl message");
+		        return -1;
+		}
+
+		status = send_nlmsg((struct nl_sock *)drv->global->nl, nlmsg,
+		                     response_handler, &info);
+		if (status != 0) {
+		        wpa_printf(MSG_ERROR,"Failed to send nl message with err %d", status);
+		        return -1;
+		}
+
+		return WPA_DRIVER_OEM_STATUS_SUCCESS;
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));

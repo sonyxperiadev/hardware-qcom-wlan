@@ -948,12 +948,51 @@ unload:
     return ret;
 }
 
+#ifdef WIFI_DRIVER_STATE_CTRL_PARAM
+static int wifi_update_driver_state(const char *state) {
+    struct timespec ts;
+    int len, fd, ret = 0, count = 5;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 200 * 1000000L;
+    do {
+        if (access(WIFI_DRIVER_STATE_CTRL_PARAM, W_OK) == 0)
+            break;
+        nanosleep(&ts, (struct timespec *)NULL);
+    } while (--count > 0); /* wait at most 1 second for completion. */
+    if (count == 0) {
+        ALOGE("Failed to access driver state control param %s, %d at %s",
+              strerror(errno), errno, WIFI_DRIVER_STATE_CTRL_PARAM);
+        return -1;
+    }
+    fd = TEMP_FAILURE_RETRY(open(WIFI_DRIVER_STATE_CTRL_PARAM, O_WRONLY));
+    if (fd < 0) {
+        ALOGE("Failed to open driver state control param at %s",
+              WIFI_DRIVER_STATE_CTRL_PARAM);
+        return -1;
+    }
+    len = strlen(state) + 1;
+    if (TEMP_FAILURE_RETRY(write(fd, state, len)) != len) {
+        ALOGE("Failed to write driver state control param at %s",
+              WIFI_DRIVER_STATE_CTRL_PARAM);
+        ret = -1;
+    }
+    close(fd);
+    return ret;
+}
+#endif
+
 wifi_error wifi_wait_for_driver_ready(void)
 {
     // This function will wait to make sure basic client netdev is created
     // Function times out after 10 seconds
     int count = (POLL_DRIVER_MAX_TIME_MS * 1000) / POLL_DRIVER_DURATION_US;
     FILE *fd;
+
+#if defined(WIFI_DRIVER_STATE_CTRL_PARAM) && defined(WIFI_DRIVER_STATE_ON)
+    if (wifi_update_driver_state(WIFI_DRIVER_STATE_ON) < 0) {
+        return WIFI_ERROR_UNKNOWN;
+    }
+#endif
 
     do {
         if ((fd = fopen("/sys/class/net/wlan0", "r")) != NULL) {
@@ -1792,6 +1831,11 @@ static int wifi_get_multicast_id(wifi_handle handle, const char *name,
 
 static bool is_wifi_interface(const char *name)
 {
+    // filter out bridge interface
+    if (strstr(name, "br") != NULL) {
+        return false;
+    }
+
     if (strncmp(name, "wlan", 4) != 0 && strncmp(name, "p2p", 3) != 0
         && strncmp(name, "wifi", 4) != 0
         && strncmp(name, "swlan", 5) != 0) {

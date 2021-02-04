@@ -33,6 +33,9 @@
 #include "driver_cmd_nl80211_extn.h"
 #include "common.h"
 
+void wpa_msg_handler(struct wpa_driver_nl80211_data *drv, char *msg) {
+	wpa_msg(drv->ctx, MSG_INFO, "%s", msg);
+}
 
 int wpa_driver_oem_initialize(wpa_driver_oem_cb_table_t *oem_cb_table)
 {
@@ -70,6 +73,13 @@ int wpa_driver_oem_initialize(wpa_driver_oem_cb_table_t *oem_cb_table)
 	}
 	oem_cb_table->wpa_driver_driver_cmd_oem_cb =
                             oem_cb_table_local->wpa_driver_driver_cmd_oem_cb;
+	oem_cb_table->wpa_driver_nl80211_driver_oem_event =
+                            oem_cb_table_local->wpa_driver_nl80211_driver_oem_event;
+	oem_cb_table->wpa_driver_driver_wpa_msg_oem_cb =
+                            oem_cb_table_local->wpa_driver_driver_wpa_msg_oem_cb;
+	if(oem_cb_table->wpa_driver_driver_wpa_msg_oem_cb) {
+		oem_cb_table->wpa_driver_driver_wpa_msg_oem_cb(wpa_msg_handler);
+	}
 	wpa_printf(MSG_INFO, "%s: OEM lib initialized\n", __func__);
 
 	return WPA_DRIVER_OEM_STATUS_SUCCESS;

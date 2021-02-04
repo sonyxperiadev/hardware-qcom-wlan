@@ -32,6 +32,10 @@
 #define __DRIVER_CMD_NL80211_EXTN__
 
 #include "qca-vendor_copy.h"
+#include "includes.h"
+#include <sys/types.h>
+#include "driver_nl80211.h"
+
 
 #define IFNAMSIZ 16
 #define WPA_DRIVER_OEM_STATUS_SUCCESS 0
@@ -45,6 +49,10 @@ typedef struct
 {
     int (*wpa_driver_driver_cmd_oem_cb)(void *priv,
 			char *cmd, char *buf, size_t buf_len, int *status);
+    int (*wpa_driver_nl80211_driver_oem_event)(struct wpa_driver_nl80211_data *drv,
+                                u32 vendor_id, u32 subcmd, u8 *data, size_t len);
+    void (*wpa_driver_driver_wpa_msg_oem_cb)(void(*)(struct wpa_driver_nl80211_data *drv,
+								  char *msg));
 } wpa_driver_oem_cb_table_t;
 
 typedef wpa_driver_oem_cb_table_t* (wpa_driver_oem_get_cb_table_t)();
