@@ -1021,7 +1021,7 @@ static int fill_sta_info(struct remote_sta_info *sta_info,
 	if (sta_info->num_sta == 1) {
 		if (sta_info->show_band)
 			ret = snprintf(buf, buf_len,
-				 "%02x:%02x:%02x:%02x:%02x:%02x %d %d %04x %02x:%02x:%02x %d %d %d %d %d %d %d %d %d %s",
+				 "%02x:%02x:%02x:%02x:%02x:%02x %d %d %04x %02x:%02x:%02x %d %d %d %d %d %d %d %d %d %s %d %d %d %d %d %d %d %d %d %d %d %d %d",
 				 sta_info->mac_addr[0], sta_info->mac_addr[1],
 				 sta_info->mac_addr[2], sta_info->mac_addr[3],
 				 sta_info->mac_addr[4], sta_info->mac_addr[5],
@@ -1037,10 +1037,23 @@ static int fill_sta_info(struct remote_sta_info *sta_info,
 				 -1,
 				 sta_info->reason,
 				 sta_info->supported_mode,
-				 sta_info->country);
+				 sta_info->country,
+				 sta_info->ani_level,
+				 -1,
+				 -1,
+				 -1,
+				 sta_info->roam_trigger_reason,
+				 sta_info->roam_fail_reason,
+				 sta_info->roam_invoke_fail_reason,
+				 sta_info->tsf_out_of_sync_count,
+				 sta_info->latest_tx_power,
+				 sta_info->latest_tx_rate,
+				 sta_info->target_power_24g_1mbps,
+				 sta_info->target_power_24g_6mbps,
+				 sta_info->target_power_5g_6mbps);
 		else
 			ret = snprintf(buf, buf_len,
-				 "%02x:%02x:%02x:%02x:%02x:%02x %d %d %04x %02x:%02x:%02x %d %d %d %d %d %d %d %d %u %s",
+				 "%02x:%02x:%02x:%02x:%02x:%02x %d %d %04x %02x:%02x:%02x %d %d %d %d %d %d %d %d %u %s %d %d %d %d %d %d %d %d %d %d %d %d %d",
 				 sta_info->mac_addr[0], sta_info->mac_addr[1],
 				 sta_info->mac_addr[2], sta_info->mac_addr[3],
 				 sta_info->mac_addr[4], sta_info->mac_addr[5],
@@ -1056,7 +1069,20 @@ static int fill_sta_info(struct remote_sta_info *sta_info,
 				 -1,
 				 sta_info->reason,
 				 sta_info->supported_band,
-				 sta_info->country);
+				 sta_info->country,
+				 sta_info->ani_level,
+				 -1,
+				 -1,
+				 -1,
+				 sta_info->roam_trigger_reason,
+				 sta_info->roam_fail_reason,
+				 sta_info->roam_invoke_fail_reason,
+				 sta_info->tsf_out_of_sync_count,
+				 sta_info->latest_tx_power,
+				 sta_info->latest_tx_rate,
+				 sta_info->target_power_24g_1mbps,
+				 sta_info->target_power_24g_6mbps,
+				 sta_info->target_power_5g_6mbps);
 	} else {
 		ret = snprintf(buf, buf_len,
 			 "%d %d %04x %d %d %d %d %d %d %d %d %d %s",
@@ -1364,6 +1390,72 @@ static int get_sta_info_handler(struct nl_msg *msg, void *arg)
 		g_sta_info.tx_pkts_fw_retry_exhausted +=
 			nla_get_u32(tb_vendor[GET_STA_INFO_TARGET_TX_RETRY_EXHAUSTED]);
 		wpa_printf(MSG_INFO,"tx_pkts_fw_retry_exhausted %d", g_sta_info.tx_pkts_fw_retry_exhausted);
+	}
+
+	if (tb_vendor[GET_STA_INFO_ANI_LEVEL]) {
+		g_sta_info.ani_level =
+			nla_get_u32(tb_vendor[GET_STA_INFO_ANI_LEVEL]);
+		wpa_printf(MSG_INFO,"ani_level %d", g_sta_info.ani_level);
+	}
+
+	if (tb_vendor[GET_STA_INFO_ROAM_TRIGGER_REASON]) {
+		g_sta_info.roam_trigger_reason =
+			nla_get_u32(tb_vendor[GET_STA_INFO_ROAM_TRIGGER_REASON]);
+		wpa_printf(MSG_INFO,"roam_trigger_reason %d", g_sta_info.roam_trigger_reason);
+	}
+
+	if (tb_vendor[GET_STA_INFO_ROAM_FAIL_REASON]) {
+		g_sta_info.roam_fail_reason =
+			nla_get_u32(tb_vendor[GET_STA_INFO_ROAM_FAIL_REASON]);
+		wpa_printf(MSG_INFO,"roam_fail_reason %d", g_sta_info.roam_fail_reason);
+	}
+
+	if (tb_vendor[GET_STA_INFO_ROAM_INVOKE_FAIL_REASON]) {
+		g_sta_info.roam_invoke_fail_reason =
+			nla_get_u32(tb_vendor[GET_STA_INFO_ROAM_INVOKE_FAIL_REASON]);
+		wpa_printf(MSG_INFO,"roam_invoke_fail_reason %d", g_sta_info.roam_invoke_fail_reason);
+	}
+
+	if (tb_vendor[GET_STA_INFO_TSF_OUT_OF_SYNC_COUNT]) {
+		g_sta_info.tsf_out_of_sync_count =
+			nla_get_u32(tb_vendor[GET_STA_INFO_TSF_OUT_OF_SYNC_COUNT]);
+		wpa_printf(MSG_INFO,"tsf_out_of_sync_count %d", g_sta_info.tsf_out_of_sync_count);
+	}
+
+	if (tb_vendor[GET_STA_INFO_LATEST_TX_POWER]) {
+		g_sta_info.latest_tx_power =
+			nla_get_u32(tb_vendor[GET_STA_INFO_LATEST_TX_POWER]);
+		wpa_printf(MSG_INFO,"latest_tx_power %d", g_sta_info.latest_tx_power);
+	}
+
+	if (tb_vendor[GET_STA_INFO_LATEST_TX_RATE]) {
+		g_sta_info.latest_tx_rate =
+			nla_get_u32(tb_vendor[GET_STA_INFO_LATEST_TX_RATE]);
+		wpa_printf(MSG_INFO,"latest_tx_rate %d", g_sta_info.latest_tx_rate);
+	}
+
+	if (tb_vendor[GET_STA_INFO_TARGET_POWER_24G_1MBPS]) {
+		g_sta_info.target_power_24g_1mbps =
+			nla_get_u32(tb_vendor[GET_STA_INFO_TARGET_POWER_24G_1MBPS]);
+		wpa_printf(MSG_INFO,"target_power_24g_1mbps %d", g_sta_info.target_power_24g_1mbps);
+	}
+
+	if (tb_vendor[GET_STA_INFO_TARGET_POWER_24G_6MBPS]) {
+		g_sta_info.target_power_24g_6mbps =
+			nla_get_u32(tb_vendor[GET_STA_INFO_TARGET_POWER_24G_6MBPS]);
+		wpa_printf(MSG_INFO,"target_power_24g_6mbps %d", g_sta_info.target_power_24g_6mbps);
+	}
+
+	if (tb_vendor[GET_STA_INFO_TARGET_POWER_5G_6MBPS]) {
+		g_sta_info.target_power_5g_6mbps =
+			nla_get_u32(tb_vendor[GET_STA_INFO_TARGET_POWER_5G_6MBPS]);
+		wpa_printf(MSG_INFO,"target_power_5g_6mbps %d", g_sta_info.target_power_5g_6mbps);
+	}
+
+	if (tb_vendor[GET_STA_INFO_LATEST_RIX]) {
+		g_sta_info.latest_rix =
+			nla_get_u32(tb_vendor[GET_STA_INFO_LATEST_RIX]);
+		wpa_printf(MSG_INFO,"latest_rix %d", g_sta_info.latest_rix);
 	}
 
 
