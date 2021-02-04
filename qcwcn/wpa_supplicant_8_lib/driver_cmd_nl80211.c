@@ -203,6 +203,7 @@ static void wpa_driver_notify_country_change(void *ctx, char *cmd)
 }
 
 static struct remote_sta_info g_sta_info = {0};
+static struct bss_info g_bss_info = {0};
 
 static struct nl_msg *prepare_nlmsg(struct wpa_driver_nl80211_data *drv,
 				    char *ifname, int cmdid, int subcmd,
@@ -261,18 +262,15 @@ static struct nl_msg *prepare_vendor_nlmsg(struct wpa_driver_nl80211_data *drv,
 static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 			      int datalen)
 {
-	struct bss_info data;
 	struct nlattr *tb_vendor[GET_STATION_INFO_MAX + 1];
 	struct nlattr *attr, *attr1, *attr2;
 	u8 *beacon_ies = NULL;
 	size_t beacon_ies_len = 0;
 	u8 seg1;
 
-	os_memset(&data, 0, sizeof(struct bss_info));
-
-	data.oui[0] = (OUI_QCA) & 0xFF;
-	data.oui[1] = ((OUI_QCA)>>8) & 0xFF;
-	data.oui[2] = ((OUI_QCA)>>16) & 0xFF;
+	g_bss_info.oui[0] = (OUI_QCA) & 0xFF;
+	g_bss_info.oui[1] = ((OUI_QCA)>>8) & 0xFF;
+	g_bss_info.oui[2] = ((OUI_QCA)>>16) & 0xFF;
 
 	nla_parse(tb_vendor, GET_STATION_INFO_MAX,
 		  vendata, datalen, NULL);
@@ -285,14 +283,14 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 			  nla_len(attr), NULL);
 		if (tb1[NL80211_ATTR_SSID] &&
 		    (nla_len(tb1[NL80211_ATTR_SSID]) <= MAX_SSID_LEN)) {
-			os_memcpy(data.ssid, nla_data(tb1[NL80211_ATTR_SSID]),
+			os_memcpy(g_bss_info.ssid, nla_data(tb1[NL80211_ATTR_SSID]),
 					  nla_len(tb1[NL80211_ATTR_SSID]));
-			data.ssid[nla_len(tb1[NL80211_ATTR_SSID])] = '\0';
+			g_bss_info.ssid[nla_len(tb1[NL80211_ATTR_SSID])] = '\0';
 		} else {
 			wpa_printf(MSG_ERROR,"NL80211_ATTR_SSID not found");
 		}
 		if (tb1[NL80211_ATTR_MAC]) {
-			os_memcpy(data.oui, nla_data(tb1[NL80211_ATTR_MAC]), OUI_LEN);
+			os_memcpy(g_bss_info.oui, nla_data(tb1[NL80211_ATTR_MAC]), OUI_LEN);
 		} else {
 			wpa_printf(MSG_ERROR,"NL80211_ATTR_MAC not found");
 		}
@@ -303,16 +301,16 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 				  nla_data(tb1[NL80211_ATTR_SURVEY_INFO]),
 				  nla_len(tb1[NL80211_ATTR_SURVEY_INFO]), NULL);
 			if (tb2[NL80211_SURVEY_INFO_FREQUENCY]) {
-				data.channel =
+				g_bss_info.channel =
 				nla_get_u32(tb2[NL80211_SURVEY_INFO_FREQUENCY]);
 			} else {
 				wpa_printf(MSG_ERROR,
 				    "NL80211_SURVEY_INFO_FREQUENCY not found");
 			}
 			if (tb2[NL80211_SURVEY_INFO_NOISE]) {
-				data.noise =
+				g_bss_info.noise =
 				nla_get_u8(tb2[NL80211_SURVEY_INFO_NOISE]);
-				data.noise -= 100;
+				g_bss_info.noise -= 100;
 			} else {
 				wpa_printf(MSG_ERROR,"NL80211_SURVEY_INFO_NOISE not found");
 			}
@@ -327,13 +325,13 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 				  nla_data(tb1[NL80211_ATTR_STA_INFO]),
 				  nla_len(tb1[NL80211_ATTR_STA_INFO]), NULL);
 			if (tb2[NL80211_STA_INFO_SIGNAL]) {
-				data.rssi =
+				g_bss_info.rssi =
 				nla_get_u8(tb2[NL80211_STA_INFO_SIGNAL]);
-				data.rssi -= 100;
+				g_bss_info.rssi -= 100;
 			} else {
 				wpa_printf(MSG_ERROR,"NL80211_STA_INFO_SIGNAL not found");
 			}
-			data.snr = data.rssi - data.noise;
+			g_bss_info.snr = g_bss_info.rssi - g_bss_info.noise;
 
 			attr1 = tb2[NL80211_STA_INFO_TX_BITRATE];
 			if (attr1) {
@@ -343,10 +341,10 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 					  nla_data(attr1), nla_len(attr1),
 					  NULL);
 				if (tb3[NL80211_RATE_INFO_BITRATE32]) {
-					data.data_rate = nla_get_u32(
+					g_bss_info.data_rate = nla_get_u32(
 					tb3[NL80211_RATE_INFO_BITRATE32])/10;
 				} else if (tb3[NL80211_RATE_INFO_BITRATE]) {
-					data.data_rate = nla_get_u16(
+					g_bss_info.data_rate = nla_get_u16(
 					tb3[NL80211_RATE_INFO_BITRATE])/10;
 				}
 
@@ -362,12 +360,12 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 	}
 
 	if (tb_vendor[GET_STATION_INFO_AKM]) {
-		data.akm = nla_get_u32(
+		g_bss_info.akm = nla_get_u32(
 			tb_vendor[GET_STATION_INFO_AKM]);
 	}
 
 	if (tb_vendor[QCA_WLAN_VENDOR_ATTR_802_11_MODE])
-		data.mode_80211 = nla_get_u32(
+		g_bss_info.mode_80211 = nla_get_u32(
 			tb_vendor[QCA_WLAN_VENDOR_ATTR_802_11_MODE]);
 
 	attr = tb_vendor[GET_STATION_INFO_VHT_OPERATION];
@@ -382,22 +380,22 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 				struct ieee80211_ht_operation *info;
 
 				info = nla_data(attr1);
-				data.bw = info->ht_param ? 40:20;
+				g_bss_info.bw = info->ht_param ? 40:20;
 			}
 			break;
 		case CHANWIDTH_80MHZ:
 			seg1 = info->vht_op_info_chan_center_freq_seg1_idx;
 			if (seg1)
 				/* Notifying 80P80 also as bandwidth = 160 */
-				data.bw = 160;
+				g_bss_info.bw = 160;
 			else
-				data.bw = 80;
+				g_bss_info.bw = 80;
 			break;
 		case CHANWIDTH_160MHZ:
-			data.bw = 160;
+			g_bss_info.bw = 160;
 			break;
 		case CHANWIDTH_80P80MHZ:
-			data.bw = 160;
+			g_bss_info.bw = 160;
 			break;
 		default:
 			wpa_printf(MSG_ERROR,"Invalid channel width received : %u",
@@ -406,9 +404,9 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 	} else if (attr1) {
 		struct ieee80211_ht_operation *info = nla_data(attr1);
 
-		data.bw = info->ht_param ? 40:20;
+		g_bss_info.bw = info->ht_param ? 40:20;
 	} else
-		data.bw = 20;
+		g_bss_info.bw = 20;
 
 	if (attr2) {
 		struct ieee80211_he_operation *he_info = nla_data(attr2);
@@ -438,15 +436,15 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 				seg1 = opr[HE_OPER_VHT_CENTER_FRQ_SEG1_OFFSET];
 				if (seg1)
 					/* Notifying 80P80 also as bandwidth = 160 */
-					data.bw = 160;
+					g_bss_info.bw = 160;
 				else
-					data.bw = 80;
+					g_bss_info.bw = 80;
 				break;
 			case CHANWIDTH_160MHZ:
-				data.bw = 160;
+				g_bss_info.bw = 160;
 				break;
 			case CHANWIDTH_80P80MHZ:
-				data.bw = 160;
+				g_bss_info.bw = 160;
 				break;
 			default:
 				break;
@@ -465,17 +463,17 @@ static int parse_station_info(struct resp_info *info, struct nlattr *vendata,
 				 HE_OPER_6G_PARAMS_SUB_CH_BW_MASK);
 			switch (ch_bw) {
 			case HE_CHANWIDTH_20MHZ:
-				data.bw = 20;
+				g_bss_info.bw = 20;
 				break;
 			case HE_CHANWIDTH_40MHZ:
-				data.bw = 40;
+				g_bss_info.bw = 40;
 				break;
 			case HE_CHANWIDTH_80MHZ:
-				data.bw = 80;
+				g_bss_info.bw = 80;
 				break;
 			case HE_CHANWIDTH_160MHZ:
 				/* Notifying 80P80 also as bandwidth = 160 */
-				data.bw = 160;
+				g_bss_info.bw = 160;
 				break;
 			default:
 				wpa_printf(MSG_ERROR,"Invalid channel width received : %u", ch_bw);
@@ -497,33 +495,46 @@ parse_beacon_ies:
 	}
 
 	if (tb_vendor[GET_STATION_INFO_DRIVER_DISCONNECT_REASON]) {
-		data.disc_reasn_code = nla_get_u32(tb_vendor[
+		g_bss_info.disc_reasn_code = nla_get_u32(tb_vendor[
 			GET_STATION_INFO_DRIVER_DISCONNECT_REASON]);
 	}
 	snprintf(info->reply_buf, info->reply_buf_len,
-		 "%02x%02x%02x %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %u %s",
-		 data.oui[0],
-		 data.oui[1],
-		 data.oui[2],
-		 data.ssid,
-		 data.channel,
-		 data.bw,
-		 data.rssi,
-		 data.data_rate,
-		 data.mode_80211,
+		 "%02x%02x%02x %s %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %u %s %d %d %d %d %d %d %d %d %d %d %d %d %d",
+		 g_bss_info.oui[0],
+		 g_bss_info.oui[1],
+		 g_bss_info.oui[2],
+		 g_bss_info.ssid,
+		 g_bss_info.channel,
+		 g_bss_info.bw,
+		 g_bss_info.rssi,
+		 g_bss_info.data_rate,
+		 g_bss_info.mode_80211,
 		 -1,
 		 -1,
 		 -1,
-		 data.snr,
-		 data.noise,
-		 data.akm,
-		 data.roaming_count,
+		 g_bss_info.snr,
+		 g_bss_info.noise,
+		 g_bss_info.akm,
+		 g_bss_info.roaming_count,
 		 -1,
 		 -1,
 		 -1,
 		 -1,
-		 data.disc_reasn_code,
-		 info->country);
+		 g_bss_info.disc_reasn_code,
+		 info->country,
+		 g_bss_info.ani_level,
+		 -1,
+		 -1,
+		 -1,
+		 g_bss_info.roam_trigger_reason,
+		 g_bss_info.roam_fail_reason,
+		 g_bss_info.roam_invoke_fail_reason,
+		 g_bss_info.tsf_out_of_sync_count,
+		 g_bss_info.latest_tx_power,
+		 g_bss_info.latest_tx_rate,
+		 g_bss_info.target_power_24g_1mbps,
+		 g_bss_info.target_power_24g_6mbps,
+		 g_bss_info.target_power_5g_6mbps);
 
 	return 0;
 }
@@ -2002,10 +2013,15 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		return wpa_driver_cmd_set_tx_power(priv, cmd + 12);
 	} else if(os_strncasecmp(cmd, "GETSTATSBSSINFO", 15) == 0) {
 
-		struct resp_info info;
+		struct resp_info info,info2;
 		struct nl_msg *nlmsg;
+		struct nlattr *attr;
+
+		os_memset(&g_bss_info, 0, sizeof(struct bss_info));
 
 		memset(&info, 0, sizeof(struct resp_info));
+		memset(&info2, 0, sizeof(struct resp_info));
+
 		info.subcmd = QCA_NL80211_VENDOR_SUBCMD_GET_STATION;
 		info.cmd_type = GETSTATSBSSINFO;
 		char *p;
@@ -2016,6 +2032,70 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		}
 		cmd += 16;
 		os_memset(buf, 0, buf_len);
+
+		u8 mac[MAC_ADDR_LEN];
+
+		cmd = skip_white_space(cmd);
+
+		if (strlen(cmd) >= MAC_ADDR_LEN * 2 + MAC_ADDR_LEN - 1
+		    && convert_string_to_bytes(mac, cmd, MAC_ADDR_LEN) > 0) {
+			wpa_printf(MSG_INFO,"invoking QCA_NL80211_VENDOR_SUBCMD_GET_STA_INFO to retrieve new attributes");
+			os_memcpy(&info2.mac_addr[0], mac, MAC_ADDR_LEN);
+			nlmsg = prepare_vendor_nlmsg(bss->drv, bss->ifname,
+						     QCA_NL80211_VENDOR_SUBCMD_GET_STA_INFO);
+			if (!nlmsg) {
+				wpa_printf(MSG_ERROR,"Failed to allocate nl message");
+				return -1;
+			}
+
+			attr = nla_nest_start(nlmsg, NL80211_ATTR_VENDOR_DATA);
+			if (!attr) {
+				nlmsg_free(nlmsg);
+				return -1;
+			}
+
+			if (nla_put(nlmsg, GET_STA_INFO_MAC,
+				    MAC_ADDR_LEN, mac)) {
+				wpa_printf(MSG_ERROR,"Failed to put GET_STA_INFO_MAC");
+				nlmsg_free(nlmsg);
+				return -1;
+			}
+
+			nla_nest_end(nlmsg, attr);
+
+			ret = send_nlmsg((struct nl_sock *)drv->global->nl, nlmsg,
+					     get_sta_info_handler, &info2);
+			if (ret != 0) {
+				if (ret == -EOPNOTSUPP) {
+					wpa_printf(MSG_INFO,"Command is not supported, sending -1 for all new vendor attributes");
+				} else {
+					wpa_printf(MSG_ERROR,"Failed to send nl message with err %d", ret);
+					return -1;
+				}
+				g_bss_info.ani_level = -1;
+				g_bss_info.roam_trigger_reason = -1;
+				g_bss_info.roam_fail_reason = -1;
+				g_bss_info.roam_invoke_fail_reason = -1;
+				g_bss_info.tsf_out_of_sync_count = -1;
+				g_bss_info.latest_tx_power = -1;
+				g_bss_info.latest_tx_rate = -1;
+				g_bss_info.target_power_24g_1mbps = -1;
+				g_bss_info.target_power_24g_6mbps = -1;
+				g_bss_info.target_power_5g_6mbps = -1;
+			} else {
+				wpa_printf(MSG_INFO,"Command successfully invoked");
+				g_bss_info.ani_level = g_sta_info.ani_level;
+				g_bss_info.roam_trigger_reason = g_sta_info.roam_trigger_reason;
+				g_bss_info.roam_fail_reason = g_sta_info.roam_fail_reason;
+				g_bss_info.roam_invoke_fail_reason = g_sta_info.roam_invoke_fail_reason;
+				g_bss_info.tsf_out_of_sync_count = g_sta_info.tsf_out_of_sync_count;
+				g_bss_info.latest_tx_power = g_sta_info.latest_tx_power;
+				g_bss_info.latest_tx_rate = g_sta_info.latest_tx_rate;
+				g_bss_info.target_power_24g_1mbps = g_sta_info.target_power_24g_1mbps;
+				g_bss_info.target_power_24g_6mbps = g_sta_info.target_power_24g_6mbps;
+				g_bss_info.target_power_5g_6mbps = g_sta_info.target_power_5g_6mbps;
+			}
+		}
 
 		info.reply_buf = buf;
 		info.reply_buf_len = buf_len;

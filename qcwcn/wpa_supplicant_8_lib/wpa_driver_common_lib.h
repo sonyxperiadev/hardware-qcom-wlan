@@ -141,6 +141,16 @@ struct bss_info {
 	/* Bit mask value of 11kv support */
 	int mask_11kv;
 	u32 disc_reasn_code;
+	u32 ani_level;
+	u32 roam_trigger_reason;
+	u32 roam_fail_reason;
+	u32 roam_invoke_fail_reason;
+	u32 tsf_out_of_sync_count;
+	u32 latest_tx_power;
+	u32 latest_tx_rate;
+	u32 target_power_24g_1mbps;
+	u32 target_power_24g_6mbps;
+	u32 target_power_5g_6mbps;
 };
 
 enum get_info_cmd {
