@@ -102,8 +102,11 @@ int wpa_driver_oem_initialize(wpa_driver_oem_cb_table_t **oem_cb_table)
 	if (*oem_cb_table)
 		return WPA_DRIVER_OEM_STATUS_SUCCESS;
 
-	for (lib_n = 0; lib_n < MAX_OEM_LIBS; lib_n++)
+	for (lib_n = 0; lib_n < MAX_OEM_LIBS; lib_n++) {
 		oem_cb_array[lib_n].wpa_driver_driver_cmd_oem_cb = NULL;
+		oem_cb_array[lib_n].wpa_driver_nl80211_driver_oem_event = NULL;
+		oem_cb_array[lib_n].wpa_driver_oem_feature_check_cb = NULL;
+	}
 
 	oem_lib_dir = opendir(oem_lib_path);
 	if (!oem_lib_dir) {
@@ -157,6 +160,14 @@ int wpa_driver_oem_initialize(wpa_driver_oem_cb_table_t **oem_cb_table)
 			oem_cb_table_local->wpa_driver_nl80211_driver_oem_event;
 		oem_cb_array[lib_n].wpa_driver_driver_wpa_msg_oem_cb =
 			oem_cb_table_local->wpa_driver_driver_wpa_msg_oem_cb;
+		oem_cb_array[lib_n].wpa_driver_oem_feature_check_cb =
+			oem_cb_table_local->wpa_driver_oem_feature_check_cb;
+
+		/* Register wpa message callback with the oem library */
+		if(oem_cb_array[lib_n].wpa_driver_driver_wpa_msg_oem_cb) {
+			oem_cb_array[lib_n].wpa_driver_driver_wpa_msg_oem_cb(wpa_msg_handler);
+		}
+
 		lib_n++;
 
 		if (lib_n == MAX_OEM_LIBS) {
