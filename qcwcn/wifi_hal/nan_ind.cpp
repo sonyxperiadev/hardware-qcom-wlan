@@ -227,7 +227,7 @@ int NanCommand::getNanPublishReplied(NanPublishRepliedInd *event)
         return WIFI_SUCCESS;
     }
     while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
+           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen)))) {
         switch (outputTlv.type) {
         case NAN_TLV_TYPE_MAC_ADDRESS:
             if (outputTlv.length > sizeof(event->addr)) {
@@ -296,7 +296,7 @@ int NanCommand::getNanMatch(NanMatchInd *event)
     }
     ALOGV("%s: TLV remaining Len:%d",__func__, remainingLen);
     while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
+           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen)))) {
         ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
               __func__, remainingLen, readLen, outputTlv.type,
               outputTlv.length);
@@ -484,7 +484,7 @@ int NanCommand::getNanFollowup(NanFollowupInd *event)
     }
     ALOGV("%s: TLV remaining Len:%d",__func__, remainingLen);
     while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
+           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen)))) {
         ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
               __func__, remainingLen, readLen, outputTlv.type,
               outputTlv.length);
@@ -548,7 +548,7 @@ int NanCommand::getNanDiscEngEvent(NanDiscEngEventInd *event)
 
     ALOGV("%s: TLV remaining Len:%d",__func__, remainingLen);
     while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
+           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen)))) {
         ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
               __func__, remainingLen, readLen, outputTlv.type,
               outputTlv.length);
@@ -635,7 +635,7 @@ int NanCommand::getNanTca(NanTCAInd *event)
 
     ALOGV("%s: TLV remaining Len:%d",__func__, remainingLen);
     while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
+           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen)))) {
         ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
               __func__, remainingLen, readLen, outputTlv.type,
               outputTlv.length);
@@ -688,7 +688,7 @@ int NanCommand::getNanBeaconSdfPayload(NanBeaconSdfPayloadInd *event)
 
     ALOGV("%s: TLV remaining Len:%d",__func__, remainingLen);
     while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
+           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen)))) {
         ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
               __func__, remainingLen, readLen, outputTlv.type,
               outputTlv.length);
@@ -811,7 +811,7 @@ int NanCommand::getNanReceivePostDiscoveryVal(const u8 *pInValue,
 
     ALOGV("%s: TLV remaining Len:%d",__func__, remainingLen);
     while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
+           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen)))) {
         ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
               __func__, remainingLen, readLen, outputTlv.type,
               outputTlv.length);
@@ -1299,7 +1299,7 @@ int NanCommand::getNanRangeRequestReceivedInd(NanRangeRequestInd *event)
 
     ALOGV("%s: TLV remaining Len:%d",__func__, remainingLen);
     while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
+           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen)))) {
         ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
               __func__, remainingLen, readLen, outputTlv.type,
               outputTlv.length);
@@ -1348,7 +1348,7 @@ int NanCommand::getNanRangeReportInd(NanRangeReportInd *event)
 
     ALOGV("%s: TLV remaining Len:%d",__func__, remainingLen);
     while ((remainingLen > 0) &&
-           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv)))) {
+           (0 != (readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen)))) {
         ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
               __func__, remainingLen, readLen, outputTlv.type,
               outputTlv.length);
