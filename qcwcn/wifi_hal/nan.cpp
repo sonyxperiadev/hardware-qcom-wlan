@@ -1425,7 +1425,7 @@ u16 NANTLV_ReadTlv(u8 *pInTlv, pNanTlv pOutTlv, int inBufferSize)
     pOutTlv->length |= *pInTlv++ << 8;
     readLen += 2;
 
-    if(pOutTlv->length > inBufferSize - NAN_TLV_HEADER_SIZE) {
+    if(pOutTlv->length > (u16)(inBufferSize - NAN_TLV_HEADER_SIZE)) {
         ALOGE("Insufficient length to process TLV header, inBufferSize = %d",
               inBufferSize);
         return readLen;
