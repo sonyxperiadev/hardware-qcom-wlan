@@ -160,7 +160,7 @@ enum rb_status rb_write (void *ctx, u8 *buf, size_t length, int overwrite,
                                      // write in current buffer
     unsigned int total_push_in_rd_ptr = 0; // Total amount of push in read pointer in this write
 
-    if (record_length > rbc->each_buf_size) {
+    if (record_length > rbc->each_buf_size || length > rbc->each_buf_size) {
         return RB_FAILURE;
     }
 
@@ -279,6 +279,17 @@ enum rb_status rb_write (void *ctx, u8 *buf, size_t length, int overwrite,
             }
         }
         rb_unlock(&rbc->rb_rw_lock);
+        if(rbc->bufs[rbc->wr_buf_no].data == NULL || (rbc->bufs[rbc->wr_buf_no].data + rbc->cur_wr_buf_idx) == NULL ||
+                buf == NULL || buf + bytes_written == NULL) {
+            ALOGE("The read or Write buffer is null");
+            return RB_FAILURE;
+        }
+        if (((bytes_written + cur_copy_len) > length
+                || (rbc->cur_wr_buf_idx + cur_copy_len) > rbc->each_buf_size)) {
+            ALOGE("LOG_RB rb_write overflow - cur_copy_len=%d wr_buf[max=%zu no=%d idx=%d] buf[max=%zu accessed=%d]",
+              cur_copy_len, rbc->each_buf_size, rbc->wr_buf_no, rbc->cur_wr_buf_idx, length, bytes_written + cur_copy_len);
+            return RB_FAILURE;
+        }
 
         /* don't use lock while doing memcpy, so that we don't block the read
          * context for too long. There is no harm while writing the memory if
@@ -476,7 +487,13 @@ u8 *rb_get_read_buf(void *ctx, size_t *length)
             cur_read_len = rbc->cur_wr_buf_idx - rbc->cur_rd_buf_idx;
         } else {
             /* write is rolled over and just behind the read */
-            cur_read_len = rbc->bufs[rbc->rd_buf_no].last_wr_index - rbc->cur_rd_buf_idx;
+            if (rbc->bufs[rbc->rd_buf_no].last_wr_index >= rbc->cur_rd_buf_idx) {
+                cur_read_len = rbc->bufs[rbc->rd_buf_no].last_wr_index - rbc->cur_rd_buf_idx;
+            } else {
+                ALOGE("Alert: cur_read_len=%u invalid, rd_buf[no=%d rd_idx=%d wr_index=%d]",cur_read_len, rbc->rd_buf_no, rbc->cur_rd_buf_idx, rbc->bufs[rbc->rd_buf_no].last_wr_index);
+                rb_unlock(&rbc->rb_rw_lock);
+                return NULL;
+            }
         }
     } else {
         if (rbc->cur_rd_buf_idx == 0) {

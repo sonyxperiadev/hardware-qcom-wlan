@@ -25,7 +25,7 @@
 #include <netpacket/packet.h>
 #include <linux/filter.h>
 #include <linux/errqueue.h>
-
+#include <linux-private/linux/fib_rules.h>
 #include <linux/pkt_sched.h>
 #include <netlink/object-api.h>
 #include <netlink/netlink.h>
@@ -1792,6 +1792,11 @@ static int wifi_get_multicast_id(wifi_handle handle, const char *name,
 
 static bool is_wifi_interface(const char *name)
 {
+    // filter out bridge interface
+    if (strstr(name, "br") != NULL) {
+        return false;
+    }
+
     if (strncmp(name, "wlan", 4) != 0 && strncmp(name, "p2p", 3) != 0
         && strncmp(name, "wifi", 4) != 0
         && strncmp(name, "swlan", 5) != 0) {

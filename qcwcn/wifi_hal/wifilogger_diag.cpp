@@ -1009,6 +1009,11 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u32 length)
                 payloadlen = diag_msg_hdr->u.msg_hdr.payload_len;
                 hdr_size = sizeof(fw_diag_msg_hdr_t);
                 payload = diag_msg_hdr->payload;
+                if ((count + hdr_size + payloadlen) > length) {
+                    ALOGE("WLAN_DIAG_TYPE_MSG - possible buffer over access, length=%d count=%d hdr_size=%d payload len=%d",
+                           length, count, hdr_size, payloadlen);
+                    return WIFI_ERROR_UNKNOWN;
+                }
                 process_firmware_prints(info, (u8 *)diag_msg_fixed_hdr,
                                        payloadlen + hdr_size);
                 break;
@@ -1019,6 +1024,11 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u32 length)
                 payloadlen = diag_msg_hdr_v2->u.msg_hdr.payload_len;
                 hdr_size = sizeof(fw_diag_msg_hdr_v2_t);
                 payload = diag_msg_hdr_v2->payload;
+                if ((count + hdr_size + payloadlen) > length) {
+                    ALOGE("WLAN_DIAG_TYPE_MSG_V2 - possible buffer over access, length=%d count=%d hdr_size=%d payload len=%d",
+                           length, count, hdr_size, payloadlen);
+                    return WIFI_ERROR_UNKNOWN;
+                }
                 process_firmware_prints(info, (u8 *)diag_msg_fixed_hdr,
                                        payloadlen + hdr_size);
                 break;
@@ -1030,6 +1040,11 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u32 length)
                 payload = diag_msg_hdr->payload;
                 payloadlen = diag_msg_hdr->u.payload_len;
                 hdr_size = sizeof(fw_diag_msg_hdr_t);
+                if ((count + hdr_size + payloadlen) > length) {
+                    ALOGE("WLAN_DIAG_TYPE_CONFIG - possible buffer over access, length=%d count=%d hdr_size=%d payload len=%d",
+                           length, count, hdr_size, payloadlen);
+                    return WIFI_ERROR_UNKNOWN;
+                }
                 process_firmware_prints(info, (u8 *)diag_msg_hdr,
                                         payloadlen + hdr_size);
             }
