@@ -529,24 +529,18 @@ parse_beacon_ies:
 }
 
 static int parse_get_feature_info(struct resp_info *info, struct nlattr *vendata,
-			      int datalen)
+				  int datalen)
 {
 	struct nlattr *tb_vendor[NUM_QCA_WLAN_VENDOR_FEATURES + 1];
 	struct nlattr *attr;
-	char *result = NULL;
 	nla_parse(tb_vendor, NUM_QCA_WLAN_VENDOR_FEATURES,
 		  vendata, datalen, NULL);
 	attr = tb_vendor[QCA_WLAN_VENDOR_ATTR_FEATURE_FLAGS];
 	if (attr) {
-		int length = snprintf( NULL, 0, "%d", nla_get_u32(attr));
-		result = (char *)malloc(length + 1);
-		if (result != NULL) {
-			memset(result, 0, length + 1);
-			snprintf(result, length + 1, "%d", nla_get_u32(attr));
-			snprintf(info->reply_buf, info->reply_buf_len,
-				 "%s", result);
-			wpa_printf(MSG_DEBUG, "%s: driver supported feature info  = %s", __func__, result);
-		}
+		snprintf(info->reply_buf, info->reply_buf_len, "%u",
+			 nla_get_u32(attr));
+		wpa_printf(MSG_DEBUG, "%s: driver supported feature info  = %s",
+			   __func__, info->reply_buf);
 	} else {
 		snprintf(info->reply_buf, info->reply_buf_len, "FAIL");
 		return -1;
