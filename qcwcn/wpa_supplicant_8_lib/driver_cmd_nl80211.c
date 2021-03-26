@@ -641,15 +641,13 @@ int wpa_driver_nl80211_driver_event(struct wpa_driver_nl80211_data *drv,
 					   u8 *data, size_t len)
 {
 	int ret = -1;
-	wpa_printf(MSG_INFO, "wpa_driver_nld80211 vendor event recieved");
 	switch(subcmd) {
 		case QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT:
 			ret = wpa_driver_nl80211_oem_event(drv, vendor_id, subcmd,
 					data, len);
 			break;
 		default:
-			wpa_printf(MSG_DEBUG, "Unsupported vendor event recieved %d",
-					subcmd);
+			break;
 	}
 	return ret;
 }
