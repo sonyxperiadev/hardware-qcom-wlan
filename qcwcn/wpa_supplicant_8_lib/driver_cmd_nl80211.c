@@ -85,6 +85,7 @@
 #define TWT_SETUP_WAKE_INTVL_MANTISSA_MAX       0xFFFF
 #define TWT_SETUP_WAKE_DURATION_MAX             0xFF
 #define TWT_SETUP_WAKE_INTVL_EXP_MAX            31
+#define TWT_WAKE_INTERVAL_TU_FACTOR		1024
 
 #define TWT_SETUP_STR        "twt_session_setup"
 #define TWT_TERMINATE_STR    "twt_session_terminate"
@@ -2970,8 +2971,15 @@ int prepare_twt_setup_nlmsg(struct nl_msg *nlmsg,
 	}
 
 	if (nla_put_u32(nlmsg,
-		QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA,
+		QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA,
 		twt_setup_params->wake_intr_mantissa)) {
+		wpa_printf(MSG_DEBUG, "TWT: Failed to put wake intr mantissa");
+		goto fail;
+	}
+
+	if (nla_put_u32(nlmsg,
+		QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA,
+		twt_setup_params->wake_intr_mantissa/TWT_WAKE_INTERVAL_TU_FACTOR)) {
 		wpa_printf(MSG_DEBUG, "TWT: Failed to put wake intr mantissa");
 		goto fail;
 	}
@@ -3701,12 +3709,18 @@ unpack_twt_get_params_resp(struct nlattr **tb, char *buf, int buf_len)
 		return -EINVAL;
 
 	/* Wake Interval Mantissa */
-	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA;
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA;
 	if (!tb[cmd_id]) {
-		wpa_printf(MSG_ERROR, "twt_get_params resp: no wake mantissa");
-		return -EINVAL;
+		cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA;
+		if (!tb[cmd_id]) {
+			wpa_printf(MSG_ERROR, "twt_get_params resp: no wake mantissa");
+			return -EINVAL;
+		}
+		value = nla_get_u32(tb[cmd_id]);
+		value = value * TWT_WAKE_INTERVAL_TU_FACTOR;
+	} else {
+		value = nla_get_u32(tb[cmd_id]);
 	}
-	value = nla_get_u32(tb[cmd_id]);
 	os_snprintf(temp, TWT_RESP_BUF_LEN, "wake_intvl_mantis %d", value);
 	buf = result_copy_to_buf(temp, buf, &buf_len);
 	if (!buf)
@@ -3880,13 +3894,18 @@ static int wpa_get_twt_setup_resp_val(struct nlattr **tb2, char *buf,
 	if (!buf)
 		return -EINVAL;
 
-	cmd_id =
-	QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA;
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL2_MANTISSA;
 	if (!tb2[cmd_id]) {
-		wpa_printf(MSG_ERROR, "SETUP_WAKE_INTVL_MANTISSA is must");
-		return -EINVAL;
+		cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_INTVL_MANTISSA;
+		if (!tb2[cmd_id]) {
+			wpa_printf(MSG_ERROR, "SETUP_WAKE_INTVL_MANTISSA is must");
+			return -EINVAL;
+		}
+		wake_intvl_mantis = nla_get_u32(tb2[cmd_id]);
+		wake_intvl_mantis = wake_intvl_mantis * TWT_WAKE_INTERVAL_TU_FACTOR;
+	} else {
+		wake_intvl_mantis = nla_get_u32(tb2[cmd_id]);
 	}
-	wake_intvl_mantis = nla_get_u32(tb2[cmd_id]);
 	os_snprintf(temp, TWT_RESP_BUF_LEN, "wake_intvl %d", wake_intvl_mantis);
 	buf = result_copy_to_buf(temp, buf, &buf_len);
 	if (!buf)
@@ -4847,6 +4866,11 @@ static int wpa_driver_twt_async_resp_event(struct wpa_driver_nl80211_data *drv,
 	if (ret) {
 		wpa_printf(MSG_ERROR, "nla_parse failed %d", ret);
 		goto fail;
+	}
+
+	if (!buf) {
+		wpa_printf(MSG_ERROR, "buf not allocated");
+		return -1;
 	}
 
 	memset(buf, 0, TWT_RESP_BUF_LEN);
