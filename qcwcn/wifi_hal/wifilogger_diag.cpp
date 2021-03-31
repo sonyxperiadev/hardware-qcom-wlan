@@ -1322,7 +1322,6 @@ static void process_wlan_low_resource_failure(hal_info *info,
     }
 }
 
-
 static wifi_error update_stats_to_ring_buf(hal_info *info,
                       u8 *rb_entry, u32 size)
 {
@@ -2756,6 +2755,12 @@ wifi_error diag_message_handler(hal_info *info, nl_msg *msg)
                         break;
                     case EVENT_WLAN_STA_DATA_STALL:
                         process_wlan_data_stall_event(info, buf, event_hdr->length);
+                        break;
+                    case EVENT_WLAN_POWERSAVE_WOW:
+                    case EVENT_WLAN_POWERSAVE_WOW_STATS:
+                    case EVENT_WLAN_STA_KICKOUT:
+                    case EVENT_WLAN_BRINGUP_STATUS:
+                        /* Handle DIAG events properly */
                         break;
                     default:
                         return WIFI_SUCCESS;
