@@ -513,7 +513,7 @@ int NanCommand::getNanResponse(transaction_id *id, NanResponseMsg *pRsp)
             int remainingLen = (mNanDataLen -  \
                 (sizeof(NanMsgHeader) + sizeof(NanStatsRspParams)));
             if (remainingLen > 0) {
-                readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv);
+                readLen = NANTLV_ReadTlv(pInputTlv, &outputTlv, remainingLen);
                 ALOGV("%s: Remaining Len:%d readLen:%d type:%d length:%d",
                       __func__, remainingLen, readLen, outputTlv.type,
                       outputTlv.length);
