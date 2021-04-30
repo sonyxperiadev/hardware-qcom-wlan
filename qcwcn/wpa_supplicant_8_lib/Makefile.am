@@ -11,7 +11,7 @@ endif
 
 AM_CFLAGS += -Wno-unused-parameter -Wno-int-to-pointer-cast \
              -Wno-maybe-uninitialized -Wno-parentheses \
-             -DCONFIG_P2P
+             -DCONFIG_P2P -lcutils
 
 h_sources = driver_cmd_nl80211_extn.h
 library_includedir = $(pkgincludedir)
