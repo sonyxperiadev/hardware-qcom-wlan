@@ -32,7 +32,7 @@
 #define __DRIVER_CMD_NL80211_EXTN__
 
 #include "qca-vendor_copy.h"
-#include "includes.h"
+#include <stdbool.h>
 #include <sys/types.h>
 #include "driver_nl80211.h"
 
