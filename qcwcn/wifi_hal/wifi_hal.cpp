@@ -907,7 +907,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     if (wifi_is_nan_ext_cmd_supported(iface_handle))
         info->support_nan_ext_cmd = true;
     else
-        info->support_nan_ext_cmd = false;
+        info->support_nan_ext_cmd = true;//Nan ext cmd is enabled force set
 
     ALOGV("support_nan_ext_cmd is %d",
           info->support_nan_ext_cmd);
