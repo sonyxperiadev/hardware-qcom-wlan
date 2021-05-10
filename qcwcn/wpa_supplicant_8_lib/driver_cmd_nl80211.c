@@ -4207,6 +4207,8 @@ static int wpa_get_twt_capabilities_resp_val(struct nlattr **tb2, char *buf,
 	val = (msb << 16) | lsb;
 	os_snprintf(temp, TWT_RESP_BUF_LEN, "0x%x", val);
 	buf = result_copy_to_buf(temp, buf, &buf_len);
+	if (!buf)
+		return -EINVAL;
 	*buf = '\0';
 
 	return 0;
@@ -4233,7 +4235,7 @@ static int unpack_twt_get_capab_nlmsg(struct nl_msg **tb, char *buf, int buf_len
 	struct nlattr *setup_attr[QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAX + 1];
 	struct nlattr *attr;
 
-	if (nla_parse_nested(config_attr, QCA_WLAN_VENDOR_ATTR_TWT_CAPABILITIES_MAX,
+	if (nla_parse_nested(config_attr, QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_MAX,
 			     tb[NL80211_ATTR_VENDOR_DATA], NULL)) {
 		wpa_printf(MSG_ERROR, "twt_get_capability: nla_parse_nested fail");
 		return -EINVAL;
@@ -4836,6 +4838,9 @@ static int wpa_driver_twt_async_resp_event(struct wpa_driver_nl80211_data *drv,
 	int buf_len = TWT_RESP_BUF_LEN;
 	struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_MAX + 1];
 	u8 twt_operation_type;
+
+	if (!buf)
+		return -1;
 
 	ret = nla_parse(tb, QCA_WLAN_VENDOR_ATTR_CONFIG_TWT_MAX,
 			(struct nlattr *) data, len, NULL);
