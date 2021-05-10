@@ -108,6 +108,7 @@ static int wpa_driver_cmd_set_congestion_report(struct i802_bss *bss, char *cmd)
 		  !(*endptr) ||
 		  ((interval = strtol(endptr, &endptr, 10)) < 1 || interval > 255)) {
 			wpa_printf(MSG_ERROR, "%s: args less or invalid", __FUNCTION__);
+			nlmsg_free(msg);
 			return -EINVAL;
 		}
 		if (nla_put_u8(msg,
