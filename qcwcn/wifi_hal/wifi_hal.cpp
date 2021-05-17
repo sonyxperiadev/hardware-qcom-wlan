@@ -582,6 +582,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_virtual_interface_delete = wifi_virtual_interface_delete;
     fn->wifi_set_latency_mode = wifi_set_latency_mode;
     fn->wifi_set_thermal_mitigation_mode = wifi_set_thermal_mitigation_mode;
+    fn->wifi_multi_sta_set_primary_connection = wifi_multi_sta_set_primary_connection;
+    fn->wifi_multi_sta_set_use_case = wifi_multi_sta_set_use_case;
 
     return WIFI_SUCCESS;
 }

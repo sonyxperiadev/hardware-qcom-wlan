@@ -1039,3 +1039,168 @@ cleanup:
     delete wifiConfigCommand;
     return (wifi_error)ret;
 }
+
+/**
+ * Set STA + STA primary iface connection
+ */
+wifi_error wifi_multi_sta_set_primary_connection(wifi_handle handle,
+                                 wifi_interface_handle iface)
+{
+    int requestId, ret = 0;
+    WiFiConfigCommand *wifiConfigCommand;
+    if (!handle) {
+        ALOGE("%s: Error wifi_handle NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+    struct nlattr *nlData;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+
+    requestId = get_requestid();
+
+    wifiConfigCommand = new WiFiConfigCommand(
+                            handle,
+                            requestId,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION);
+
+    if (wifiConfigCommand == NULL) {
+        ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = wifiConfigCommand->create();
+    if (ret < 0) {
+        ALOGE("%s: failed to create NL msg. Error:%d",
+            __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = wifiConfigCommand->set_iface_id(ifaceInfo->name);
+    if (ret < 0) {
+        ALOGE("%s: failed to set iface id. Error:%d",
+            __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ALOGE("%s: failed attr_start for VENDOR_DATA. Error:%d",
+            __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    if (wifiConfigCommand->put_u8(
+        QCA_WLAN_VENDOR_ATTR_CONFIG_CONCURRENT_STA_PRIMARY, 1)) {
+        ALOGE("%s: failed to put vendor data. Error:%d",
+            __FUNCTION__, ret);
+        goto cleanup;
+    }
+    wifiConfigCommand->attr_end(nlData);
+
+    /* Send the NL msg. */
+    wifiConfigCommand->waitForRsp(false);
+    ret = wifiConfigCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+cleanup:
+    delete wifiConfigCommand;
+    return (wifi_error)ret;
+}
+
+/**
+ * Set STA + STA use case
+ */
+wifi_error wifi_multi_sta_set_use_case(wifi_handle handle,
+                                       wifi_multi_sta_use_case case_info)
+{
+    int requestId, ret = 0;
+    u8 use_case;
+    WiFiConfigCommand *wifiConfigCommand;
+    if (!handle) {
+        ALOGE("%s: Error wifi_handle NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+    struct nlattr *nlData;
+    hal_info *info = getHalInfo(handle);
+    if (!info || info->num_interfaces < 1) {
+        ALOGE("%s: Error wifi_handle NULL or base wlan interface not present", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ALOGD("%s: %d", __FUNCTION__, case_info);
+
+    switch (case_info) {
+    case WIFI_DUAL_STA_TRANSIENT_PREFER_PRIMARY:
+        use_case = QCA_WLAN_CONCURRENT_STA_POLICY_PREFER_PRIMARY;
+        break;
+    case WIFI_DUAL_STA_NON_TRANSIENT_UNBIASED:
+        use_case = QCA_WLAN_CONCURRENT_STA_POLICY_UNBIASED;
+        break;
+    default:
+        ALOGE("%s: Unknown use case %d", __FUNCTION__, case_info);
+        ret = WIFI_ERROR_UNKNOWN;
+        goto cleanup;;
+    }
+
+    requestId = get_requestid();
+
+    wifiConfigCommand = new WiFiConfigCommand(
+                            handle,
+                            requestId,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_CONCURRENT_MULTI_STA_POLICY);
+
+    if (wifiConfigCommand == NULL) {
+        ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    /* Create the NL message. */
+    ret = wifiConfigCommand->create();
+    if (ret < 0) {
+        ALOGE("%s: failed to create NL msg. Error:%d",
+            __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    if (wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX,
+                                   info->interfaces[0]->id)) {
+        ALOGE("%s: Failed to put iface id", __FUNCTION__);
+         goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ALOGE("%s: failed attr_start for VENDOR_DATA. Error:%d",
+            __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    if (wifiConfigCommand->put_u8(
+        QCA_WLAN_VENDOR_ATTR_CONCURRENT_STA_POLICY_CONFIG, use_case)) {
+        ALOGE("%s: failed to put use_case. Error:%d",
+            __FUNCTION__, ret);
+        goto cleanup;
+    }
+    wifiConfigCommand->attr_end(nlData);
+
+    /* Send the NL msg. */
+    wifiConfigCommand->waitForRsp(false);
+    ret = wifiConfigCommand->requestEvent();
+    if (ret != 0) {
+        ALOGE("%s: requestEvent Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+cleanup:
+    delete wifiConfigCommand;
+    return (wifi_error)ret;
+}
