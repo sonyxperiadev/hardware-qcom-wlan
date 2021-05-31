@@ -909,7 +909,7 @@ wifi_error wifi_initialize(wifi_handle *handle)
     if (wifi_is_nan_ext_cmd_supported(iface_handle))
         info->support_nan_ext_cmd = true;
     else
-        info->support_nan_ext_cmd = true;//Nan ext cmd is enabled force set
+        info->support_nan_ext_cmd = false;
 
     ALOGV("support_nan_ext_cmd is %d",
           info->support_nan_ext_cmd);
@@ -2704,6 +2704,7 @@ public:
     virtual wifi_error create() {
         int nl80211_id = genl_ctrl_resolve(mInfo->cmd_sock, "nl80211");
         wifi_error ret = mMsg.create(nl80211_id, NL80211_CMD_GET_WIPHY, NLM_F_DUMP, 0);
+        mMsg.put_flag(NL80211_ATTR_SPLIT_WIPHY_DUMP);
 
         return ret;
     }
