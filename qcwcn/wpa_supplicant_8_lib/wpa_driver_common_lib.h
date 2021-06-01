@@ -30,6 +30,10 @@
 #ifndef WPA_DRIVER_COMMON_LIB
 #define WPA_DRIVER_COMMON_LIB
 
+#ifdef LINUX_EMBEDDED
+#include <stdbool.h>
+#endif
+
 #include "android_drv.h"
 #define OUI_LEN		3
 #define MAX_CMD_LEN	32
