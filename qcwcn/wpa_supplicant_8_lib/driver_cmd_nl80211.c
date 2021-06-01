@@ -2084,6 +2084,14 @@ static int wpa_driver_start_csi_capture(struct i802_bss *bss, char *cmd,
 		return WPA_DRIVER_OEM_STATUS_FAILURE;
 	}
 
+	if (nla_put_u8(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_DATA_TRANSPORT_MODE,
+		       QCA_WLAN_VENDOR_CFR_DATA_NETLINK_EVENTS)) {
+		       //QCA_WLAN_VENDOR_CFR_DATA_RELAY_FS)) {
+		wpa_printf(MSG_ERROR, "Failed to set transport mode");
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
 	if (nla_put_flag(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_ENABLE)) {
 		wpa_printf(MSG_ERROR, "Failed to csi enable flag");
 		nlmsg_free(nlmsg);
