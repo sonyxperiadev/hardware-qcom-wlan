@@ -94,6 +94,8 @@ private:
     /* Packet Filter buffer and length */
     u8 *mfilter_packet_read_buffer;
     int mfilter_packet_length;
+    u32 res_size;
+    wifi_usable_channel *channel_buff;
     virtual wifi_error wifiParseCapabilities(struct nlattr **tbVendor);
 
 public:
@@ -101,6 +103,8 @@ public:
     virtual ~WifihalGeneric();
     virtual wifi_error requestResponse();
     virtual int handleResponse(WifiEvent &reply);
+    virtual int handle_response_usable_channels(struct nlattr *VendorData,
+                                                u32 mDataLen);
     virtual void getResponseparams(feature_set *pset);
     virtual void getDriverFeatures(features_info *pfeatures);
     virtual void setMaxSetSize(int set_size_max);
@@ -111,7 +115,19 @@ public:
     virtual int getFilterLength();
     virtual int getBusSize();
     virtual wifi_error wifiGetCapabilities(wifi_interface_handle handle);
+    virtual void set_channels_buff(wifi_usable_channel *channels);
+    virtual u32 get_results_size(void);
 };
+
+/**
+ * nla_for_each_nested from libnl is throwing implicit conversion from void*
+ * error. Adding a local definition to avoid it.
+ */
+#define for_each_nested_attribute(pos, nla, rem) \
+    for (pos = (struct nlattr *)nla_data(nla), rem = nla_len(nla); \
+         nla_ok(pos, rem); \
+         pos = nla_next(pos, &(rem)))
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
