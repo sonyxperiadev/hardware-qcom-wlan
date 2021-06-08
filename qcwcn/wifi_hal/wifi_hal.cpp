@@ -2940,3 +2940,76 @@ cleanup:
     delete cmd;
     return ret;
 }
+
+wifi_error wifi_get_radar_history(wifi_interface_handle handle,
+       radar_history_result *resultBuf, int resultBufSize, int *numResults)
+{
+    wifi_error ret;
+    struct nlattr *nlData;
+    WifihalGeneric *vCommand = NULL;
+    interface_info *ifaceInfo = NULL;
+    wifi_handle wifiHandle = NULL;
+
+    ALOGI("%s: enter", __FUNCTION__);
+
+    if (!handle) {
+        ALOGE("%s: Error, wifi_interface_handle NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ifaceInfo = getIfaceInfo(handle);
+    if (!ifaceInfo) {
+        ALOGE("%s: Error, interface_info NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    wifiHandle = getWifiHandle(handle);
+    if (!wifiHandle) {
+        ALOGE("%s: Error, wifi_handle NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    if (resultBuf == NULL || numResults == NULL) {
+        ALOGE("%s: Error, resultsBuf/numResults NULL pointer", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    vCommand = new WifihalGeneric(wifiHandle, 0,
+            OUI_QCA,
+            QCA_NL80211_VENDOR_SUBCMD_GET_RADAR_HISTORY);
+    if (vCommand == NULL) {
+        ALOGE("%s: Error vCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* Create the message */
+    ret = vCommand->create();
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    ret = vCommand->set_iface_id(ifaceInfo->name);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: requestResponse() error: %d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    /* No more data, copy the parsed results into the caller's results buffer */
+    ret = vCommand->copyCachedRadarHistory(
+            resultBuf, resultBufSize, numResults);
+
+cleanup:
+    vCommand->freeCachedRadarHistory();
+    delete vCommand;
+    return ret;
+}
