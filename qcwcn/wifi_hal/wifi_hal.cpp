@@ -3013,3 +3013,100 @@ cleanup:
     delete vCommand;
     return ret;
 }
+
+#define SIZEOF_TLV_HDR 4
+#define OEM_DATA_TLV_TYPE_HEADER 1
+#define OEM_DATA_CMD_SET_SKIP_CAC   18
+
+struct oem_data_header {
+    u16 cmd_id;
+    u16 request_idx;
+};
+
+static int wifi_add_oem_data_head(int cmd_id, u8* oem_buf, size_t max)
+{
+    struct oem_data_header oem_hdr;
+    oem_hdr.cmd_id = cmd_id;
+    oem_hdr.request_idx = 0;
+
+    if ((SIZEOF_TLV_HDR + sizeof(oem_hdr)) > max) {
+        return 0;
+    }
+
+    wifi_put_le16(oem_buf, OEM_DATA_TLV_TYPE_HEADER);
+    oem_buf += 2;
+    wifi_put_le16(oem_buf, sizeof(oem_hdr));
+    oem_buf += 2;
+    memcpy(oem_buf, (u8 *)&oem_hdr, sizeof(oem_hdr));
+    oem_buf += sizeof(oem_hdr);
+
+    return (SIZEOF_TLV_HDR + sizeof(oem_hdr));
+}
+
+
+/**
+ * This cmd takes effect on the interface the cmd is sent to.
+ * This cmd loses effect when interface is down. (i.e. set mac addr)
+ */
+wifi_error wifi_disable_next_cac(wifi_interface_handle handle) {
+    wifi_error ret;
+    interface_info *ifaceInfo = NULL;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+    u8 oem_buf[16];
+    int oem_buf_len = 0;
+
+    if (!handle) {
+        ALOGE("%s: Error, wifi_interface_handle NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ifaceInfo = getIfaceInfo(handle);
+    if (!ifaceInfo) {
+        ALOGE("%s: Error, interface_info NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ALOGI("%s: enter - iface=%s", __FUNCTION__, ifaceInfo->name);
+    oem_buf_len = wifi_add_oem_data_head(
+            OEM_DATA_CMD_SET_SKIP_CAC, oem_buf, sizeof(oem_buf));
+    if (oem_buf_len <= 0) {
+        ALOGE("%s: fill oem data head failed, cmd=%d", __func__,
+                OEM_DATA_CMD_SET_SKIP_CAC);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ret = initialize_vendor_cmd(handle, get_requestid(),
+                                QCA_NL80211_VENDOR_SUBCMD_OEM_DATA,
+                                &vCommand);
+
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __func__);
+        return ret;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        goto cleanup;
+    }
+
+    ret = vCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_OEM_DATA_CMD_DATA,
+                              (char *)oem_buf, oem_buf_len);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    vCommand->attr_end(nlData);
+    ret = vCommand->requestResponse();
+
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: requestResponse() error: %d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+cleanup:
+    if (vCommand)
+        delete vCommand;
+    return ret;
+}

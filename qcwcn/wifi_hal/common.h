@@ -187,6 +187,11 @@ typedef struct {
     u64 clock_boottime;
 } radar_history_result;
 
+static inline void wifi_put_le16(u8 *a, u16 val) {
+    a[1] = val >> 8;
+    a[0] = val & 0xff;
+}
+
 wifi_error wifi_register_handler(wifi_handle handle, int cmd, nl_recvmsg_msg_cb_t func, void *arg);
 wifi_error wifi_register_vendor_handler(wifi_handle handle,
             uint32_t id, int subcmd, nl_recvmsg_msg_cb_t func, void *arg);
@@ -226,6 +231,7 @@ wifi_error wifi_virtual_interface_create(wifi_handle handle, const char* ifname,
 wifi_error wifi_virtual_interface_delete(wifi_handle handle, const char* ifname);
 wifi_error wifi_get_radar_history(wifi_interface_handle handle,
         radar_history_result *resultBuf, int resultBufSize, int *numResults);
+wifi_error wifi_disable_next_cac(wifi_interface_handle handle);
 // some common macros
 
 #define min(x, y)       ((x) < (y) ? (x) : (y))
