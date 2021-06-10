@@ -10,14 +10,11 @@ LOCAL_SRC_FILES := wcnss_service.c
 LOCAL_SHARED_LIBRARIES := libc libcutils libutils liblog
 ifeq ($(strip $(TARGET_USES_QCOM_WCNSS_QMI)),true)
 LOCAL_CFLAGS += -DWCNSS_QMI
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/services
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/platform
 ifeq ($(filter 10% Q% q%,$(TARGET_PLATFORM_VERSION)),)
 #For Android R and above, assuming not compiling on Q and lower
-LOCAL_HEADER_LIBRARIES += libqmi_legacy_headers
+LOCAL_HEADER_LIBRARIES += libqmi_common_headers
 else
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi-framework/inc
-LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qmi/inc
 endif
 LOCAL_SRC_FILES += wcnss_qmi_client.c
 LOCAL_SHARED_LIBRARIES += libqmiservices libqmi_cci
