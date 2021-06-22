@@ -38,6 +38,8 @@ typedef enum {
 
     EVENT_WLAN_ADD_BLOCK_ACK_SUCCESS = 0x67B,        /* 11 byte payload */
     EVENT_WLAN_ADD_BLOCK_ACK_FAILED = 0x67C,         /* 9 byte payload */
+    EVENT_WLAN_BRINGUP_STATUS = 0x680,               /* 12 byte payload */
+    EVENT_WLAN_POWERSAVE_WOW = 0x682,                /* 11 byte payload */
 
     EVENT_WLAN_EXTSCAN_FEATURE_STARTED =   0xA8E, /* 240 byte payload */
     EVENT_WLAN_EXTSCAN_FEATURE_CHANNEL_CONFIG = 0xA8F, /* 243 byte payload */
@@ -64,6 +66,8 @@ typedef enum {
     EVENT_WLAN_BEACON_EVENT = 0xAA6,
     EVENT_WLAN_LOG_COMPLETE = 0xAA7,
     EVENT_WLAN_LOW_RESOURCE_FAILURE = 0xABB,
+    EVENT_WLAN_POWERSAVE_WOW_STATS = 0xB33, /* 76 bytes payload */
+    EVENT_WLAN_STA_KICKOUT = 0xB39, /* 11 bytes payload */
     EVENT_WLAN_STA_DATA_STALL = 0xB3A,
 
     EVENT_MAX_ID = 0x0FFF
@@ -462,5 +466,51 @@ typedef struct wlan_low_resource_failure_event
 {
     resource_failure_type event_sub_type;
 } __attribute__((packed)) wlan_low_resource_failure_event_t;
+
+/* EVENT_WLAN_POWERSAVE_WOW */
+typedef struct {
+    u8 event_subtype;
+    u8 wow_type;
+    u8 wow_magic_pattern[6];
+    u8 wow_del_ptrn_id;
+    u8 wow_wakeup_cause;
+    u8 wow_wakeup_cause_pbm_ptrn_id;
+} __attribute__((packed)) wlan_wow_payload_t;
+
+/* EVENT_WLAN_POWERSAVE_WOW_STATS */
+typedef struct {
+    u32 wow_ucast_wake_up_count;
+    u32 wow_bcast_wake_up_count;
+    u32 wow_ipv4_mcast_wake_up_count;
+    u32 wow_ipv6_mcast_wake_up_count;
+    u32 wow_ipv6_mcast_ra_stats;
+    u32 wow_ipv6_mcast_ns_stats;
+    u32 wow_ipv6_mcast_na_stats;
+    u32 wow_pno_match_wake_up_count;
+    u32 wow_pno_complete_wake_up_count;
+    u32 wow_gscan_wake_up_count;
+    u32 wow_low_rssi_wake_up_count;
+    u32 wow_rssi_breach_wake_up_count;
+    u32 wow_icmpv4_count;
+    u32 wow_icmpv6_count;
+    u32 wow_oem_response_wake_up_count;
+    u32 Reserved_1;
+    u32 Reserved_2;
+    u32 Reserved_3;
+    u32 Reserved_4;
+} __attribute__((packed)) wlan_wow_stats_t;
+
+/* EVENT_WLAN_STA_KICKOUT */
+typedef struct {
+    u32 reasoncode;
+    u8 peer_mac[6];
+    u8 vdev_id;
+} __attribute__((packed)) wlan_kickout_t;
+
+/* EVENT_WLAN_BRINGUP_STATUS */
+typedef struct {
+    u16 wlan_status;
+    u8 driver_version[10];
+} __attribute__((packed)) wlan_status_payload_t;
 
 #endif /* WIFILOGGER_EVENT_DEFS_H */

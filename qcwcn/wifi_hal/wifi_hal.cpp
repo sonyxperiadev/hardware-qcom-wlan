@@ -2704,6 +2704,7 @@ public:
     virtual wifi_error create() {
         int nl80211_id = genl_ctrl_resolve(mInfo->cmd_sock, "nl80211");
         wifi_error ret = mMsg.create(nl80211_id, NL80211_CMD_GET_WIPHY, NLM_F_DUMP, 0);
+        mMsg.put_flag(NL80211_ATTR_SPLIT_WIPHY_DUMP);
 
         return ret;
     }

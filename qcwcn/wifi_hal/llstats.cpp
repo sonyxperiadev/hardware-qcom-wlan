@@ -1165,7 +1165,7 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
 
                         memset(pIfaceStat, 0, resultsBufSize);
                         if(mResultsParams.iface_stat) {
-                            if(resultsBufSize > sizeof(wifi_iface_stat)) {
+                            if(resultsBufSize >= sizeof(wifi_iface_stat)) {
                                 memcpy ( pIfaceStat, mResultsParams.iface_stat,
                                     sizeof(wifi_iface_stat));
                                 free (mResultsParams.iface_stat);
