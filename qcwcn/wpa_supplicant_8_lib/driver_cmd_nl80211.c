@@ -132,6 +132,7 @@
 #define NEXT2_TWT_STR           "next2_twt"
 #define NEXT_TWT_SIZE_STR       "next_twt_size"
 #define PAUSE_DURATION_STR      "pause_duration"
+#define WAKE_TSF_STR            "wake_tsf"
 
 #define DIALOG_ID_STR_LEN               strlen(DIALOG_ID_STR)
 #define REQ_TYPE_STR_LEN                strlen(REQ_TYPE_STR)
@@ -151,6 +152,7 @@
 #define NEXT2_TWT_STR_LEN		strlen(NEXT2_TWT_STR)
 #define NEXT_TWT_SIZE_STR_LEN		strlen(NEXT_TWT_SIZE_STR)
 #define PAUSE_DURATION_STR_LEN          strlen(PAUSE_DURATION_STR)
+#define WAKE_TSF_STR_LEN                strlen(WAKE_TSF_STR)
 
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
@@ -184,6 +186,7 @@ struct twt_setup_parameters {
 	u32 max_wake_intvl;
 	u32 min_wake_duration;
 	u32 max_wake_duration;
+	u64 wake_tsf;
 };
 
 struct twt_resume_parameters {
@@ -2598,6 +2601,25 @@ static int check_for_twt_cmd(char **cmd)
 	}
 }
 
+static u64 get_u64_from_string(char *cmd_string, int *ret)
+{
+	u64 val = 0;
+	char *cmd = cmd_string;
+
+	while (*cmd != ' ')
+		cmd++;
+
+	*ret = 0;
+	errno = 0;
+	val = strtoll(cmd_string, NULL, 10);
+	if (errno == ERANGE || (errno != 0 && val == 0)) {
+		wpa_printf(MSG_ERROR, "invalid value");
+		*ret = -EINVAL;
+        }
+	return val;
+}
+
+
 static u32 get_u32_from_string(char *cmd_string, int *ret)
 {
 	u32 val = 0;
@@ -2682,6 +2704,8 @@ void print_setup_cmd_values(struct twt_setup_parameters *twt_setup_params)
 		   twt_setup_params->min_wake_duration);
 	wpa_printf(MSG_DEBUG, "TWT: max wake duration: %d ",
 		   twt_setup_params->max_wake_duration);
+	wpa_printf(MSG_DEBUG, "TWT: wake tsf: 0x%lx ",
+		   twt_setup_params->wake_tsf);
 }
 
 static int check_cmd_input(char *cmd_string)
@@ -2889,6 +2913,14 @@ int process_twt_setup_cmd_string(char *cmd,
 		cmd = move_to_next_str(cmd);
 	}
 
+	if (strncmp(cmd, WAKE_TSF_STR, WAKE_TSF_STR_LEN) == 0) {
+		cmd += (WAKE_TSF_STR_LEN + 1);
+		twt_setup_params->wake_tsf = get_u64_from_string(cmd, &ret);
+		if (ret < 0)
+			return ret;
+		cmd = move_to_next_str(cmd);
+	}
+
 	print_setup_cmd_values(twt_setup_params);
 
 	return 0;
@@ -3018,6 +3050,15 @@ int prepare_twt_setup_nlmsg(struct nl_msg *nlmsg,
 		twt_setup_params->max_wake_duration)) {
 		wpa_printf(MSG_ERROR,"TWT: Failed to put max wake dur");
 		goto fail;
+	}
+
+	if (twt_setup_params->wake_tsf) {
+		if (nla_put_u64(nlmsg,
+			QCA_WLAN_VENDOR_ATTR_TWT_SETUP_WAKE_TIME_TSF,
+			twt_setup_params->wake_tsf)) {
+			wpa_printf(MSG_ERROR,"TWT: Failed to put wake time tsf value");
+			goto fail;
+		}
 	}
 
 	nla_nest_end(nlmsg, twt_attr);
