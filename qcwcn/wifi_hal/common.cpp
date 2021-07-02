@@ -386,6 +386,9 @@ lowi_cb_table_t *getLowiCallbackTable(u32 requested_lowi_capabilities)
                 "Returned error:%d. Exit.", __FUNCTION__, ret);
             goto cleanup;
         }
+    } else if (lowiSupportedCapabilities == 0 &&
+               LowiWifiHalApi->get_lowi_capabilities) {
+            LowiWifiHalApi->get_lowi_capabilities(&lowiSupportedCapabilities);
     }
 
     if ((lowiSupportedCapabilities & requested_lowi_capabilities) == 0) {
