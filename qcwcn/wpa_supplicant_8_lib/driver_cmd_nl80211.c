@@ -40,6 +40,7 @@
 #define UNUSED(x)	(void)(x)
 #define NL80211_ATTR_MAX_INTERNAL 256
 #define CSI_STATUS_REJECTED      -1
+#define CSI_STATUS_SUCCESS        0
 #define ENHANCED_CFR_VER          2
 #define CSI_GROUP_BITMAP          1
 #define CSI_DEFAULT_GROUP_ID      0
@@ -56,6 +57,7 @@ struct csi_global_params {
 	struct i802_bss *bss;
 	enum csi_state current_state;
 	char connected_bssid[MAC_ADDR_LEN];
+	int transport_mode;
 };
 
 static struct csi_global_params g_csi_param = {0};
@@ -647,15 +649,32 @@ int wpa_driver_nl80211_oem_event(struct wpa_driver_nl80211_data *drv,
 	return ret;
 }
 
+static int wpa_driver_restart_csi(struct i802_bss *bss, int *status);
+
 int wpa_driver_nl80211_driver_event(struct wpa_driver_nl80211_data *drv,
 					   u32 vendor_id, u32 subcmd,
 					   u8 *data, size_t len)
 {
 	int ret = -1;
+	int status = -1;
+	struct i802_bss *bss;
 	switch(subcmd) {
 		case QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT:
 			ret = wpa_driver_nl80211_oem_event(drv, vendor_id, subcmd,
 					data, len);
+			break;
+		case QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH:
+			if(g_csi_param.current_state == CSI_STATE_START) {
+				bss = get_bss_ifindex(drv, drv->ifindex);
+				if(bss == NULL) {
+					wpa_printf(MSG_DEBUG, "%s: bss is NULL",
+							__func__);
+					break;
+				}
+				if(wpa_driver_restart_csi(bss, &status))
+					wpa_printf(MSG_DEBUG, "csi_restart failed %d",
+						   status);
+			}
 			break;
 		default:
 			break;
@@ -2138,8 +2157,8 @@ static int wpa_driver_handle_csi_cmd(struct i802_bss *bss, char *cmd,
 
 		if (transport_mode == 1 || transport_mode == -1)
 			transport_mode = 1;
-		else if (transport_mode == 0)
-			transport_mode = 0;
+		g_csi_param.transport_mode = transport_mode;
+
 		wpa_driver_start_csi_capture(bss, status, transport_mode);
 		if (*status == 0 && csi_duration > 0) {
 			signal(SIGALRM, stop_csi_callback);
@@ -2159,6 +2178,28 @@ static int wpa_driver_handle_csi_cmd(struct i802_bss *bss, char *cmd,
 		return WPA_DRIVER_OEM_STATUS_FAILURE;
 	}
 
+	return WPA_DRIVER_OEM_STATUS_SUCCESS;
+}
+
+static int wpa_driver_restart_csi(struct i802_bss *bss, int *status)
+{
+	wpa_driver_send_get_scan_cmd(bss, status);
+	if (g_csi_param.connected_bssid[0] == 0xff) {
+		wpa_printf(MSG_DEBUG, "%s: Not connected", __func__);
+		*status = CSI_STATUS_REJECTED;
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+	/* Stop CSI capture on previous bss */
+	if(wpa_driver_stop_csi_capture(g_csi_param.bss, status)) {
+		wpa_printf(MSG_DEBUG, "%s: csi stop failed", __func__);
+	}
+	g_csi_param.bss = bss;
+	if(wpa_driver_start_csi_capture(g_csi_param.bss, status,
+				g_csi_param.transport_mode)) {
+		*status = CSI_STATUS_REJECTED;
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+	*status = CSI_STATUS_SUCCESS;
 	return WPA_DRIVER_OEM_STATUS_SUCCESS;
 }
 
