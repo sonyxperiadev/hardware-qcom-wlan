@@ -39,8 +39,39 @@
 #define WPA_PS_DISABLED		1
 #define UNUSED(x)	(void)(x)
 #define NL80211_ATTR_MAX_INTERNAL 256
+#define CSI_STATUS_REJECTED      -1
+#define CSI_STATUS_SUCCESS        0
+#define ENHANCED_CFR_VER          2
+#define CSI_GROUP_BITMAP          1
+#define CSI_DEFAULT_GROUP_ID      0
+#define CSI_FC_STYPE_BEACON       8
+#define CSI_MGMT_BEACON           (1<<WLAN_FC_STYPE_BEACON)
 
 /* ============ nl80211 driver extensions ===========  */
+enum csi_state {
+	CSI_STATE_STOP = 0,
+	CSI_STATE_START,
+};
+
+struct csi_global_params {
+	struct i802_bss *bss;
+	enum csi_state current_state;
+	char connected_bssid[MAC_ADDR_LEN];
+	int transport_mode;
+};
+
+static struct csi_global_params g_csi_param = {0};
+
+static char *get_next_arg(char *cmd)
+{
+	char *pos = cmd;
+
+	while (*pos != ' ' && *pos != '\0')
+		pos++;
+
+	return pos;
+}
+
 static int wpa_driver_cmd_set_ani_level(struct i802_bss *bss, int mode, int ofdmlvl)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -642,15 +673,32 @@ int wpa_driver_nl80211_oem_event(struct wpa_driver_nl80211_data *drv,
 	return ret;
 }
 
+static int wpa_driver_restart_csi(struct i802_bss *bss, int *status);
+
 int wpa_driver_nl80211_driver_event(struct wpa_driver_nl80211_data *drv,
 					   u32 vendor_id, u32 subcmd,
 					   u8 *data, size_t len)
 {
 	int ret = -1;
+	int status = -1;
+	struct i802_bss *bss;
 	switch(subcmd) {
 		case QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT:
 			ret = wpa_driver_nl80211_oem_event(drv, vendor_id, subcmd,
 					data, len);
+			break;
+		case QCA_NL80211_VENDOR_SUBCMD_KEY_MGMT_ROAM_AUTH:
+			if(g_csi_param.current_state == CSI_STATE_START) {
+				bss = get_bss_ifindex(drv, drv->ifindex);
+				if(bss == NULL) {
+					wpa_printf(MSG_DEBUG, "%s: bss is NULL",
+							__func__);
+					break;
+				}
+				if(wpa_driver_restart_csi(bss, &status))
+					wpa_printf(MSG_DEBUG, "csi_restart failed %d",
+						   status);
+			}
 			break;
 		default:
 			break;
@@ -1941,6 +1989,329 @@ static int wpa_driver_cmd_get_thermal_info(struct i802_bss *bss, int *result, in
 	return ret;
 }
 
+static int get_scan_handler(struct nl_msg *msg, void *arg)
+{
+	struct genlmsghdr *msg_hdr;
+	struct nlattr *attr[NL80211_ATTR_MAX + 1];
+	struct resp_info *info = (struct resp_info *)arg;
+	struct nlattr *bss_attr[NL80211_BSS_MAX + 1];
+	char *bssid;
+	static struct nla_policy get_scan_policy[NL80211_BSS_MAX + 1] = {
+		[NL80211_BSS_BSSID] = {},
+		[NL80211_BSS_FREQUENCY] = { .type = NLA_U32 },
+		[NL80211_BSS_STATUS] = { .type = NLA_U32 },
+		[NL80211_BSS_CHAN_WIDTH] = { .type = NLA_U32 },
+	};
+
+	if (!info) {
+		wpa_printf(MSG_DEBUG, "resp_info is NULL");
+		return NL_SKIP;
+	}
+
+	msg_hdr = (struct genlmsghdr *)nlmsg_data(nlmsg_hdr(msg));
+	nla_parse(attr, NL80211_ATTR_MAX, genlmsg_attrdata(msg_hdr, 0),
+		  genlmsg_attrlen(msg_hdr, 0), NULL);
+
+	if (!attr[NL80211_ATTR_BSS]) {
+		wpa_printf(MSG_DEBUG, "no bss info");
+		return NL_SKIP;
+	}
+
+	if (nla_parse_nested(bss_attr, NL80211_BSS_MAX,
+			     attr[NL80211_ATTR_BSS],
+			     get_scan_policy)) {
+		wpa_printf(MSG_DEBUG, "parse bss attr fail");
+		return NL_SKIP;
+	}
+
+	if (!bss_attr[NL80211_BSS_BSSID])
+		return NL_SKIP;
+
+	if (!bss_attr[NL80211_BSS_STATUS])
+		return NL_SKIP;
+
+	if (nla_get_u32(bss_attr[NL80211_BSS_STATUS]) !=
+	    NL80211_BSS_STATUS_ASSOCIATED)
+		return NL_SKIP;
+
+	bssid = nla_data(bss_attr[NL80211_BSS_BSSID]);
+	os_memcpy(g_csi_param.connected_bssid, bssid, MAC_ADDR_LEN);
+
+	wpa_printf(MSG_DEBUG, "get connected bss");
+	if (bss_attr[NL80211_BSS_FREQUENCY])
+		wpa_printf(MSG_DEBUG, "freq %d", nla_get_u32(bss_attr[NL80211_BSS_FREQUENCY]));
+
+	if (bss_attr[NL80211_BSS_CHAN_WIDTH])
+		wpa_printf(MSG_DEBUG, "BW %d", nla_get_u32(bss_attr[NL80211_BSS_CHAN_WIDTH]));
+
+	return 0;
+}
+
+static int wpa_driver_send_get_scan_cmd(struct i802_bss *bss, int *status)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *nlmsg;
+	struct resp_info info;
+
+	os_memset(g_csi_param.connected_bssid, 0xff, MAC_ADDR_LEN);
+	nlmsg = prepare_nlmsg(drv, bss->ifname, NL80211_CMD_GET_SCAN, 0, NLM_F_DUMP);
+	if (!nlmsg) {
+		wpa_printf(MSG_ERROR, "Failed to allocate nl message");
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	*status = send_nlmsg((struct nl_sock *)drv->global->nl, nlmsg,
+			     get_scan_handler, &info);
+	if (*status != 0) {
+		wpa_printf(MSG_ERROR, "Failed to send nl message with err %d", *status);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	return WPA_DRIVER_OEM_STATUS_SUCCESS;
+}
+
+static int wpa_driver_start_csi_capture(struct i802_bss *bss, int *status,
+					int transport_mode)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *nlmsg;
+	struct nlattr *attr, *attr_table, *attr_entry;
+	char ta_mask[MAC_ADDR_LEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
+	nlmsg = prepare_vendor_nlmsg(drv, bss->ifname,
+				     QCA_NL80211_VENDOR_SUBCMD_PEER_CFR_CAPTURE_CFG);
+	if (!nlmsg) {
+		wpa_printf(MSG_ERROR, "Failed to allocate nl message");
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	attr = nla_nest_start(nlmsg, NL80211_ATTR_VENDOR_DATA);
+	if (!attr) {
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put_u8(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_VERSION,
+		       ENHANCED_CFR_VER)) {
+		wpa_printf(MSG_ERROR, "Failed to csi version");
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put_u8(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_DATA_TRANSPORT_MODE,
+		       transport_mode)) {
+		wpa_printf(MSG_ERROR, "Failed to set transport mode");
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put_flag(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_ENABLE)) {
+		wpa_printf(MSG_ERROR, "Failed to csi enable flag");
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_ENABLE_GROUP_BITMAP,
+			CSI_GROUP_BITMAP)) {
+		wpa_printf(MSG_ERROR, "Failed to csi group bitmap");
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_CAPTURE_TYPE,
+			QCA_WLAN_VENDOR_CFR_TA_RA)) {
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	attr_table = nla_nest_start(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_GROUP_TABLE);
+	if (!attr_table) {
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	attr_entry = nla_nest_start(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_GROUP_ENTRY);
+	if (!attr_entry) {
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_GROUP_NUMBER,
+			CSI_DEFAULT_GROUP_ID)) {
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_GROUP_MGMT_FILTER,
+			CSI_MGMT_BEACON)) {
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_GROUP_TA,
+		    MAC_ADDR_LEN, g_csi_param.connected_bssid)) {
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_GROUP_TA_MASK,
+		    MAC_ADDR_LEN, ta_mask)) {
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+	nla_nest_end(nlmsg, attr_entry);
+	nla_nest_end(nlmsg, attr_table);
+	nla_nest_end(nlmsg, attr);
+
+	*status = send_nlmsg((struct nl_sock *)drv->global->nl, nlmsg, NULL, NULL);
+	if (*status != 0) {
+		wpa_printf(MSG_ERROR, "Failed to send nl message with err %d", *status);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	g_csi_param.current_state = CSI_STATE_START;
+
+	return WPA_DRIVER_OEM_STATUS_SUCCESS;
+}
+
+static int wpa_driver_stop_csi_capture(struct i802_bss *bss, int *status)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *nlmsg;
+	struct nlattr *attr;
+
+	nlmsg = prepare_vendor_nlmsg(drv, bss->ifname,
+				     QCA_NL80211_VENDOR_SUBCMD_PEER_CFR_CAPTURE_CFG);
+	if (!nlmsg) {
+		wpa_printf(MSG_ERROR, "Failed to allocate nl message");
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	attr = nla_nest_start(nlmsg, NL80211_ATTR_VENDOR_DATA);
+	if (!attr) {
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	if (nla_put_u8(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_VERSION,
+			ENHANCED_CFR_VER)) {
+		wpa_printf(MSG_ERROR, "Failed to csi version");
+		nlmsg_free(nlmsg);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	wpa_printf(MSG_DEBUG, "send stop csi cmd");
+	nla_nest_end(nlmsg, attr);
+	*status = send_nlmsg((struct nl_sock *)drv->global->nl, nlmsg, NULL, NULL);
+	if (*status != 0) {
+		wpa_printf(MSG_ERROR, "Failed to send nl message with err %d", *status);
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	g_csi_param.current_state = CSI_STATE_STOP;
+
+	return WPA_DRIVER_OEM_STATUS_SUCCESS;
+}
+
+static void stop_csi_callback(int nsec)
+{
+	int status = 0;
+
+	wpa_printf(MSG_DEBUG, "enter %s, nsec %d", __func__, nsec);
+
+	wpa_driver_stop_csi_capture(g_csi_param.bss, &status);
+	if (status)
+		wpa_printf(MSG_ERROR, "Stop CSI failed");
+}
+
+static int wpa_driver_handle_csi_cmd(struct i802_bss *bss, char *cmd,
+				     char *buf, size_t buf_len,
+				     int *status)
+{
+	int csi_duration = -1;
+	int transport_mode = -1;
+	char *next_arg;
+
+	cmd = skip_white_space(cmd);
+	wpa_printf(MSG_DEBUG, "cmd:%s", cmd);
+	if (os_strncasecmp(cmd, "start", 5) == 0) {
+		next_arg = get_next_arg(cmd);
+		csi_duration = atoi(next_arg);
+
+		if (csi_duration < 0) {
+			wpa_printf(MSG_ERROR, "Invalid duration");
+			snprintf(buf, buf_len, "FAIL, Invalid duration");
+			*status = CSI_STATUS_REJECTED;
+			return WPA_DRIVER_OEM_STATUS_FAILURE;
+		}
+
+		wpa_driver_send_get_scan_cmd(bss, status);
+		if (g_csi_param.connected_bssid[0] == 0xff) {
+			wpa_printf(MSG_DEBUG, "Not connected");
+			snprintf(buf, buf_len, "FAIL, Not connected");
+			*status = CSI_STATUS_REJECTED;
+			return WPA_DRIVER_OEM_STATUS_FAILURE;
+		}
+
+		if (g_csi_param.current_state == CSI_STATE_START) {
+			wpa_driver_stop_csi_capture(bss, status);
+			alarm(0);
+		}
+
+		g_csi_param.bss = bss;
+		cmd += 6;
+		next_arg = get_next_arg(cmd);
+		if (*next_arg != '\0' && *next_arg == ' ')
+			transport_mode = atoi(next_arg);
+
+		if (transport_mode == 1 || transport_mode == -1)
+			transport_mode = 1;
+		g_csi_param.transport_mode = transport_mode;
+
+		wpa_driver_start_csi_capture(bss, status, transport_mode);
+		if (*status == 0 && csi_duration > 0) {
+			signal(SIGALRM, stop_csi_callback);
+			alarm(csi_duration);
+			wpa_printf(MSG_DEBUG, "set alarm %ds done", csi_duration);
+		}
+	} else if (os_strncasecmp(cmd, "stop", 4) == 0) {
+		if (g_csi_param.current_state != CSI_STATE_START)
+			return WPA_DRIVER_OEM_STATUS_SUCCESS;
+
+		wpa_driver_stop_csi_capture(bss, status);
+		wpa_printf(MSG_DEBUG, "stop csi cmd");
+	} else {
+		wpa_printf(MSG_ERROR, "invalid command");
+		*status = CSI_STATUS_REJECTED;
+		snprintf(buf, buf_len, "FAIL, Invalid command");
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+
+	return WPA_DRIVER_OEM_STATUS_SUCCESS;
+}
+
+static int wpa_driver_restart_csi(struct i802_bss *bss, int *status)
+{
+	wpa_driver_send_get_scan_cmd(bss, status);
+	if (g_csi_param.connected_bssid[0] == 0xff) {
+		wpa_printf(MSG_DEBUG, "%s: Not connected", __func__);
+		*status = CSI_STATUS_REJECTED;
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+	/* Stop CSI capture on previous bss */
+	if(wpa_driver_stop_csi_capture(g_csi_param.bss, status)) {
+		wpa_printf(MSG_DEBUG, "%s: csi stop failed", __func__);
+	}
+	g_csi_param.bss = bss;
+	if(wpa_driver_start_csi_capture(g_csi_param.bss, status,
+				g_csi_param.transport_mode)) {
+		*status = CSI_STATUS_REJECTED;
+		return WPA_DRIVER_OEM_STATUS_FAILURE;
+	}
+	*status = CSI_STATUS_SUCCESS;
+	return WPA_DRIVER_OEM_STATUS_SUCCESS;
+}
+
 int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 				  size_t buf_len )
 {
@@ -1999,6 +2370,9 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		return wpa_driver_cmd_set_congestion_report(priv, cmd + 22);
 	} else if (os_strncasecmp(cmd, "SET_TXPOWER ", 12) == 0) {
 		return wpa_driver_cmd_set_tx_power(priv, cmd + 12);
+	} else if (os_strncasecmp(cmd, "CSI", 3) == 0) {
+		cmd += 3;
+		return wpa_driver_handle_csi_cmd(bss, cmd, buf, buf_len, &status);
 	} else if(os_strncasecmp(cmd, "GETSTATSBSSINFO", 15) == 0) {
 
 		struct resp_info info,info2;
