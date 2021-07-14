@@ -1947,7 +1947,7 @@ static int wpa_driver_send_get_scan_cmd(struct i802_bss *bss,
 
 static int wpa_driver_start_csi_capture(struct i802_bss *bss, char *cmd,
 				     char *buf, size_t buf_len,
-				     int *status)
+				     int *status, int transport_mode)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *nlmsg;
@@ -1976,8 +1976,7 @@ static int wpa_driver_start_csi_capture(struct i802_bss *bss, char *cmd,
 	}
 
 	if (nla_put_u8(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_CFR_DATA_TRANSPORT_MODE,
-		       QCA_WLAN_VENDOR_CFR_DATA_NETLINK_EVENTS)) {
-		       //QCA_WLAN_VENDOR_CFR_DATA_RELAY_FS)) {
+		       transport_mode)) {
 		wpa_printf(MSG_ERROR, "Failed to set transport mode");
 		nlmsg_free(nlmsg);
 		return WPA_DRIVER_OEM_STATUS_FAILURE;
@@ -2118,6 +2117,7 @@ static int wpa_driver_handle_csi_cmd(struct i802_bss *bss, char *cmd,
 				     int *status)
 {
 	int csi_duration = -1;
+	int transport_mode = -1;
 	char *next_arg;
 
 	cmd = skip_white_space(cmd);
@@ -2147,7 +2147,16 @@ static int wpa_driver_handle_csi_cmd(struct i802_bss *bss, char *cmd,
 		}
 
 		g_csi_param.bss = bss;
-		wpa_driver_start_csi_capture(bss, cmd, buf, buf_len, status);
+		cmd += 6;
+		next_arg = get_next_arg(cmd);
+		if (*next_arg != '\0' && *next_arg == ' ')
+			transport_mode = atoi(next_arg);
+
+		if (transport_mode == 1 || transport_mode == -1)
+			transport_mode = 1;
+		else if (transport_mode == 0)
+			transport_mode = 0;
+		wpa_driver_start_csi_capture(bss, cmd, buf, buf_len, status, transport_mode);
 		if (*status == 0) {
 			signal(SIGALRM, stop_csi_callback);
 			alarm(csi_duration);
