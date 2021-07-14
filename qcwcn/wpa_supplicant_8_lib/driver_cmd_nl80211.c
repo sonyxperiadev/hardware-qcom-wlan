@@ -42,7 +42,6 @@
 #define CSI_STATUS_REJECTED      -1
 #define ENHANCED_CFR_VER          2
 #define CSI_GROUP_BITMAP          1
-#define MAX_CSI_DURATION          900 /* second */
 #define CSI_DEFAULT_GROUP_ID      0
 #define CSI_FC_STYPE_BEACON       8
 #define CSI_MGMT_BEACON           (1<<WLAN_FC_STYPE_BEACON)
@@ -2126,7 +2125,7 @@ static int wpa_driver_handle_csi_cmd(struct i802_bss *bss, char *cmd,
 		next_arg = get_next_arg(cmd);
 		csi_duration = atoi(next_arg);
 
-		if (csi_duration <= 0 || csi_duration > MAX_CSI_DURATION) {
+		if (csi_duration < 0) {
 			wpa_printf(MSG_ERROR, "Invalid duration");
 			snprintf(buf, buf_len, "FAIL, Invalid duration");
 			*status = CSI_STATUS_REJECTED;
@@ -2157,7 +2156,7 @@ static int wpa_driver_handle_csi_cmd(struct i802_bss *bss, char *cmd,
 		else if (transport_mode == 0)
 			transport_mode = 0;
 		wpa_driver_start_csi_capture(bss, cmd, buf, buf_len, status, transport_mode);
-		if (*status == 0) {
+		if (*status == 0 && csi_duration > 0) {
 			signal(SIGALRM, stop_csi_callback);
 			alarm(csi_duration);
 			wpa_printf(MSG_DEBUG, "set alarm %ds done", csi_duration);
