@@ -1189,6 +1189,7 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                             status = WIFI_ERROR_INVALID_ARGS;
                             goto cleanup;
                         }
+                        num_rates = 0;
                         for (peerInfo = (struct nlattr *) nla_data(tb_vendor[
                             QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO]),
                             rem = nla_len(tb_vendor[
@@ -1200,7 +1201,8 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                                 QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX+ 1];
                             pPeerStats = (wifi_peer_info *) (
                                            (u8 *)pIfaceStat->peer_info
-                                           + (i++ * sizeof(wifi_peer_info)));
+                                           + (i++ * sizeof(wifi_peer_info))
+                                           + (num_rates * sizeof(wifi_rate_stat)));
                             nla_parse(tb2, QCA_WLAN_VENDOR_ATTR_LL_STATS_MAX,
                                 (struct nlattr *) nla_data(peerInfo),
                                 nla_len(peerInfo), NULL);
@@ -1209,6 +1211,7 @@ int LLStatsCommand::handleResponse(WifiEvent &reply)
                             {
                                 goto cleanup;
                             }
+                            num_rates += pPeerStats->num_rate;
                         }
                     }
 
