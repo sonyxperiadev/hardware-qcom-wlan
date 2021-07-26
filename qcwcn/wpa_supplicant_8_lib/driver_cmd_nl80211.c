@@ -1765,6 +1765,11 @@ static int wpa_driver_get_all_sta_info(struct i802_bss *bss, int *status)
 	struct sta_info *sta;
 	int ret, total_ret = 0;
 
+	if(bss->drv && bss->drv->nlmode != NL80211_IFTYPE_AP) {
+		wpa_printf(MSG_ERROR,"Not a hapd interface");
+		return -1;
+	}
+
 	if (!hapd) {
 		wpa_printf(MSG_ERROR,"hapd is NULL");
 		return -1;
