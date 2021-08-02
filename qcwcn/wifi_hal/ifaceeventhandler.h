@@ -46,6 +46,10 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+typedef struct{
+    int num_entries;
+    radar_history_result *entries;
+} RadarHistoryResultsParams;
 
 class wifiEventHandler: public WifiCommand
 {
@@ -96,7 +100,9 @@ private:
     int mfilter_packet_length;
     u32 res_size;
     wifi_usable_channel *channel_buff;
+    RadarHistoryResultsParams mRadarResultParams;
     virtual wifi_error wifiParseCapabilities(struct nlattr **tbVendor);
+    virtual wifi_error wifiParseRadarHistory();
 
 public:
     WifihalGeneric(wifi_handle handle, int id, u32 vendor_id, u32 subcmd);
@@ -117,6 +123,9 @@ public:
     virtual wifi_error wifiGetCapabilities(wifi_interface_handle handle);
     virtual void set_channels_buff(wifi_usable_channel *channels);
     virtual u32 get_results_size(void);
+    virtual wifi_error copyCachedRadarHistory(radar_history_result *resultBuf,
+            int resultBufSize, int *numResults);
+    virtual void freeCachedRadarHistory();
 };
 
 /**
