@@ -1930,7 +1930,6 @@ wifi_error wifi_get_ifaces(wifi_handle handle, int *num,
 {
     hal_info *info = (hal_info *)handle;
 
-#ifdef WCNSS_QTI_AOSP
     /* In case of dynamic interface add/remove, interface handles need to be
      * updated so that, interface specific APIs could be instantiated.
      * Reload here to get interfaces which are dynamically added. */
@@ -1946,7 +1945,6 @@ wifi_error wifi_get_ifaces(wifi_handle handle, int *num,
         ALOGE("Failed to init interfaces while wifi_get_ifaces");
         return ret;
     }
-#endif
 
     *interfaces = (wifi_interface_handle *)info->interfaces;
     *num = info->num_interfaces;
