@@ -871,6 +871,20 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u32 length)
     while ((info && !info->clean_up)
           && (length > (count + sizeof(fw_diag_msg_fixed_hdr_t)))) {
         diag_msg_fixed_hdr = (fw_diag_msg_fixed_hdr_t *)(buf + count);
+
+        if (diag_msg_fixed_hdr->diag_event_type > WLAN_DIAG_TYPE_LEGACY_MSG) {
+            hdr_size = sizeof(fw_diag_msg_hdr_v2_t);
+        } else {
+            hdr_size = sizeof(fw_diag_msg_hdr_t);
+        }
+
+        if ((count + hdr_size) > length)
+        {
+            ALOGE("process_fw_diag_msg (%d) - possible buffer over access, length=%d count=%d hdr_size=%d",
+                  diag_msg_fixed_hdr->diag_event_type, length, count, hdr_size);
+            return WIFI_ERROR_UNKNOWN;
+        }
+
         switch (diag_msg_fixed_hdr->diag_event_type) {
             case WLAN_DIAG_TYPE_EVENT:
             case WLAN_DIAG_TYPE_EVENT_V2:
@@ -890,6 +904,12 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u32 length)
                     hdr_size = sizeof(fw_diag_msg_hdr_v2_t);
                     payload = diag_msg_hdr_v2->payload;
                 }
+                if ((count + hdr_size + payloadlen) > length) {
+                    ALOGE("WLAN_DIAG_TYPE_EVENT - possible buffer over access, length=%d count=%d hdr_size=%d payload len=%d",
+                           length, count, hdr_size, payloadlen);
+                    return WIFI_ERROR_UNKNOWN;
+                }
+
                 switch (id) {
                     case EVENT_WLAN_BT_COEX_BT_SCO_START:
                     case EVENT_WLAN_BT_COEX_BT_SCO_STOP:
@@ -987,6 +1007,12 @@ static wifi_error process_fw_diag_msg(hal_info *info, u8* buf, u32 length)
                     hdr_size = sizeof(fw_diag_msg_hdr_v2_t);
                     payload = diag_msg_hdr_v2->payload;
                 }
+                if ((count + hdr_size + payloadlen) > length) {
+                    ALOGE("WLAN_DIAG_TYPE_LOG - possible buffer over access, length=%d count=%d hdr_size=%d payload len=%d",
+                           length, count, hdr_size, payloadlen);
+                    return WIFI_ERROR_UNKNOWN;
+                }
+
                 switch (id) {
                 case LOG_WLAN_EXTSCAN_CAPABILITIES:
                     status = process_log_extscan_capabilities(info,

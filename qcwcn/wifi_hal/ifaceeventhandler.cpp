@@ -205,6 +205,8 @@ WifihalGeneric::WifihalGeneric(wifi_handle handle, int id, u32 vendor_id,
     mCapa = &(info->capa);
     mfilter_packet_read_buffer = NULL;
     mfilter_packet_length = 0;
+    res_size = 0;
+    channel_buff = NULL;
     memset(&mDriverFeatures, 0, sizeof(mDriverFeatures));
 }
 
@@ -220,6 +222,119 @@ WifihalGeneric::~WifihalGeneric()
 wifi_error WifihalGeneric::requestResponse()
 {
     return WifiCommand::requestResponse(mMsg);
+}
+
+static u32 get_wifi_iftype_masks(u32 in_mask)
+{
+    u32 op_mask = 0;
+
+    if (in_mask & BIT(NL80211_IFTYPE_STATION)) {
+        op_mask |= BIT(WIFI_INTERFACE_STA);
+        op_mask |= BIT(WIFI_INTERFACE_TDLS);
+    }
+    if (in_mask & BIT(NL80211_IFTYPE_AP))
+        op_mask |= BIT(WIFI_INTERFACE_SOFTAP);
+    if (in_mask & BIT(NL80211_IFTYPE_P2P_CLIENT))
+        op_mask |= BIT(WIFI_INTERFACE_P2P_CLIENT);
+    if (in_mask & BIT(NL80211_IFTYPE_P2P_GO))
+        op_mask |= BIT(WIFI_INTERFACE_P2P_GO);
+    if (in_mask & BIT(NL80211_IFTYPE_NAN))
+        op_mask |= BIT(WIFI_INTERFACE_NAN);
+
+    return op_mask;
+}
+
+static wifi_channel_width get_channel_width(u32 nl_width)
+{
+    switch(nl_width) {
+    case NL80211_CHAN_WIDTH_20:
+         return WIFI_CHAN_WIDTH_20;
+    case NL80211_CHAN_WIDTH_40:
+         return WIFI_CHAN_WIDTH_40;
+    case NL80211_CHAN_WIDTH_80:
+         return WIFI_CHAN_WIDTH_80;
+    case NL80211_CHAN_WIDTH_160:
+         return WIFI_CHAN_WIDTH_160;
+    case NL80211_CHAN_WIDTH_80P80:
+         return WIFI_CHAN_WIDTH_80P80;
+    case NL80211_CHAN_WIDTH_5:
+         return WIFI_CHAN_WIDTH_5;
+    case NL80211_CHAN_WIDTH_10:
+         return WIFI_CHAN_WIDTH_10;
+    default:
+         return WIFI_CHAN_WIDTH_INVALID;
+    }
+}
+
+int WifihalGeneric::handle_response_usable_channels(struct nlattr *VendorData,
+                                                    u32 mDataLen)
+{
+    struct nlattr *tb[QCA_WLAN_VENDOR_ATTR_USABLE_CHANNELS_MAX + 1];
+    struct nlattr *curr_attr;
+    wifi_usable_channel *chan_info = NULL;
+    int rem;
+    u32 currSize = 0;
+
+    if (nla_parse(tb, QCA_WLAN_VENDOR_ATTR_USABLE_CHANNELS_MAX,
+                  (struct nlattr *)mVendorData, mDataLen, NULL)) {
+         ALOGE("Failed to parse NL channels list");
+         return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if (!tb[QCA_WLAN_VENDOR_ATTR_USABLE_CHANNELS_CHAN_INFO]) {
+         ALOGE("%s: USABLE_CHANNELS_CHAN_INFO not found", __FUNCTION__);
+         return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    for_each_nested_attribute(curr_attr,
+                     tb[QCA_WLAN_VENDOR_ATTR_USABLE_CHANNELS_CHAN_INFO], rem) {
+         struct nlattr *ch_info[QCA_WLAN_VENDOR_ATTR_CHAN_INFO_MAX + 1];
+
+         if (currSize >= mSetSizeMax) {
+              ALOGE("Got max channels %d completed", mSetSizeMax);
+              break;
+         }
+
+         if (nla_parse_nested(ch_info, QCA_WLAN_VENDOR_ATTR_CHAN_INFO_MAX,
+                              curr_attr, NULL)) {
+              ALOGE("Failed to get usable channel info");
+              return NL_SKIP;
+         }
+
+         chan_info = &channel_buff[currSize];
+         if (!ch_info[QCA_WLAN_VENDOR_ATTR_CHAN_INFO_PRIMARY_FREQ]) {
+              ALOGE("%s: CHAN_INFO_PRIMARY_FREQ not found",
+                    __FUNCTION__);
+              return NL_SKIP;
+         }
+
+         chan_info->freq = nla_get_u32(ch_info[
+                                  QCA_WLAN_VENDOR_ATTR_CHAN_INFO_PRIMARY_FREQ]);
+         if (!ch_info[QCA_WLAN_VENDOR_ATTR_CHAN_INFO_BANDWIDTH]) {
+              ALOGE("%s: CHAN_INFO_BANDWIDTH not found",
+                    __FUNCTION__);
+              return NL_SKIP;
+         }
+
+         chan_info->width = get_channel_width(nla_get_u32(
+                            ch_info[QCA_WLAN_VENDOR_ATTR_CHAN_INFO_BANDWIDTH]));
+         if (!ch_info[QCA_WLAN_VENDOR_ATTR_CHAN_INFO_IFACE_MODE_MASK]) {
+              ALOGE("%s: CHAN_INFO_IFACE_MODE_MASK not found",
+                    __FUNCTION__);
+              return NL_SKIP;
+         }
+
+         chan_info->iface_mode_mask = get_wifi_iftype_masks(nla_get_u32(
+                      ch_info[QCA_WLAN_VENDOR_ATTR_CHAN_INFO_IFACE_MODE_MASK]));
+         ALOGV("Primary freq %d BW %d iface mask %d", chan_info->freq,
+               chan_info->width, chan_info->iface_mode_mask);
+         currSize++;
+    }
+
+    res_size = currSize;
+    ALOGV("%s: Result size %d", __FUNCTION__, res_size);
+
+    return NL_SKIP;
 }
 
 int WifihalGeneric::handleResponse(WifiEvent &reply)
@@ -436,6 +551,9 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 }
             }
             break;
+        case QCA_NL80211_VENDOR_SUBCMD_USABLE_CHANNELS:
+            return handle_response_usable_channels((struct nlattr *)mVendorData,
+                                                   mDataLen);
         default :
             ALOGE("%s: Wrong Wi-Fi HAL event received %d", __func__, mSubcmd);
     }
@@ -610,6 +728,17 @@ void WifihalGeneric::setPacketBufferParams(u8 *host_packet_buffer, int packet_le
 
 int WifihalGeneric::getBusSize() {
     return firmware_bus_max_size;
+}
+
+void WifihalGeneric::set_channels_buff(wifi_usable_channel* channels)
+{
+    channel_buff = channels;
+    memset(channel_buff, 0, sizeof(wifi_usable_channel) * mSetSizeMax);
+}
+
+u32 WifihalGeneric::get_results_size(void)
+{
+    return res_size;
 }
 
 wifi_error WifihalGeneric::wifiGetCapabilities(wifi_interface_handle handle)
