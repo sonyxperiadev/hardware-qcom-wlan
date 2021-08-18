@@ -3802,6 +3802,17 @@ unpack_twt_get_params_resp(struct nlattr **tb, char *buf, int buf_len)
 	if (!buf)
 		return -EINVAL;
 
+	val = 0;
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_RESPONDER_PM_MODE;
+	if (tb[cmd_id]) {
+		val = nla_get_u8(tb[cmd_id]);
+
+		os_snprintf(temp, TWT_RESP_BUF_LEN, "responder_pm %d", val);
+		buf = result_copy_to_buf(temp, buf, &buf_len);
+		if (!buf)
+			return -EINVAL;
+	}
+
 	len = (buf - start);
 	*buf = '\0';
 
@@ -3970,6 +3981,18 @@ static int wpa_get_twt_setup_resp_val(struct nlattr **tb2, char *buf,
 	buf = result_copy_to_buf(temp, buf, &buf_len);
 	if (!buf)
 		return -EINVAL;
+
+	val = 0;
+	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_RESPONDER_PM_MODE;
+	if (tb2[cmd_id]) {
+		val = nla_get_u8(tb2[cmd_id]);
+
+		os_snprintf(temp, TWT_RESP_BUF_LEN, "responder_pm %d", val);
+		buf = result_copy_to_buf(temp, buf, &buf_len);
+		if (!buf)
+			return -EINVAL;
+	}
+
 	*buf = '\0';
 
 	return 0;
