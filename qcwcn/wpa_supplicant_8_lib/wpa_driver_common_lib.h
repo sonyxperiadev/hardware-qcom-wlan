@@ -30,7 +30,7 @@
 #ifndef WPA_DRIVER_COMMON_LIB
 #define WPA_DRIVER_COMMON_LIB
 
-#include "android_drv.h"	//needed?
+#include "android_drv.h"
 #define OUI_LEN		3
 #define MAX_CMD_LEN	32
 #define MAC_ADDR_LEN	6
@@ -41,6 +41,8 @@
 #define IEEE80211_HE_OPERATION_6G_OPER_MASK 0x00020000
 
 #define HE_OPER_VHT_CH_WIDTH_OFFSET 0
+#define HE_OPER_VHT_CENTER_FRQ_SEG0_OFFSET 1
+#define HE_OPER_VHT_CENTER_FRQ_SEG1_OFFSET 2
 #define HE_OPER_VHT_MAX_OFFSET 2
 
 #define HE_OPER_CO_LOCATED_MAX_OFFSET 0
@@ -95,6 +97,28 @@
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_TARGET_TX_RETRY
 #define GET_STA_INFO_TARGET_TX_RETRY_EXHAUSTED \
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_TARGET_TX_RETRY_EXHAUSTED
+#define GET_STA_INFO_ANI_LEVEL \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_ANI_LEVEL
+#define GET_STA_INFO_LATEST_TX_RATE \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_LATEST_TX_RATE
+#define GET_STA_INFO_LATEST_RIX \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_LATEST_RIX
+#define GET_STA_INFO_TSF_OUT_OF_SYNC_COUNT \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_TSF_OUT_OF_SYNC_COUNT
+#define GET_STA_INFO_LATEST_TX_POWER \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_LATEST_TX_POWER
+#define GET_STA_INFO_ROAM_TRIGGER_REASON \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_ROAM_TRIGGER_REASON
+#define GET_STA_INFO_TARGET_POWER_24G_1MBPS \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_TARGET_POWER_24G_1MBPS
+#define GET_STA_INFO_TARGET_POWER_24G_6MBPS \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_TARGET_POWER_24G_6MBPS
+#define GET_STA_INFO_TARGET_POWER_5G_6MBPS \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_TARGET_POWER_5G_6MBPS
+#define GET_STA_INFO_ROAM_FAIL_REASON \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_ROAM_FAIL_REASON
+#define GET_STA_INFO_ROAM_INVOKE_FAIL_REASON \
+	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_ROAM_INVOKE_FAIL_REASON
 #define GET_STA_INFO_MAX \
 	QCA_WLAN_VENDOR_ATTR_GET_STA_INFO_MAX
 
@@ -117,6 +141,16 @@ struct bss_info {
 	/* Bit mask value of 11kv support */
 	int mask_11kv;
 	u32 disc_reasn_code;
+	u32 ani_level;
+	u32 roam_trigger_reason;
+	u32 roam_fail_reason;
+	u32 roam_invoke_fail_reason;
+	u32 tsf_out_of_sync_count;
+	u32 latest_tx_power;
+	u32 latest_tx_rate;
+	u32 target_power_24g_1mbps;
+	u32 target_power_24g_6mbps;
+	u32 target_power_5g_6mbps;
 };
 
 enum get_info_cmd {
@@ -149,6 +183,13 @@ struct resp_info {
 #ifndef CHANWIDTH_80P80MHZ
 #define CHANWIDTH_80P80MHZ VHT_CHANWIDTH_80P80MHZ
 #endif /* CHANWIDTH_80P80MHZ */
+
+/* HE channel widths */
+
+#define HE_CHANWIDTH_20MHZ     0
+#define HE_CHANWIDTH_40MHZ     1
+#define HE_CHANWIDTH_80MHZ     2
+#define HE_CHANWIDTH_160MHZ    3
 
 /**
  * enum qca_wlan_vendor_attr_get_station - Sub commands used by
@@ -317,6 +358,17 @@ struct remote_sta_info {
 	u32 tx_pkts_fw_total;
 	u32 tx_pkts_fw_retries;
 	u32 tx_pkts_fw_retry_exhausted;
+	u32 ani_level;
+	u32 roam_trigger_reason;
+	u32 roam_fail_reason;
+	u32 roam_invoke_fail_reason;
+	u32 tsf_out_of_sync_count;
+	u32 latest_tx_power;
+	u32 latest_tx_rate;
+	u32 latest_rix;
+	u32 target_power_24g_1mbps;
+	u32 target_power_24g_6mbps;
+	u32 target_power_5g_6mbps;
 	u8 *supp_op_classes; /* Supported Operating Classes element, if
 			      * received, starting from the Length field */
 	u8 *supp_channels;

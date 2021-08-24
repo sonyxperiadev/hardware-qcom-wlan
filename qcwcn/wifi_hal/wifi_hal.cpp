@@ -1930,7 +1930,6 @@ wifi_error wifi_get_ifaces(wifi_handle handle, int *num,
 {
     hal_info *info = (hal_info *)handle;
 
-#ifdef WCNSS_QTI_AOSP
     /* In case of dynamic interface add/remove, interface handles need to be
      * updated so that, interface specific APIs could be instantiated.
      * Reload here to get interfaces which are dynamically added. */
@@ -1946,7 +1945,6 @@ wifi_error wifi_get_ifaces(wifi_handle handle, int *num,
         ALOGE("Failed to init interfaces while wifi_get_ifaces");
         return ret;
     }
-#endif
 
     *interfaces = (wifi_interface_handle *)info->interfaces;
     *num = info->num_interfaces;
@@ -2938,5 +2936,175 @@ wifi_error wifi_get_usable_channels(wifi_handle handle, u32 band_mask,
 
 cleanup:
     delete cmd;
+    return ret;
+}
+
+wifi_error wifi_get_radar_history(wifi_interface_handle handle,
+       radar_history_result *resultBuf, int resultBufSize, int *numResults)
+{
+    wifi_error ret;
+    struct nlattr *nlData;
+    WifihalGeneric *vCommand = NULL;
+    interface_info *ifaceInfo = NULL;
+    wifi_handle wifiHandle = NULL;
+
+    ALOGI("%s: enter", __FUNCTION__);
+
+    if (!handle) {
+        ALOGE("%s: Error, wifi_interface_handle NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ifaceInfo = getIfaceInfo(handle);
+    if (!ifaceInfo) {
+        ALOGE("%s: Error, interface_info NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    wifiHandle = getWifiHandle(handle);
+    if (!wifiHandle) {
+        ALOGE("%s: Error, wifi_handle NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    if (resultBuf == NULL || numResults == NULL) {
+        ALOGE("%s: Error, resultsBuf/numResults NULL pointer", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    vCommand = new WifihalGeneric(wifiHandle, 0,
+            OUI_QCA,
+            QCA_NL80211_VENDOR_SUBCMD_GET_RADAR_HISTORY);
+    if (vCommand == NULL) {
+        ALOGE("%s: Error vCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    /* Create the message */
+    ret = vCommand->create();
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    ret = vCommand->set_iface_id(ifaceInfo->name);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    vCommand->attr_end(nlData);
+
+    ret = vCommand->requestResponse();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: requestResponse() error: %d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    /* No more data, copy the parsed results into the caller's results buffer */
+    ret = vCommand->copyCachedRadarHistory(
+            resultBuf, resultBufSize, numResults);
+
+cleanup:
+    vCommand->freeCachedRadarHistory();
+    delete vCommand;
+    return ret;
+}
+
+#define SIZEOF_TLV_HDR 4
+#define OEM_DATA_TLV_TYPE_HEADER 1
+#define OEM_DATA_CMD_SET_SKIP_CAC   18
+
+struct oem_data_header {
+    u16 cmd_id;
+    u16 request_idx;
+};
+
+static int wifi_add_oem_data_head(int cmd_id, u8* oem_buf, size_t max)
+{
+    struct oem_data_header oem_hdr;
+    oem_hdr.cmd_id = cmd_id;
+    oem_hdr.request_idx = 0;
+
+    if ((SIZEOF_TLV_HDR + sizeof(oem_hdr)) > max) {
+        return 0;
+    }
+
+    wifi_put_le16(oem_buf, OEM_DATA_TLV_TYPE_HEADER);
+    oem_buf += 2;
+    wifi_put_le16(oem_buf, sizeof(oem_hdr));
+    oem_buf += 2;
+    memcpy(oem_buf, (u8 *)&oem_hdr, sizeof(oem_hdr));
+    oem_buf += sizeof(oem_hdr);
+
+    return (SIZEOF_TLV_HDR + sizeof(oem_hdr));
+}
+
+
+/**
+ * This cmd takes effect on the interface the cmd is sent to.
+ * This cmd loses effect when interface is down. (i.e. set mac addr)
+ */
+wifi_error wifi_disable_next_cac(wifi_interface_handle handle) {
+    wifi_error ret;
+    interface_info *ifaceInfo = NULL;
+    struct nlattr *nlData;
+    WifiVendorCommand *vCommand = NULL;
+    u8 oem_buf[16];
+    int oem_buf_len = 0;
+
+    if (!handle) {
+        ALOGE("%s: Error, wifi_interface_handle NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ifaceInfo = getIfaceInfo(handle);
+    if (!ifaceInfo) {
+        ALOGE("%s: Error, interface_info NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ALOGI("%s: enter - iface=%s", __FUNCTION__, ifaceInfo->name);
+    oem_buf_len = wifi_add_oem_data_head(
+            OEM_DATA_CMD_SET_SKIP_CAC, oem_buf, sizeof(oem_buf));
+    if (oem_buf_len <= 0) {
+        ALOGE("%s: fill oem data head failed, cmd=%d", __func__,
+                OEM_DATA_CMD_SET_SKIP_CAC);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ret = initialize_vendor_cmd(handle, get_requestid(),
+                                QCA_NL80211_VENDOR_SUBCMD_OEM_DATA,
+                                &vCommand);
+
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Initialization failed", __func__);
+        return ret;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData) {
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
+        goto cleanup;
+    }
+
+    ret = vCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_OEM_DATA_CMD_DATA,
+                              (char *)oem_buf, oem_buf_len);
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    vCommand->attr_end(nlData);
+    ret = vCommand->requestResponse();
+
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: requestResponse() error: %d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+cleanup:
+    if (vCommand)
+        delete vCommand;
     return ret;
 }
