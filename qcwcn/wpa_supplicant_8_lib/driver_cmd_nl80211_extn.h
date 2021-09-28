@@ -52,7 +52,7 @@ typedef struct
     int (*wpa_driver_nl80211_driver_oem_event)(struct wpa_driver_nl80211_data *drv,
                                 u32 vendor_id, u32 subcmd, u8 *data, size_t len);
     void (*wpa_driver_driver_wpa_msg_oem_cb)(void(*)(struct wpa_driver_nl80211_data *drv,
-								  char *msg));
+								  char *msg, u32 subcmd));
 } wpa_driver_oem_cb_table_t;
 
 typedef wpa_driver_oem_cb_table_t* (wpa_driver_oem_get_cb_table_t)();
