@@ -984,17 +984,25 @@ wifi_error nan_data_request_initiator(transaction_id id,
                 msg->cipher_type))
             goto cleanup;
     }
-    if ( msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK &&
-         msg->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN) {
+    if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK) {
+        if (msg->key_info.body.pmk_info.pmk_len != NAN_PMK_INFO_LEN) {
+            ALOGE("%s: Invalid pmk len:%d", __FUNCTION__,
+                  msg->key_info.body.pmk_info.pmk_len);
+            goto cleanup;
+        }
         if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
             (char *)msg->key_info.body.pmk_info.pmk,
             msg->key_info.body.pmk_info.pmk_len))
             goto cleanup;
-    } else if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE &&
-        msg->key_info.body.passphrase_info.passphrase_len >=
-        NAN_SECURITY_MIN_PASSPHRASE_LEN &&
-        msg->key_info.body.passphrase_info.passphrase_len <=
-        NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+    } else if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE) {
+        if (msg->key_info.body.passphrase_info.passphrase_len <
+            NAN_SECURITY_MIN_PASSPHRASE_LEN ||
+            msg->key_info.body.passphrase_info.passphrase_len >
+            NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            ALOGE("%s: Invalid passphrase len:%d", __FUNCTION__,
+                  msg->key_info.body.passphrase_info.passphrase_len);
+            goto cleanup;
+        }
         if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
             (char *)msg->key_info.body.passphrase_info.passphrase,
             msg->key_info.body.passphrase_info.passphrase_len))
@@ -1087,17 +1095,25 @@ wifi_error nan_data_indication_response(transaction_id id,
                 msg->cipher_type))
             goto cleanup;
     }
-    if ( msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK &&
-         msg->key_info.body.pmk_info.pmk_len == NAN_PMK_INFO_LEN) {
+    if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK) {
+        if (msg->key_info.body.pmk_info.pmk_len != NAN_PMK_INFO_LEN) {
+            ALOGE("%s: Invalid pmk len:%d", __FUNCTION__,
+                  msg->key_info.body.pmk_info.pmk_len);
+            goto cleanup;
+        }
         if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
             (char *)msg->key_info.body.pmk_info.pmk,
             msg->key_info.body.pmk_info.pmk_len))
             goto cleanup;
-    } else if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE &&
-        msg->key_info.body.passphrase_info.passphrase_len >=
-        NAN_SECURITY_MIN_PASSPHRASE_LEN &&
-        msg->key_info.body.passphrase_info.passphrase_len <=
-        NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+    } else if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE) {
+        if (msg->key_info.body.passphrase_info.passphrase_len <
+            NAN_SECURITY_MIN_PASSPHRASE_LEN ||
+            msg->key_info.body.passphrase_info.passphrase_len >
+            NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            ALOGE("%s: Invalid passphrase len:%d", __FUNCTION__,
+                  msg->key_info.body.passphrase_info.passphrase_len);
+            goto cleanup;
+        }
         if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
             (char *)msg->key_info.body.passphrase_info.passphrase,
             msg->key_info.body.passphrase_info.passphrase_len))
