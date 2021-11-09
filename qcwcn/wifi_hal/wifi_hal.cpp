@@ -2557,8 +2557,7 @@ wifi_error wifi_enable_packet_filter(wifi_interface_handle handle,
     info->apf_enabled = !!enable;
 
 cleanup:
-    if (vCommand)
-        delete vCommand;
+    delete vCommand;
     return ret;
 
 }
@@ -3104,7 +3103,6 @@ wifi_error wifi_disable_next_cac(wifi_interface_handle handle) {
     }
 
 cleanup:
-    if (vCommand)
-        delete vCommand;
+    delete vCommand;
     return ret;
 }
