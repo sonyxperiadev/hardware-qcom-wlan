@@ -91,6 +91,7 @@ typedef struct
     void (*wpa_driver_driver_wpa_msg_oem_cb)(void(*)(struct wpa_driver_nl80211_data *drv,
 								  char *msg, u32 subcmd));
     int (*wpa_driver_oem_feature_check_cb)(u32 feature);
+    int (*wpa_driver_nl80211_driver_oem_diag_event)(struct nl_msg *msg, void *ctx);
 } wpa_driver_oem_cb_table_t;
 
 typedef wpa_driver_oem_cb_table_t* (wpa_driver_oem_get_cb_table_t)();
