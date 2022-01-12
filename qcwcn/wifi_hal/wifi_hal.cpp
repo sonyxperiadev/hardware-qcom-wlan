@@ -483,6 +483,197 @@ static wifi_error wifi_init_cld80211_sock_cb(hal_info *info)
     return WIFI_SUCCESS;
 }
 
+static uint32_t get_frequency_from_channel(uint32_t channel, wlan_mac_band band)
+{
+  uint32_t freq = 0;
+
+  switch (band)
+  {
+    case WLAN_MAC_2_4_BAND:
+      if (!(channel >= 1 && channel <= 14))
+        goto failure;
+      //special handling for channel 14 by filling freq here
+      if (channel == 14)
+        freq = 2484;
+      else
+        freq = 2407 + (channel * 5);
+      break;
+    case WLAN_MAC_5_0_BAND:
+      if (!((channel >= 34 && channel < 65) ||
+          (channel > 99 && channel <= 196)))
+        goto failure;
+      freq = 5000 + (channel * 5);
+      break;
+    case WLAN_MAC_6_0_BAND:
+      if (!(channel >= 1 && channel <= 233))
+        goto failure;
+      freq = 5950 + (channel * 5);
+      break;
+    default:
+      break;
+  }
+
+failure:
+  return freq;
+}
+
+wifi_error wifi_set_coex_unsafe_channels(wifi_handle handle, u32 num_channels,
+                                         wifi_coex_unsafe_channel *unsafeChannels,
+                                         u32 restrictions)
+{
+    wifi_error ret = WIFI_ERROR_UNKNOWN;
+    WifihalGeneric *cmd = NULL;
+    struct nlattr *nl_data = NULL;
+    struct nlattr *nl_attr_unsafe_chan = NULL;
+    struct nlattr *unsafe_channels_attr = NULL;
+    hal_info *info = NULL;
+
+    if (!handle) {
+         ALOGE("%s: Error, wifi_handle NULL", __FUNCTION__);
+         goto cleanup;
+    }
+
+    info = getHalInfo(handle);
+    if (!info || info->num_interfaces < 1) {
+         ALOGE("%s: Error, wifi_handle NULL or base wlan interface not present",
+               __FUNCTION__);
+         goto cleanup;
+    }
+
+    cmd = new WifihalGeneric(handle, get_requestid(), OUI_QCA,
+                             QCA_NL80211_VENDOR_SUBCMD_AVOID_FREQUENCY_EXT);
+    if (cmd == NULL) {
+         ALOGE("%s: Error, created command NULL", __FUNCTION__);
+         ret = WIFI_ERROR_OUT_OF_MEMORY;
+         goto cleanup;
+    }
+
+    /* Create the NL message. */
+    ret = cmd->create();
+    if (ret < 0) {
+         ALOGE("%s: failed to create NL msg due to error: (%d)",
+               __FUNCTION__, ret);
+         goto cleanup;
+    }
+
+    /* Add the vendor specific attributes for the NL command. */
+    nl_data = cmd->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nl_data) {
+         ALOGE("%s: failed attr_start for NL80211_ATTR_VENDOR_DATA",
+               __FUNCTION__);
+         ret = WIFI_ERROR_OUT_OF_MEMORY;
+         goto cleanup;
+    }
+
+    nl_attr_unsafe_chan = cmd->attr_start(
+        QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_RANGE);
+    if (!nl_attr_unsafe_chan) {
+         ALOGE("%s: failed attr_start for"
+               " QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_RANGE", __FUNCTION__);
+         ret = WIFI_ERROR_OUT_OF_MEMORY;
+         goto cleanup;
+    }
+    ALOGD("%s: num_channels:%d, restrictions:%x", __FUNCTION__, num_channels,
+          restrictions);
+    if (num_channels == 0) {
+         unsafe_channels_attr = cmd->attr_start(0);
+         if (!unsafe_channels_attr) {
+              ALOGE("%s: failed attr_start for unsafe_channels_attr when"
+                    " trying to clear usafe channels clear", __FUNCTION__);
+              ret = WIFI_ERROR_OUT_OF_MEMORY;
+              goto cleanup;
+         }
+         ret = cmd->put_u32(
+               QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_START, 0);
+         if (ret != WIFI_SUCCESS) {
+              ALOGE("%s: Failed to put frequency start, ret:%d",
+                    __FUNCTION__, ret);
+              goto cleanup;
+         }
+         ret = cmd->put_u32(
+               QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_END, 0);
+         if (ret != WIFI_SUCCESS) {
+              ALOGE("%s: Failed to put frequency end, ret:%d",
+                    __FUNCTION__, ret);
+              goto cleanup;
+         }
+         cmd->attr_end(unsafe_channels_attr);
+    }
+    else {
+        if (!unsafeChannels) {
+            ALOGE("%s: unsafe channels buffer should not be NULL when"
+                  " there are unsafe channels", __FUNCTION__);
+            ret = WIFI_ERROR_INVALID_ARGS;
+            goto cleanup;
+        }
+    }
+    for (int i = 0; i < num_channels; i++) {
+         unsafe_channels_attr = cmd->attr_start(i);
+         if (!unsafe_channels_attr) {
+              ALOGE("%s: failed attr_start for unsafe_channels_attr of"
+                    " index:%d", __FUNCTION__, i);
+              ret = WIFI_ERROR_OUT_OF_MEMORY;
+              goto cleanup;
+         }
+         u32 freq = get_frequency_from_channel(unsafeChannels[i].channel,
+               unsafeChannels[i].band);
+         if (!freq) {
+              ALOGE("%s: Failed to get frequency of band:%d, channel:%d",
+                        __FUNCTION__, (int)unsafeChannels[i].band,
+                        unsafeChannels[i].channel);
+              ret = WIFI_ERROR_INVALID_ARGS;
+              goto cleanup;
+         }
+         ret = cmd->put_u32(
+               QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_START, freq);
+         if (ret != WIFI_SUCCESS) {
+              ALOGE("%s: Failed to put frequency start, ret:%d",
+                    __FUNCTION__, ret);
+              goto cleanup;
+         }
+         ret = cmd->put_u32(
+               QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_END, freq);
+         if (ret != WIFI_SUCCESS) {
+              ALOGE("%s: Failed to put frequency end, ret:%d",
+                    __FUNCTION__, ret);
+              goto cleanup;
+         }
+         ret = cmd->put_s32(
+               QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_POWER_CAP_DBM,
+               unsafeChannels[i].power_cap_dbm);
+         if (ret != WIFI_SUCCESS) {
+              ALOGE("%s: Failed to put frequency, ret:%d",
+                    __FUNCTION__, ret);
+              goto cleanup;
+         }
+         cmd->attr_end(unsafe_channels_attr);
+         ALOGD("%s: channel:%d, freq:%d, power_cap_dbm:%d, band:%d",
+               __FUNCTION__, unsafeChannels[i].channel, freq,
+               unsafeChannels[i].power_cap_dbm, unsafeChannels[i].band);
+    }
+    cmd->attr_end(nl_attr_unsafe_chan);
+    if (num_channels > 0) {
+        ret = cmd->put_u32(QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_IFACES_BITMASK,
+                           restrictions);
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: Failed to put restrictions mask, ret:%d",
+                  __FUNCTION__, ret);
+            goto cleanup;
+        }
+    }
+    cmd->attr_end(nl_data);
+
+    /* Send the msg and wait for a response. */
+    ret = cmd->requestResponse();
+    if (ret != WIFI_SUCCESS) {
+         ALOGE("%s: Error %d waiting for response.", __FUNCTION__, ret);
+         goto cleanup;
+    }
+
+cleanup:
+    delete cmd;
+    return ret;
+}
 
 /*initialize function pointer table with Qualcomm HAL API*/
 wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
@@ -589,6 +780,7 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_thermal_mitigation_mode = wifi_set_thermal_mitigation_mode;
     fn->wifi_multi_sta_set_primary_connection = wifi_multi_sta_set_primary_connection;
     fn->wifi_multi_sta_set_use_case = wifi_multi_sta_set_use_case;
+    fn->wifi_set_coex_unsafe_channels = wifi_set_coex_unsafe_channels;
 
     return WIFI_SUCCESS;
 }
