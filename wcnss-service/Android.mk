@@ -21,6 +21,7 @@ LOCAL_SHARED_LIBRARIES += libqmiservices libqmi_cci
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/libmdmdetect/inc
 LOCAL_SHARED_LIBRARIES += libmdmdetect
 LOCAL_HEADER_LIBRARIES += libril-qc-qmi-services-headers
+LOCAL_HEADER_LIBRARIES += libmdmdetect_headers
 endif #TARGET_USES_QCOM_WCNSS_QMI
 LOCAL_MODULE_TAGS := optional
 LOCAL_CFLAGS += -Wall -Werror
