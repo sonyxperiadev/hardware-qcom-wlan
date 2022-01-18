@@ -12,6 +12,40 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted (subject to the limitations in the
+ * disclaimer below) provided that the following conditions are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *
+ *   * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <stdint.h>
@@ -638,13 +672,24 @@ wifi_error wifi_set_coex_unsafe_channels(wifi_handle handle, u32 num_channels,
                     __FUNCTION__, ret);
               goto cleanup;
          }
-         ret = cmd->put_s32(
-               QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_POWER_CAP_DBM,
-               unsafeChannels[i].power_cap_dbm);
-         if (ret != WIFI_SUCCESS) {
-              ALOGE("%s: Failed to put frequency, ret:%d",
-                    __FUNCTION__, ret);
-              goto cleanup;
+         /**
+          * WIFI_COEX_NO_POWER_CAP (0x7FFFFFF) is specific to android
+          * framework, this value denotes that framework/wifihal is not
+          * providing any power cap and allow driver/firmware to operate on
+          * current power cap dbm. As driver is supposed to work on with
+          * LA/LE etc, we are skipping to send 0x7FFFFFF down to driver,
+          * hence driver will be operating as per current power cap calculated
+          * based on regulatory or other constraints.
+          */
+         if (unsafeChannels[i].power_cap_dbm != WIFI_COEX_NO_POWER_CAP) {
+             ret = cmd->put_s32(
+                   QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_POWER_CAP_DBM,
+                   unsafeChannels[i].power_cap_dbm);
+             if (ret != WIFI_SUCCESS) {
+                 ALOGE("%s: Failed to put power_cap_dbm, ret:%d",
+                       __FUNCTION__, ret);
+                 goto cleanup;
+             }
          }
          cmd->attr_end(unsafe_channels_attr);
          ALOGD("%s: channel:%d, freq:%d, power_cap_dbm:%d, band:%d",
@@ -671,7 +716,8 @@ wifi_error wifi_set_coex_unsafe_channels(wifi_handle handle, u32 num_channels,
     }
 
 cleanup:
-    delete cmd;
+    if (cmd)
+        delete cmd;
     return ret;
 }
 
