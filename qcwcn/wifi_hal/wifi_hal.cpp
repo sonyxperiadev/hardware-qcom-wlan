@@ -551,6 +551,22 @@ failure:
   return freq;
 }
 
+static u32 get_nl_ifmask_from_coex_restriction_mask(u32 in_mask)
+{
+    u32 op_mask = 0;
+
+    if (!in_mask)
+       return op_mask;
+    if (in_mask & SOFTAP)
+         op_mask |= BIT(NL80211_IFTYPE_AP);
+    if (in_mask & WIFI_DIRECT)
+         op_mask |= BIT(NL80211_IFTYPE_P2P_GO);
+    if (in_mask & WIFI_AWARE)
+         op_mask |= BIT(NL80211_IFTYPE_NAN);
+
+    return op_mask;
+}
+
 wifi_error wifi_set_coex_unsafe_channels(wifi_handle handle, u32 num_channels,
                                          wifi_coex_unsafe_channel *unsafeChannels,
                                          u32 restrictions)
@@ -699,7 +715,7 @@ wifi_error wifi_set_coex_unsafe_channels(wifi_handle handle, u32 num_channels,
     cmd->attr_end(nl_attr_unsafe_chan);
     if (num_channels > 0) {
         ret = cmd->put_u32(QCA_WLAN_VENDOR_ATTR_AVOID_FREQUENCY_IFACES_BITMASK,
-                           restrictions);
+                       get_nl_ifmask_from_coex_restriction_mask(restrictions));
         if (ret != WIFI_SUCCESS) {
             ALOGE("%s: Failed to put restrictions mask, ret:%d",
                   __FUNCTION__, ret);
