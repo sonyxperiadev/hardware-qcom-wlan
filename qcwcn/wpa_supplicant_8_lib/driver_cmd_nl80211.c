@@ -3448,7 +3448,7 @@ static
 int process_twt_set_param_cmd_string(char *cmd,
 				     struct twt_set_parameters *set_params)
 {
-	int ret = 0;
+	int ret = -EINVAL;
 
 	if (!set_params) {
 		wpa_printf(MSG_ERROR, "TWT: set_params null");
@@ -3470,7 +3470,7 @@ int process_twt_set_param_cmd_string(char *cmd,
 		cmd = move_to_next_str(cmd);
 	}
 
-	return 0;
+	return ret;
 }
 
 /**
