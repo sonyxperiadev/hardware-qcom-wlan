@@ -223,6 +223,7 @@ struct twt_resp_info {
 
 static int wpa_driver_twt_async_resp_event(struct wpa_driver_nl80211_data *drv,
 					   u32 vendor_id, u32 subcmd, u8 *data, size_t len);
+
 /* ============ nl80211 driver extensions ===========  */
 enum csi_state {
 	CSI_STATE_STOP = 0,
@@ -239,6 +240,17 @@ struct csi_global_params {
 static struct csi_global_params g_csi_param = {0};
 
 static wpa_driver_oem_cb_table_t *oem_cb_table = NULL;
+
+#define MCC_QUOTA_MIN 10
+#define MCC_QUOTA_MAX 90
+/* Only one quota entry for now */
+#define MCC_QUOTA_ENTRIES_MAX 1
+
+struct mcc_quota {
+       uint32_t if_idx;
+       uint32_t quota;
+};
+
 
 static char *get_next_arg(char *cmd)
 {
@@ -2673,8 +2685,14 @@ static u8 get_u8_from_string(char *cmd_string, int *ret)
 
 char *move_to_next_str(char *cmd)
 {
-	while (*cmd != ' ')
+	if (*cmd == '\0')
+		return cmd;
+
+	while (*cmd != ' ') {
 		cmd++;
+		if (*cmd == '\0')
+			return cmd;
+	}
 
 	while (*cmd == ' ')
 		cmd++;
@@ -5095,6 +5113,231 @@ fail:
 	return ret;
 }
 
+static int wpa_driver_form_clear_mcc_quota_msg(struct i802_bss *bss,
+					       char *cmd)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nlattr *nl_attr;
+	struct nl_msg *nlmsg;
+	uint32_t if_index = 0;
+	int ret;
+
+	/* First comes interface name - optional */
+	if (os_strncasecmp(cmd, "iface", 5) == 0) {
+		char *iface;
+		cmd = move_to_next_str(cmd);
+		/* null terminate the iface name in the cmd string */
+		iface = strchr(cmd, ' ');
+		*iface = '\0';
+		iface = cmd;
+		errno = 0;
+		if_index = if_nametoindex(cmd);
+		if (if_index == 0) {
+			wpa_printf(MSG_ERROR, "mcc_quota: iface %s not found %d",
+				   cmd, errno);
+			return -EINVAL;
+		}
+		wpa_printf(MSG_INFO, "mcc_quota: ifindex %u", if_index);
+		cmd += strlen(iface) + 1;
+	}
+
+	nlmsg = prepare_vendor_nlmsg(drv, bss->ifname,
+				     QCA_NL80211_VENDOR_SUBCMD_MCC_QUOTA);
+	if (!nlmsg) {
+		wpa_printf(MSG_ERROR, "mcc_quota: Failed to allocate nl message");
+		return -ENOMEM;
+	}
+
+	nl_attr = nla_nest_start(nlmsg, NL80211_ATTR_VENDOR_DATA);
+	if (!nl_attr) {
+		wpa_printf(MSG_ERROR, "mcc_quota: Failed to alloc nlattr");
+		ret = -ENOMEM;
+		goto fail;
+	}
+	/* Put the quota type */
+	ret = nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_TYPE,
+			  QCA_WLAN_VENDOR_MCC_QUOTA_TYPE_CLEAR);
+	if (ret) {
+		wpa_printf(MSG_ERROR, "mcc_quota: Failed to add type attr %d", ret);
+		goto fail;
+	}
+
+	if (if_index) {
+		ret = nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_IFINDEX, if_index);
+		if (ret) {
+			wpa_printf(MSG_ERROR, "mcc_quota: Failed to add if_index attr %d", ret);
+			goto fail;
+		}
+	}
+	nla_nest_end(nlmsg, nl_attr);
+
+	ret = send_nlmsg((struct nl_sock *)drv->global->nl, nlmsg, NULL, NULL);
+
+	if (ret) {
+		wpa_printf(MSG_ERROR, "mcc_quota: Error sending nlmsg %d", ret);
+		goto fail;
+	}
+
+	return 0;
+fail:
+	nlmsg_free(nlmsg);
+	return ret;
+}
+
+static int wpa_driver_form_set_mcc_quota_msg(struct i802_bss *bss,
+					     char *cmd)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct mcc_quota mccquota[MCC_QUOTA_ENTRIES_MAX];
+	uint32_t if_index, quota;
+	struct nlattr *nl_attr, *mcc_attr_list;
+	struct nlattr *mcc_attr;
+	struct nl_msg *nlmsg;
+	int ret, entry, i;
+
+	wpa_printf(MSG_INFO, "mcc_quota: %s", cmd);
+
+	entry = 0;
+	while (*cmd != '\0') {
+		if (entry >= MCC_QUOTA_ENTRIES_MAX) {
+			wpa_printf(MSG_INFO, "mcc_quota: Only %d entries accepted", entry);
+			break;
+		}
+		/* First comes interface name */
+		if (os_strncasecmp(cmd, "iface", 5) == 0) {
+			char *iface;
+			cmd = move_to_next_str(cmd);
+			/* null terminate the iface name in the cmd string */
+			iface = strchr(cmd, ' ');
+			*iface = '\0';
+			iface = cmd;
+			errno = 0;
+			if_index = if_nametoindex(cmd);
+			if (if_index == 0) {
+				wpa_printf(MSG_ERROR, "mcc_quota: iface %s not found %d",
+						cmd, errno);
+				return -EINVAL;
+			}
+			wpa_printf(MSG_INFO, "mcc_quota: ifindex %u", if_index);
+			cmd += strlen(iface) + 1;
+		} else {
+			wpa_printf(MSG_ERROR, "mcc_quota: Iface name not in order");
+			return -EINVAL;
+		}
+
+		/* Second comes quota value */
+		if (os_strncasecmp(cmd, "quota", 5) == 0) {
+			cmd = move_to_next_str(cmd);
+			quota = get_u32_from_string(cmd, &ret);
+			if (ret < 0)
+				return ret;
+		} else {
+			wpa_printf(MSG_ERROR, "mcc_quota: Quota not in order");
+			return -EINVAL;
+		}
+
+		if (quota < MCC_QUOTA_MIN || quota > MCC_QUOTA_MAX) {
+			wpa_printf(MSG_ERROR, "mcc_quota: Invalid quota value %u", quota);
+			return -EINVAL;
+		}
+
+		mccquota[entry].if_idx = if_index;
+		mccquota[entry].quota = quota;
+		cmd = move_to_next_str(cmd);
+		entry++;
+	}
+	wpa_printf(MSG_INFO, "mcc_quota: Entries : %d", entry);
+	if (entry < 1) {
+		wpa_printf(MSG_ERROR, "mcc_quota: No valid entries?");
+		return -EINVAL;
+	}
+
+	nlmsg = prepare_vendor_nlmsg(drv, bss->ifname,
+				     QCA_NL80211_VENDOR_SUBCMD_MCC_QUOTA);
+	if (!nlmsg) {
+		wpa_printf(MSG_ERROR,"mcc_quota: Failed to allocate nl message");
+		return -ENOMEM;
+	}
+
+	nl_attr = nla_nest_start(nlmsg, NL80211_ATTR_VENDOR_DATA);
+	if (nl_attr == NULL) {
+		wpa_printf(MSG_ERROR, "mcc_quota: Failed to alloc nlattr");
+		ret = -ENOMEM;
+		goto fail;
+	}
+
+	/* Put the quota type */
+	ret = nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_TYPE,
+			  QCA_WLAN_VENDOR_MCC_QUOTA_TYPE_FIXED);
+	if (ret) {
+		wpa_printf(MSG_ERROR, "mcc_quota: Failed to add type attr %d", ret);
+		goto fail;
+	}
+
+	mcc_attr_list = nla_nest_start(nlmsg, QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_ENTRIES);
+
+	for (i = 0; i < entry  && entry <= MCC_QUOTA_ENTRIES_MAX; i++) {
+		/* Nest the (iface ,quota) */
+		mcc_attr = nla_nest_start(nlmsg, QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_ENTRIES);
+		if (mcc_attr == NULL) {
+			wpa_printf(MSG_ERROR, "mcc_quota: Failed to alloc mccattr");
+			ret = -ENOMEM;
+			goto fail;
+		}
+		ret = nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_IFINDEX, mccquota[i].if_idx);
+		if (ret) {
+			wpa_printf(MSG_ERROR, "mcc_quota: Failed to add if_index attr %d", ret);
+			goto fail;
+		}
+
+		ret = nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_CHAN_TIME_PERCENTAGE, mccquota[i].quota);
+		if (ret) {
+			wpa_printf(MSG_ERROR, "mcc_quota: Failed to add quota attr %d", ret);
+			goto fail;
+		}
+
+		nla_nest_end(nlmsg, mcc_attr);
+	}
+	nla_nest_end(nlmsg, mcc_attr_list);
+
+	nla_nest_end(nlmsg, nl_attr);
+
+	ret = send_nlmsg((struct nl_sock *)drv->global->nl, nlmsg, NULL, NULL);
+
+	if (ret) {
+		wpa_printf(MSG_ERROR, "mcc_quota: Error sending nlmsg %d", ret);
+		goto fail;
+	}
+
+	return 0;
+fail:
+	nlmsg_free(nlmsg);
+	return ret;
+}
+
+int wpa_driver_cmd_send_mcc_quota(struct i802_bss *bss,
+				  char *cmd)
+{
+	int ret;
+
+	wpa_printf(MSG_INFO, "mcc_quota: %s", cmd);
+
+	if (os_strncasecmp(cmd, "set", 3) == 0) {
+		cmd = move_to_next_str(cmd);
+		ret = wpa_driver_form_set_mcc_quota_msg(bss, cmd);
+		return ret;
+	}
+
+	if (os_strncasecmp(cmd, "clear", 5) == 0) {
+		cmd = move_to_next_str(cmd);
+		ret = wpa_driver_form_clear_mcc_quota_msg(bss, cmd);
+		return ret;
+	}
+
+	wpa_printf(MSG_ERROR, "mcc_quota: Unknown operation");
+	return -EINVAL;
+}
+
 int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 				  size_t buf_len )
 {
@@ -5387,6 +5630,13 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 			if (ret)
 				ret = os_snprintf(buf, buf_len, "TWT failed for operation %d", twt_oper);
 		}
+	} else if (os_strncasecmp(cmd, "MCC_QUOTA", 9) == 0) {
+		/* DRIVER MCC_QUOTA set iface <name> quota <val>
+		 * DRIVER MCC_QUOTA clear iface <name>
+		 */
+		/* Move cmd by string len and space */
+		cmd += 10;
+		return wpa_driver_cmd_send_mcc_quota(priv, cmd);
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));
