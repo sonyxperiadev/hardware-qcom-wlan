@@ -73,6 +73,11 @@
 #define NAN_DEFAULT_NCS_SK NAN_CIPHER_SUITE_SHARED_KEY_128_MASK
 /* Currently by default max 6 Publishes/Subscribes are allowed */
 #define NAN_DEF_PUB_SUB 6
+/*
+ * First bit of discovery_indication_cfg in NanEnableRequest indicates
+ * disableDiscoveryAddressChangeIndication
+ */
+#define NAN_DISC_ADDR_IND_DISABLED 0x01
 
 typedef struct PACKED
 {
@@ -100,6 +105,7 @@ private:
     u32 mNanMaxSubscribes;
     NanStoreSvcParams *mStorePubParams;
     NanStoreSvcParams *mStoreSubParams;
+    bool mNanDiscAddrIndDisabled;
 
     //Function to check the initial few bytes of data to
     //determine whether NanResponse or NanEvent

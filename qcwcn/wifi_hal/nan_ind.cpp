@@ -118,6 +118,16 @@ int NanCommand::handleNanIndication()
         NanDiscEngEventInd discEngEventInd;
         memset(&discEngEventInd, 0, sizeof(discEngEventInd));
         res = getNanDiscEngEvent(&discEngEventInd);
+        /* Save the self MAC address received in DE indication event to use it
+         * in Passphrase to PMK calculation. And do not call the handler if the
+         * framework has disabled the self MAC address indication.
+         */
+        if (!res &&
+            (discEngEventInd.event_type == NAN_EVENT_ID_DISC_MAC_ADDR)) {
+            mNanCommandInstance->saveNmi(discEngEventInd.data.mac_addr.addr);
+            if (mNanCommandInstance->mNanDiscAddrIndDisabled)
+                break;
+        }
         if (!res && mHandler.EventDiscEngEvent) {
             (*mHandler.EventDiscEngEvent)(&discEngEventInd);
         }
