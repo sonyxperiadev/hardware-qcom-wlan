@@ -5128,6 +5128,11 @@ static int wpa_driver_form_clear_mcc_quota_msg(struct i802_bss *bss,
 		cmd = move_to_next_str(cmd);
 		/* null terminate the iface name in the cmd string */
 		iface = strchr(cmd, ' ');
+		if (iface == NULL) {
+			wpa_printf(MSG_ERROR, "mcc_quota: iface is not found"
+				   " in cmd string");
+			return -EINVAL;
+		}
 		*iface = '\0';
 		iface = cmd;
 		errno = 0;
@@ -5209,6 +5214,11 @@ static int wpa_driver_form_set_mcc_quota_msg(struct i802_bss *bss,
 			cmd = move_to_next_str(cmd);
 			/* null terminate the iface name in the cmd string */
 			iface = strchr(cmd, ' ');
+			if (iface == NULL) {
+				wpa_printf(MSG_ERROR, "mcc_quota: iface is not"
+					   " found in cmd string");
+				return -EINVAL;
+			}
 			*iface = '\0';
 			iface = cmd;
 			errno = 0;
@@ -5649,7 +5659,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		ifr.ifr_data = &priv_cmd;
 
 		if ((ret = ioctl(drv->global->ioctl_sock, SIOCDEVPRIVATE + 1, &ifr)) < 0) {
-			wpa_printf(MSG_ERROR, "%s: failed to issue private commands\n", __func__);
+			wpa_printf(MSG_ERROR, "%s: failed to issue private commands, ret:%d, errno:%d\n", __func__, ret, errno);
 		} else {
 			drv_errors = 0;
 			if((os_strncasecmp(cmd, "SETBAND", 7) == 0) &&
