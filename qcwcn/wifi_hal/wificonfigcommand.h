@@ -45,6 +45,8 @@ extern "C"
 {
 #endif /* __cplusplus */
 
+int check_feature(enum qca_wlan_vendor_features feature, features_info *info);
+
 class WiFiConfigCommand: public WifiVendorCommand
 {
 private:
