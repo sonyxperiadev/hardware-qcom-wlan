@@ -24,6 +24,7 @@
 #include <errno.h>
 #include "nancommand.h"
 #include "vendor_definitions.h"
+#include "wificonfigcommand.h"
 
 #ifdef __GNUC__
 #define PRINTF_FORMAT(a,b) __attribute__ ((format (printf, (a), (b))))
@@ -804,23 +805,60 @@ wifi_error nan_data_interface_create(transaction_id id,
     wifi_error ret;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
+    WiFiConfigCommand *wifiConfigCommand;
+    wifi_handle handle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(handle);
+    bool ndi_created = false;
 
     if (iface_name == NULL) {
         ALOGE("%s: Invalid Nan Data Interface Name. \n", __FUNCTION__);
         return WIFI_ERROR_INVALID_ARGS;
     }
 
-    ret = nan_initialize_vendor_cmd(iface,
-                                    &nanCommand);
+    if (!info || info->num_interfaces < 1) {
+        ALOGE("%s: Error wifi_handle NULL or base wlan interface not present",
+              __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    if (check_feature(QCA_WLAN_VENDOR_FEATURE_USE_ADD_DEL_VIRTUAL_INTF_FOR_NDI,
+                      &info->driver_supported_features)) {
+        wifiConfigCommand = new WiFiConfigCommand(handle,
+                                                  get_requestid(), 0, 0);
+        if (wifiConfigCommand == NULL) {
+            ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+            return WIFI_ERROR_UNKNOWN;
+        }
+        wifiConfigCommand->create_generic(NL80211_CMD_NEW_INTERFACE);
+        wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX,
+                                   info->interfaces[0]->id);
+        wifiConfigCommand->put_string(NL80211_ATTR_IFNAME, iface_name);
+        wifiConfigCommand->put_u32(NL80211_ATTR_IFTYPE,
+                                   NL80211_IFTYPE_STATION);
+        /* Send the NL msg. */
+        wifiConfigCommand->waitForRsp(false);
+        ret = wifiConfigCommand->requestEvent();
+        if (ret != WIFI_SUCCESS) {
+            ALOGE("%s: Create intf failed, Error:%d", __FUNCTION__, ret);
+            delete wifiConfigCommand;
+            return ret;
+        }
+        ndi_created = true;
+        delete wifiConfigCommand;
+    }
+
+    ret = nan_initialize_vendor_cmd(iface, &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return ret;
+        goto delete_ndi;
     }
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     if (nanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
@@ -831,6 +869,7 @@ wifi_error nan_data_interface_create(transaction_id id,
         nanCommand->put_string(
             QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR,
             iface_name)) {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
 
@@ -842,6 +881,25 @@ wifi_error nan_data_interface_create(transaction_id id,
 
 cleanup:
     delete nanCommand;
+
+delete_ndi:
+    if (ndi_created && ret != WIFI_SUCCESS) {
+        wifiConfigCommand = new WiFiConfigCommand(handle,
+                                                  get_requestid(), 0, 0);
+        if (wifiConfigCommand == NULL) {
+            ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+            return ret;
+        }
+        wifiConfigCommand->create_generic(NL80211_CMD_DEL_INTERFACE);
+        wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX,
+                                   if_nametoindex(iface_name));
+        /* Send the NL msg. */
+        wifiConfigCommand->waitForRsp(false);
+        if (wifiConfigCommand->requestEvent() != WIFI_SUCCESS)
+            ALOGE("%s: Delete intf failed", __FUNCTION__);
+
+        delete wifiConfigCommand;
+    }
     return ret;
 }
 
@@ -853,22 +911,34 @@ wifi_error nan_data_interface_delete(transaction_id id,
     wifi_error ret;
     struct nlattr *nlData;
     NanCommand *nanCommand = NULL;
+    WiFiConfigCommand *wifiConfigCommand;
+    wifi_handle handle = getWifiHandle(iface);
+    hal_info *info = getHalInfo(handle);
 
     if (iface_name == NULL) {
         ALOGE("%s: Invalid Nan Data Interface Name. \n", __FUNCTION__);
         return WIFI_ERROR_INVALID_ARGS;
     }
+
+    if (!info || info->num_interfaces < 1) {
+        ALOGE("%s: Error wifi_handle NULL or base wlan interface not present",
+          __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
     ret = nan_initialize_vendor_cmd(iface,
                                     &nanCommand);
     if (ret != WIFI_SUCCESS) {
         ALOGE("%s: Initialization failed", __FUNCTION__);
-        return ret;
+        goto delete_ndi;
     }
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     if (nanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
@@ -879,6 +949,7 @@ wifi_error nan_data_interface_delete(transaction_id id,
         nanCommand->put_string(
             QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR,
             iface_name)) {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
 
@@ -890,6 +961,28 @@ wifi_error nan_data_interface_delete(transaction_id id,
 
 cleanup:
     delete nanCommand;
+
+delete_ndi:
+    if ((check_feature(QCA_WLAN_VENDOR_FEATURE_USE_ADD_DEL_VIRTUAL_INTF_FOR_NDI,
+                       &info->driver_supported_features)) &&
+        if_nametoindex(iface_name)) {
+        wifiConfigCommand = new WiFiConfigCommand(handle,
+                                                  get_requestid(), 0, 0);
+        if (wifiConfigCommand == NULL) {
+            ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+            return WIFI_ERROR_UNKNOWN;
+        }
+        wifiConfigCommand->create_generic(NL80211_CMD_DEL_INTERFACE);
+        wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX,
+                                   if_nametoindex(iface_name));
+        /* Send the NL msg. */
+        wifiConfigCommand->waitForRsp(false);
+        if (wifiConfigCommand->requestEvent() != WIFI_SUCCESS) {
+            ALOGE("%s: Delete intf failed", __FUNCTION__);
+        }
+        delete wifiConfigCommand;
+    }
+
     return ret;
 }
 
