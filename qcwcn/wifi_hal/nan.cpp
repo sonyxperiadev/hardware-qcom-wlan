@@ -1566,6 +1566,7 @@ NanCommand::NanCommand(wifi_handle handle, int id, u32 vendor_id, u32 subcmd)
     mStoreSubParams = NULL;
     mNanMaxPublishes = 0;
     mNanMaxSubscribes = 0;
+    mNanDiscAddrIndDisabled = false;
 }
 
 NanCommand* NanCommand::instance(wifi_handle handle)
