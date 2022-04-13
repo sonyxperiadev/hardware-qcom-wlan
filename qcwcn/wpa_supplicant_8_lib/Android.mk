@@ -54,7 +54,7 @@ ifdef CONFIG_P2P
 L_CFLAGS += -DCONFIG_P2P
 endif
 
-ifneq ( ,$(filter S 12, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter Tiramisu T 13 S 12, $(PLATFORM_VERSION)))
 L_CFLAGS += -DCONFIG_ANDROID_S
 endif
 
