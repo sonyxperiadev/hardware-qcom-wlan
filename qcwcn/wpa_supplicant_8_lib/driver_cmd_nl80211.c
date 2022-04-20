@@ -137,6 +137,7 @@
 #define WAKE_TSF_STR            "wake_tsf"
 #define ANNOUNCE_TIMEOUT_STR    "announce_timeout"
 #define AP_AC_VALUE_STR         "ap_ac_value"
+#define MAC_ADDRESS_STR         "mac_addr"
 
 #define DIALOG_ID_STR_LEN               strlen(DIALOG_ID_STR)
 #define REQ_TYPE_STR_LEN                strlen(REQ_TYPE_STR)
@@ -159,6 +160,7 @@
 #define WAKE_TSF_STR_LEN                strlen(WAKE_TSF_STR)
 #define ANNOUNCE_TIMEOUT_STR_LEN        strlen(ANNOUNCE_TIMEOUT_STR)
 #define AP_AC_VALUE_STR_LEN             strlen(AP_AC_VALUE_STR)
+#define MAC_ADDR_STR_LEN             	strlen(MAC_ADDRESS_STR)
 
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
@@ -3616,12 +3618,12 @@ fail:
 	return -EINVAL;
 }
 
-
 static int prepare_twt_get_params_nlmsg(struct nl_msg *nlmsg, char *cmd)
 {
 	struct nlattr *twt_attr;
 	u8 dialog_id;
 	int ret = 0;
+	uint8_t peer_mac[MAC_ADDR_LEN];
 
 	while(*cmd == ' ')
 		cmd++;
@@ -3654,6 +3656,23 @@ static int prepare_twt_get_params_nlmsg(struct nl_msg *nlmsg, char *cmd)
 	} else {
 		wpa_printf(MSG_ERROR, "TWT: dialog_id not found");
 		goto fail;
+	}
+
+
+	if (os_strncasecmp(cmd, MAC_ADDRESS_STR, MAC_ADDR_STR_LEN) == 0) {
+		cmd += MAC_ADDR_STR_LEN + 1;
+
+		if (convert_string_to_bytes(peer_mac, cmd, MAC_ADDR_LEN) !=
+		    MAC_ADDR_LEN) {
+			wpa_printf(MSG_ERROR, "TWT: invalid mac address");
+			goto fail;
+		}
+
+	        if (nla_put(nlmsg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAC_ADDR,
+			    MAC_ADDR_LEN, peer_mac)) {
+			wpa_printf(MSG_ERROR, "TWT: Failed to put mac address");
+			goto fail;
+	        }
 	}
 
 	nla_nest_end(nlmsg, twt_attr);
