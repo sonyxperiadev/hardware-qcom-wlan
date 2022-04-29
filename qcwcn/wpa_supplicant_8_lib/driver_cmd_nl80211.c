@@ -5304,6 +5304,11 @@ static int wpa_driver_form_set_mcc_quota_msg(struct i802_bss *bss,
 	}
 
 	mcc_attr_list = nla_nest_start(nlmsg, QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_ENTRIES);
+	if (!mcc_attr_list) {
+		wpa_printf(MSG_ERROR, "mcc_quota: Failed to alloc mcc_attr_list");
+		ret = -ENOMEM;
+		goto fail;
+	}
 
 	for (i = 0; i < entry  && entry <= MCC_QUOTA_ENTRIES_MAX; i++) {
 		/* Nest the (iface ,quota) */
