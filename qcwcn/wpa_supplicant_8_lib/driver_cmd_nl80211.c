@@ -137,6 +137,7 @@
 #define WAKE_TSF_STR            "wake_tsf"
 #define ANNOUNCE_TIMEOUT_STR    "announce_timeout"
 #define AP_AC_VALUE_STR         "ap_ac_value"
+#define MAC_ADDRESS_STR         "mac_addr"
 
 #define DIALOG_ID_STR_LEN               strlen(DIALOG_ID_STR)
 #define REQ_TYPE_STR_LEN                strlen(REQ_TYPE_STR)
@@ -159,6 +160,7 @@
 #define WAKE_TSF_STR_LEN                strlen(WAKE_TSF_STR)
 #define ANNOUNCE_TIMEOUT_STR_LEN        strlen(ANNOUNCE_TIMEOUT_STR)
 #define AP_AC_VALUE_STR_LEN             strlen(AP_AC_VALUE_STR)
+#define MAC_ADDR_STR_LEN             	strlen(MAC_ADDRESS_STR)
 
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
@@ -3448,7 +3450,7 @@ static
 int process_twt_set_param_cmd_string(char *cmd,
 				     struct twt_set_parameters *set_params)
 {
-	int ret = 0;
+	int ret = -EINVAL;
 
 	if (!set_params) {
 		wpa_printf(MSG_ERROR, "TWT: set_params null");
@@ -3470,7 +3472,7 @@ int process_twt_set_param_cmd_string(char *cmd,
 		cmd = move_to_next_str(cmd);
 	}
 
-	return 0;
+	return ret;
 }
 
 /**
@@ -3616,12 +3618,12 @@ fail:
 	return -EINVAL;
 }
 
-
 static int prepare_twt_get_params_nlmsg(struct nl_msg *nlmsg, char *cmd)
 {
 	struct nlattr *twt_attr;
 	u8 dialog_id;
 	int ret = 0;
+	uint8_t peer_mac[MAC_ADDR_LEN];
 
 	while(*cmd == ' ')
 		cmd++;
@@ -3654,6 +3656,23 @@ static int prepare_twt_get_params_nlmsg(struct nl_msg *nlmsg, char *cmd)
 	} else {
 		wpa_printf(MSG_ERROR, "TWT: dialog_id not found");
 		goto fail;
+	}
+
+
+	if (os_strncasecmp(cmd, MAC_ADDRESS_STR, MAC_ADDR_STR_LEN) == 0) {
+		cmd += MAC_ADDR_STR_LEN + 1;
+
+		if (convert_string_to_bytes(peer_mac, cmd, MAC_ADDR_LEN) !=
+		    MAC_ADDR_LEN) {
+			wpa_printf(MSG_ERROR, "TWT: invalid mac address");
+			goto fail;
+		}
+
+	        if (nla_put(nlmsg, QCA_WLAN_VENDOR_ATTR_TWT_SETUP_MAC_ADDR,
+			    MAC_ADDR_LEN, peer_mac)) {
+			wpa_printf(MSG_ERROR, "TWT: Failed to put mac address");
+			goto fail;
+	        }
 	}
 
 	nla_nest_end(nlmsg, twt_attr);
@@ -5128,6 +5147,11 @@ static int wpa_driver_form_clear_mcc_quota_msg(struct i802_bss *bss,
 		cmd = move_to_next_str(cmd);
 		/* null terminate the iface name in the cmd string */
 		iface = strchr(cmd, ' ');
+		if (iface == NULL) {
+			wpa_printf(MSG_ERROR, "mcc_quota: iface is not found"
+				   " in cmd string");
+			return -EINVAL;
+		}
 		*iface = '\0';
 		iface = cmd;
 		errno = 0;
@@ -5209,6 +5233,11 @@ static int wpa_driver_form_set_mcc_quota_msg(struct i802_bss *bss,
 			cmd = move_to_next_str(cmd);
 			/* null terminate the iface name in the cmd string */
 			iface = strchr(cmd, ' ');
+			if (iface == NULL) {
+				wpa_printf(MSG_ERROR, "mcc_quota: iface is not"
+					   " found in cmd string");
+				return -EINVAL;
+			}
 			*iface = '\0';
 			iface = cmd;
 			errno = 0;
@@ -5275,6 +5304,11 @@ static int wpa_driver_form_set_mcc_quota_msg(struct i802_bss *bss,
 	}
 
 	mcc_attr_list = nla_nest_start(nlmsg, QCA_WLAN_VENDOR_ATTR_MCC_QUOTA_ENTRIES);
+	if (!mcc_attr_list) {
+		wpa_printf(MSG_ERROR, "mcc_quota: Failed to alloc mcc_attr_list");
+		ret = -ENOMEM;
+		goto fail;
+	}
 
 	for (i = 0; i < entry  && entry <= MCC_QUOTA_ENTRIES_MAX; i++) {
 		/* Nest the (iface ,quota) */
@@ -5649,7 +5683,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		ifr.ifr_data = &priv_cmd;
 
 		if ((ret = ioctl(drv->global->ioctl_sock, SIOCDEVPRIVATE + 1, &ifr)) < 0) {
-			wpa_printf(MSG_ERROR, "%s: failed to issue private commands\n", __func__);
+			wpa_printf(MSG_ERROR, "%s: failed to issue private commands, ret:%d, errno:%d\n", __func__, ret, errno);
 		} else {
 			drv_errors = 0;
 			if((os_strncasecmp(cmd, "SETBAND", 7) == 0) &&

@@ -118,6 +118,16 @@ int NanCommand::handleNanIndication()
         NanDiscEngEventInd discEngEventInd;
         memset(&discEngEventInd, 0, sizeof(discEngEventInd));
         res = getNanDiscEngEvent(&discEngEventInd);
+        /* Save the self MAC address received in DE indication event to use it
+         * in Passphrase to PMK calculation. And do not call the handler if the
+         * framework has disabled the self MAC address indication.
+         */
+        if (!res &&
+            (discEngEventInd.event_type == NAN_EVENT_ID_DISC_MAC_ADDR)) {
+            mNanCommandInstance->saveNmi(discEngEventInd.data.mac_addr.addr);
+            if (mNanCommandInstance->mNanDiscAddrIndDisabled)
+                break;
+        }
         if (!res && mHandler.EventDiscEngEvent) {
             (*mHandler.EventDiscEngEvent)(&discEngEventInd);
         }
@@ -451,6 +461,12 @@ int NanCommand::getNanMatch(NanMatchInd *event)
             event->sdea_service_specific_info_len = outputTlv.length;
             memcpy(event->sdea_service_specific_info, outputTlv.value,
                    outputTlv.length);
+            break;
+        case NAN_TLV_TYPE_SERVICE_ID:
+            mNanCommandInstance->saveServiceId(outputTlv.value,
+                                               event->publish_subscribe_id,
+                                               event->requestor_instance_id,
+                                               NAN_ROLE_SUBSCRIBER);
             break;
         default:
             ALOGV("Unknown TLV type skipped");
@@ -1032,6 +1048,7 @@ int NanCommand::handleNdpIndication(u32 ndpCmdType, struct nlattr **tb_vendor)
     {
         NanDataPathEndInd *ndpEndInd = NULL;
         u8 num_ndp_ids = 0;
+        u8 i;
 
         if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY]) {
             ALOGE("%s: QCA_WLAN_VENDOR_ATTR_NDP not found", __FUNCTION__);
@@ -1052,6 +1069,11 @@ int NanCommand::handleNdpIndication(u32 ndpCmdType, struct nlattr **tb_vendor)
             nla_memcpy(ndpEndInd->ndp_instance_id,
                        tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY],
                        sizeof(u32) * ndpEndInd->num_ndp_instances);
+        }
+        for (i = 0; i < num_ndp_ids; i++) {
+            mNanCommandInstance->deleteServiceId(0,
+                                                 ndpEndInd->ndp_instance_id[i],
+                                                 NAN_ROLE_PUBLISHER);
         }
         if (mHandler.EventDataEnd) {
             (*mHandler.EventDataEnd)(ndpEndInd);
@@ -1142,6 +1164,16 @@ int NanCommand::getNdpRequest(struct nlattr **tb_vendor,
     } else {
         ALOGD("%s: NDP App Info not present", __FUNCTION__);
     }
+
+    if (tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_ID]) {
+            mNanCommandInstance->saveServiceId((u8 *)nla_data(tb_vendor[QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_ID]),
+                                               event->service_instance_id,
+                                               event->ndp_instance_id,
+                                               NAN_ROLE_PUBLISHER);
+    } else {
+        ALOGD("%s: Service ID not present", __FUNCTION__);
+    }
+
     return WIFI_SUCCESS;
 }
 

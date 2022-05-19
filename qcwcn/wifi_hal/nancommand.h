@@ -12,6 +12,40 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted (subject to the limitations in the
+ * disclaimer below) provided that the following conditions are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *
+ *   * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef __WIFI_HAL_NAN_COMMAND_H__
@@ -22,6 +56,43 @@
 #include "wifi_hal.h"
 #include "nan_cert.h"
 
+/*
+ * NAN Salt is a concatenation of salt_version, CSID, Service ID, PeerMac
+ * resulting in a total length of 14 bytes
+ */
+#define NAN_SECURITY_SALT_SIZE 14
+/* In Service ID calculation SHA-256 hash size is of max. 64 bytes */
+#define NAN_SVC_HASH_SIZE 64
+/* Service ID is the first 48 bits of the SHA-256 hash of the Service Name */
+#define NAN_SVC_ID_SIZE 6
+/* Default Service name length is 21 bytes */
+#define NAN_DEF_SVC_NAME_LEN 21
+/* As per NAN spec, 4096 iterations to be used for PMK calculation */
+#define NAN_PMK_ITERATIONS 4096
+/* Keep NCS-SK-128 Cipher Suite as default i.e. HMAC-SHA-256 algorithm */
+#define NAN_DEFAULT_NCS_SK NAN_CIPHER_SUITE_SHARED_KEY_128_MASK
+/* Currently by default max 6 Publishes/Subscribes are allowed */
+#define NAN_DEF_PUB_SUB 6
+/*
+ * First bit of discovery_indication_cfg in NanEnableRequest indicates
+ * disableDiscoveryAddressChangeIndication
+ */
+#define NAN_DISC_ADDR_IND_DISABLED 0x01
+
+typedef struct PACKED
+{
+    u32 instance_id;
+    u16 subscriber_publisher_id;
+    u8 service_id[NAN_SVC_ID_SIZE];
+} NanStoreSvcParams;
+
+typedef enum
+{
+    NAN_ROLE_NONE,
+    NAN_ROLE_PUBLISHER,
+    NAN_ROLE_SUBSCRIBER
+} NanRole;
+
 class NanCommand : public WifiVendorCommand
 {
 private:
@@ -29,6 +100,12 @@ private:
     char *mNanVendorEvent;
     u32 mNanDataLen;
     NanStaParameter *mStaParam;
+    u8 mNmiMac[NAN_MAC_ADDR_LEN];
+    u32 mNanMaxPublishes;
+    u32 mNanMaxSubscribes;
+    NanStoreSvcParams *mStorePubParams;
+    NanStoreSvcParams *mStoreSubParams;
+    bool mNanDiscAddrIndDisabled;
 
     //Function to check the initial few bytes of data to
     //determine whether NanResponse or NanEvent
@@ -144,6 +221,17 @@ public:
                              u32 valueRcvd,
                              void *pRsp,
                              bool is_ndp_rsp);
+
+    /* Functions for NAN passphrase to PMK calculation */
+    void saveNmi(u8 *mac);
+    u8 *getNmi();
+    void saveServiceId(u8 *service_id, u16 sub_pub_handle,
+                        u32 instance_id, NanRole Pool);
+    u8 *getServiceId(u32 instance_id, NanRole Pool);
+    void deleteServiceId(u16 sub_handle, u32 instance_id, NanRole pool);
+    void allocSvcParams();
+    void reallocSvcParams(NanRole pool);
+    void deallocSvcParams();
 };
 #endif /* __WIFI_HAL_NAN_COMMAND_H__ */
 
