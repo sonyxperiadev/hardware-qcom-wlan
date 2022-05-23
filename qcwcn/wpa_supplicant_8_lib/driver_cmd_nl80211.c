@@ -4021,6 +4021,12 @@ static int wpa_get_twt_setup_resp_val(struct nlattr **tb2, char *buf,
 	if (!buf)
 		return -EINVAL;
 
+	/* In case of failure only status is updated */
+	if (val != QCA_WLAN_VENDOR_TWT_STATUS_OK) {
+		*buf = '\0';
+		return 0;
+	}
+
 	cmd_id = QCA_WLAN_VENDOR_ATTR_TWT_SETUP_RESP_TYPE;
 	if (!tb2[cmd_id]) {
 		wpa_printf(MSG_ERROR, "TWT resp type missing");
