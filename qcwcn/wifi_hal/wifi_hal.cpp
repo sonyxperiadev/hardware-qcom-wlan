@@ -1263,6 +1263,7 @@ unload:
             }
             if (info->pkt_stats) free(info->pkt_stats);
             if (info->rx_aggr_pkts) free(info->rx_aggr_pkts);
+            if (info->wifihal_ctrl_sock.s) close(info->wifihal_ctrl_sock.s);
             wifi_logger_ring_buffers_deinit(info);
             cleanupGscanHandlers(info);
             cleanupRSSIMonitorHandler(info);
@@ -1300,12 +1301,14 @@ static int wifi_update_driver_state(const char *state) {
     if (fd < 0) {
         ALOGE("Failed to open driver state control param at %s",
               WIFI_DRIVER_STATE_CTRL_PARAM);
+        close(fd);
         return -1;
     }
     len = strlen(state) + 1;
     if (TEMP_FAILURE_RETRY(write(fd, state, len)) != len) {
         ALOGE("Failed to write driver state control param at %s",
               WIFI_DRIVER_STATE_CTRL_PARAM);
+        close(fd);
         ret = -1;
     }
     close(fd);
