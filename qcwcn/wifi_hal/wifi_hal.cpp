@@ -1065,6 +1065,8 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_set_coex_unsafe_channels = wifi_set_coex_unsafe_channels;
     fn->wifi_set_dtim_config = wifi_set_dtim_config;
     fn->wifi_get_usable_channels = wifi_get_usable_channels;
+    fn->wifi_get_supported_radio_combinations_matrix =
+                                wifi_get_supported_radio_combinations_matrix;
 
     return WIFI_SUCCESS;
 }
@@ -2521,6 +2523,71 @@ cleanup:
     return ret;
 }
 
+wifi_error wifi_get_supported_radio_combinations_matrix(
+                wifi_handle handle, u32 max_size, u32 *size,
+                wifi_radio_combination_matrix *radio_combination_matrix)
+{
+    wifi_error ret;
+    struct nlattr *nlData;
+    WifihalGeneric *vCommand = NULL;
+    hal_info *info = NULL;
+
+    ALOGI("%s: enter", __FUNCTION__);
+    if (!handle) {
+         ALOGE("%s: Error, wifi_handle NULL", __FUNCTION__);
+         return WIFI_ERROR_UNKNOWN;
+    }
+
+    info = getHalInfo(handle);
+    if (!info || info->num_interfaces < 1) {
+         ALOGE("%s: Error, wifi_handle NULL or base wlan interface not present",
+               __FUNCTION__);
+         return WIFI_ERROR_UNKNOWN;
+    }
+
+    if (size == NULL || radio_combination_matrix == NULL) {
+        ALOGE("%s: NULL set pointer provided. Exit.",
+            __func__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if (max_size < sizeof(u32)) {
+        ALOGE("%s: Invalid max size value %d", __func__, max_size);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    vCommand = new WifihalGeneric(handle, get_requestid(), OUI_QCA,
+                        QCA_NL80211_VENDOR_SUBCMD_GET_RADIO_COMBINATION_MATRIX);
+    if (vCommand == NULL) {
+        ALOGE("%s: Error vCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+    ret = vCommand->create();
+    if (ret != WIFI_SUCCESS)
+        goto cleanup;
+
+    nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
+    if (!nlData)
+        goto cleanup;
+
+    vCommand->attr_end(nlData);
+
+    /* Populate the input received from caller/framework. */
+    vCommand->set_radio_matrix_max_size(max_size);
+    vCommand->set_radio_matrix_size(size);
+    vCommand->set_radio_matrix(radio_combination_matrix);
+
+    ret = vCommand->requestResponse();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: requestResponse() error: %d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+cleanup:
+    delete vCommand;
+    return ret;
+}
 
 wifi_error wifi_set_nodfs_flag(wifi_interface_handle handle, u32 nodfs)
 {

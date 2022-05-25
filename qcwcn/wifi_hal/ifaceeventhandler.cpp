@@ -24,6 +24,40 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted (subject to the limitations in the
+ * disclaimer below) provided that the following conditions are met:
+ *
+ *   * Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+ *
+ *   * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *     contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "sync.h"
@@ -207,6 +241,9 @@ WifihalGeneric::WifihalGeneric(wifi_handle handle, int id, u32 vendor_id,
     mfilter_packet_length = 0;
     res_size = 0;
     channel_buff = NULL;
+    mRadio_matrix = NULL;
+    mRadio_matrix_max_size = 0;
+    mRadio_matrix_size = NULL;
     memset(&mDriverFeatures, 0, sizeof(mDriverFeatures));
     memset(&mRadarResultParams, 0, sizeof(RadarHistoryResultsParams));
 }
@@ -560,6 +597,11 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
                 wifiParseRadarHistory();
             }
             break;
+        case QCA_NL80211_VENDOR_SUBCMD_GET_RADIO_COMBINATION_MATRIX:
+            {
+                wifi_parse_radio_combinations_matrix();
+            }
+            break;
         default :
             ALOGE("%s: Wrong Wi-Fi HAL event received %d", __func__, mSubcmd);
     }
@@ -684,6 +726,164 @@ wifi_error WifihalGeneric::wifiParseCapabilities(struct nlattr **tbVendor)
     return WIFI_SUCCESS;
 }
 
+wifi_error WifihalGeneric::wifi_parse_radio_combinations_matrix() {
+    // tbVendor
+    struct nlattr *tbVendor[QCA_WLAN_VENDOR_ATTR_RADIO_MATRIX_MAX + 1];
+    int rem = 0, rem_radio = 0;
+    u32 num_radio_combinations = 0, num_radio_configurations = 0;
+    // nested radio matrix configurations
+    struct nlattr *radio_combination[QCA_WLAN_VENDOR_ATTR_RADIO_COMBINATIONS_MAX + 1];
+    struct nlattr *attr, *attr_cfg;
+    struct nlattr *radio_cfg[QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_MAX + 1];
+    u8 band, antenna;
+    u32 result_size = sizeof(u32); /* num_radio_combinations */
+    bool max_size_exceeded = false;
+    u32 size_needed = 0, radio_cfg_size = 0;
+    bool invalid_radio_cfg = false;
+    wifi_radio_combination *radio_combination_ptr;
+    wifi_radio_configuration *radio_config;
+    u8 *buff_ptr;
+
+    static struct nla_policy
+        policy[QCA_WLAN_VENDOR_ATTR_RADIO_MATRIX_MAX + 1] = {
+            [QCA_WLAN_VENDOR_ATTR_RADIO_MATRIX_SUPPORTED_CFGS] =
+                                                { .type = NLA_NESTED},
+        };
+
+    static struct nla_policy
+        policy_cfg[QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_MAX + 1] = {
+            [QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_BAND] =
+                                                { .type = NLA_U8},
+            [QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_ANTENNA] =
+                                                { .type = NLA_U8},
+        };
+
+    if (nla_parse(tbVendor, QCA_WLAN_VENDOR_ATTR_RADIO_MATRIX_MAX,
+                (struct nlattr *)mVendorData,mDataLen, NULL)) {
+        ALOGE("%s: nla_parse ATTR_RADIO_MATRIX fail", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if (!tbVendor[QCA_WLAN_VENDOR_ATTR_RADIO_MATRIX_SUPPORTED_CFGS]) {
+        ALOGE("%s: radio matrix attr entries not present", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    if (!mRadio_matrix) {
+        ALOGE("%s: radio matrix buffer is null", __FUNCTION__);
+        return WIFI_ERROR_INVALID_ARGS;
+    }
+
+    buff_ptr = (u8 *)mRadio_matrix;
+    buff_ptr += sizeof(u32); /* num_radio_combinations */
+    nla_for_each_nested(attr,
+            tbVendor[QCA_WLAN_VENDOR_ATTR_RADIO_MATRIX_SUPPORTED_CFGS],
+            rem) {
+        if (nla_parse_nested(radio_combination,
+                    QCA_WLAN_VENDOR_ATTR_RADIO_COMBINATIONS_MAX,
+                    attr, policy)) {
+            ALOGI("%s: nla_parse_nested radio combination fail", __FUNCTION__);
+            continue;
+        }
+        radio_combination_ptr = (wifi_radio_combination *)buff_ptr;
+
+        num_radio_configurations = 0;
+        radio_cfg_size = 0;
+        nla_for_each_nested(attr_cfg,
+                radio_combination[QCA_WLAN_VENDOR_ATTR_RADIO_COMBINATIONS_CFGS],
+                rem_radio) {
+            if (nla_parse_nested(radio_cfg,
+                        QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_MAX,
+                        attr_cfg, policy)) {
+                ALOGI("%s: nla_parse_nested radio cfg attr fail", __FUNCTION__);
+                continue;
+            }
+
+            if (!radio_cfg[QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_BAND] ||
+                !radio_cfg[QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_ANTENNA]) {
+                ALOGI("%s: band/antenna info not present", __FUNCTION__);
+                continue;
+            }
+
+            if (!invalid_radio_cfg) {
+                if (!num_radio_configurations) {
+                    size_needed = sizeof(wifi_radio_configuration) +
+                                  sizeof(u32);
+                    buff_ptr += sizeof(u32); /* num_radio_configurations */
+                } else {
+                    size_needed = sizeof(wifi_radio_configuration);
+                    buff_ptr += sizeof(wifi_radio_configuration);
+                }
+            }
+            if (mRadio_matrix_max_size < result_size + size_needed) {
+                ALOGI("%s: Max size reached, max size %u, needed %lu",
+                        __FUNCTION__, mRadio_matrix_max_size,
+                        result_size + size_needed);
+                max_size_exceeded = true;
+                break;
+            }
+            invalid_radio_cfg = false;
+            radio_config = (wifi_radio_configuration *)buff_ptr;
+
+            if (radio_cfg[QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_BAND]) {
+                band = nla_get_u32(
+                        radio_cfg[QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_BAND]);
+                if (band == QCA_SETBAND_5G) {
+                    radio_config->band = WLAN_MAC_5_0_BAND;
+                } else if (band == QCA_SETBAND_6G) {
+                    radio_config->band = WLAN_MAC_6_0_BAND;
+                } else if (band == QCA_SETBAND_2G) {
+                    radio_config->band = WLAN_MAC_2_4_BAND;
+                } else {
+                    ALOGI("%s: Invalid band value %d", __FUNCTION__, band);
+                    invalid_radio_cfg = true;
+                    continue;
+                }
+            }
+            if (radio_cfg[QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_ANTENNA]) {
+                antenna = nla_get_u8(
+                        radio_cfg[QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_ANTENNA]);
+                if (antenna == 1) {
+                    radio_config->antenna_cfg = WIFI_ANTENNA_1X1;
+                } else if (antenna == 2) {
+                    radio_config->antenna_cfg = WIFI_ANTENNA_2X2;
+                } else if (antenna == 3) {
+                    radio_config->antenna_cfg = WIFI_ANTENNA_3X3;
+                } else if (antenna == 4) {
+                    radio_config->antenna_cfg = WIFI_ANTENNA_4X4;
+                } else {
+                    ALOGI("%s: Invalid antenna cfg value %d", __FUNCTION__,
+                          antenna);
+                    invalid_radio_cfg = true;
+                    continue;
+                }
+            }
+            radio_cfg_size += size_needed;
+            num_radio_configurations++;
+            result_size += size_needed;
+        } /* RADIO_COMBINATIONS_CFGS */
+        if (num_radio_configurations) {
+            num_radio_combinations++;
+            radio_combination_ptr->num_radio_configurations =
+                                                    num_radio_configurations;
+            ALOGI("%s: radio_combinations[%d]: num_radio_configurations %d",
+                  __FUNCTION__, num_radio_combinations,
+                  num_radio_configurations);
+        }
+
+        buff_ptr = (u8 *)radio_combination_ptr + radio_cfg_size;
+
+        if (max_size_exceeded)
+            break;
+    } /* RADIO_MATRIX_SUPPORTED_CFGS */
+    mRadio_matrix->num_radio_combinations = num_radio_combinations;
+    *mRadio_matrix_size = result_size;
+    ALOGI("%s: num_radio_combinations %d, radio_matrix_size %d", __FUNCTION__,
+          num_radio_combinations, result_size);
+
+    return WIFI_SUCCESS;
+}
+
 wifi_error WifihalGeneric::wifiParseRadarHistory() {
 {
     // tbVendor
@@ -804,6 +1004,19 @@ void WifihalGeneric::setMaxSetSize(int set_size_max) {
 
 void WifihalGeneric::setConcurrencySet(feature_set set[]) {
     mConcurrencySet = set;
+}
+
+void WifihalGeneric::set_radio_matrix_max_size(u32 max_size) {
+    mRadio_matrix_max_size = max_size;
+}
+
+void WifihalGeneric::set_radio_matrix_size(u32 *size){
+    mRadio_matrix_size = size;
+}
+
+void WifihalGeneric::set_radio_matrix(
+        wifi_radio_combination_matrix *radio_combination_matrix){
+    mRadio_matrix = radio_combination_matrix;
 }
 
 void WifihalGeneric::setSizePtr(int *set_size) {
