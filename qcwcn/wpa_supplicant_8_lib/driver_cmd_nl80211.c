@@ -5199,7 +5199,7 @@ static int wpa_driver_form_clear_mcc_quota_msg(struct i802_bss *bss,
 
 	if (ret) {
 		wpa_printf(MSG_ERROR, "mcc_quota: Error sending nlmsg %d", ret);
-		goto fail;
+		return ret;
 	}
 
 	return 0;
@@ -5340,7 +5340,7 @@ static int wpa_driver_form_set_mcc_quota_msg(struct i802_bss *bss,
 
 	if (ret) {
 		wpa_printf(MSG_ERROR, "mcc_quota: Error sending nlmsg %d", ret);
-		goto fail;
+		return ret;
 	}
 
 	return 0;
