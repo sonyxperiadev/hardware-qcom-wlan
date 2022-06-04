@@ -36,6 +36,10 @@
 #include <string>
 #include <net/if.h>
 #include <vector>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <net/if_arp.h>
+#include <sys/socket.h>
 #include "wificonfigcommand.h"
 
 /* Implementation of the API functions exposed in wifi_config.h */
@@ -906,6 +910,24 @@ wifi_error wifi_virtual_interface_create(wifi_handle handle,
     }
     // Update dynamic interface list
     added_ifaces.push_back(std::string(ifname));
+    if (iface_type == WIFI_INTERFACE_TYPE_STA) {
+         int sock = socket(AF_INET, SOCK_DGRAM, 0);
+         if(sock < 0) {
+             ALOGE("%s :socket error, Failed to bring up iface \n", __func__);
+             goto done;
+        }
+        struct ifreq ifr;
+        memset(&ifr, 0, sizeof(ifr));
+        strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+        if (ioctl(sock, SIOCGIFFLAGS, &ifr) != 0) {
+            ALOGE("%s :Could not read interface %s flags \n", __func__, ifname);
+            goto done;
+        }
+        ifr.ifr_flags |= IFF_UP;
+        if (ioctl(sock, SIOCSIFFLAGS, &ifr) != 0) {
+            ALOGE("%s :Could not bring iface %s up \n", __func__, ifname);
+        }
+    }
 
 done:
     delete wifiConfigCommand;
