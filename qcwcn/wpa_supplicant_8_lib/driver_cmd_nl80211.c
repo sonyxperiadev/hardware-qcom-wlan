@@ -5372,6 +5372,159 @@ int wpa_driver_cmd_send_mcc_quota(struct i802_bss *bss,
 	return -EINVAL;
 }
 
+static int wpa_driver_form_flush_queue_config_msg(struct i802_bss *bss, char *cmd)
+{
+	uint32_t tid_mask = 0, flush_policy = 0;
+	u8 mac[MAC_ADDR_LEN], ac_mask = 0;
+	struct nl_msg *nlmsg = NULL;
+	struct nlattr *nl_attr;
+	char *ptr = cmd;
+	int ret;
+
+	wpa_printf(MSG_DEBUG, "flush_queue_config: %s", cmd);
+
+	/* First parameter: MAC address of peer */
+	if (os_strncasecmp(cmd, "peer", 4) == 0) {
+		cmd = move_to_next_str(cmd);
+		if ((strlen(cmd) < (MAC_ADDR_LEN * 2 + MAC_ADDR_LEN - 1)) ||
+		    convert_string_to_bytes(mac, cmd, MAC_ADDR_LEN) !=
+		    MAC_ADDR_LEN) {
+			wpa_printf(MSG_ERROR, "flush_queue_config: Invalid MAC address");
+			wpa_printf(MSG_ERROR, "flush_queue_config cmd: %s", ptr);
+			return -EINVAL;
+		}
+		cmd = move_to_next_str(cmd);
+	} else {
+		wpa_printf(MSG_ERROR, "flush_queue_config: peer MAC address is missing");
+		wpa_printf(MSG_ERROR, "flush_queue_config cmd: %s", ptr);
+		return -EINVAL;
+	}
+
+	/* Second parameter: flush config */
+	if (os_strncasecmp(cmd, "policy", 6) == 0) {
+		cmd = move_to_next_str(cmd);
+		flush_policy = get_u32_from_string(cmd, &ret);
+		if (ret < 0) {
+			wpa_printf(MSG_ERROR, "flush_queue_config: Invalid flush policy");
+			wpa_printf(MSG_ERROR, "flush_queue_config cmd: %s", ptr);
+			return ret;
+		}
+		cmd = move_to_next_str(cmd);
+	}
+
+	/* Third parameter: Follow QCA_WLAN_VENDOR_ATTR_AC  for ac bit mask */
+	if (os_strncasecmp(cmd, "ac", 2) == 0) {
+		cmd = move_to_next_str(cmd);
+		ac_mask = get_u8_from_string(cmd, &ret);
+		if (ret < 0) {
+			wpa_printf(MSG_ERROR, "flush_queue_config: AC mask error");
+			wpa_printf(MSG_ERROR, "flush_queue_config cmd: %s", ptr);
+			return ret;
+		}
+
+		if (!(ac_mask & (BIT(QCA_WLAN_VENDOR_TOS_BK) | BIT(QCA_WLAN_VENDOR_TOS_BE) |
+				 BIT(QCA_WLAN_VENDOR_TOS_VI) | BIT(QCA_WLAN_VENDOR_TOS_VO)))) {
+			wpa_printf(MSG_ERROR, "flush_queue_config: Invalid AC mask");
+			wpa_printf(MSG_ERROR, "flush_queue_config cmd: %s", ptr);
+			return -EINVAL;
+		}
+		cmd = move_to_next_str(cmd);
+	}
+
+	/* Fourth parameter: tid mask */
+	if (os_strncasecmp(cmd, "tid", 3) == 0) {
+		cmd = move_to_next_str(cmd);
+		tid_mask = get_u32_from_string(cmd, &ret);
+		if (ret < 0) {
+			wpa_printf(MSG_ERROR, "flush_queue_config: TID mask error");
+			wpa_printf(MSG_ERROR, "flush_queue_config cmd: %s", ptr);
+			return ret;
+		}
+		cmd = move_to_next_str(cmd);
+	}
+
+	if (!tid_mask && !ac_mask) {
+		wpa_printf(MSG_ERROR, "flush_queue_config: Neither TID not AC mask provided");
+		wpa_printf(MSG_ERROR, "flush_queue_config cmd: %s", ptr);
+		return -EINVAL;
+	}
+
+	nlmsg =
+	prepare_vendor_nlmsg(bss->drv, bss->ifname,
+			     QCA_NL80211_VENDOR_SUBCMD_PEER_FLUSH_PENDING);
+	if (!nlmsg) {
+		wpa_printf(MSG_ERROR, "flush_queue_config: Failed to allocate nl message");
+		return -ENOMEM;
+	}
+
+	nl_attr = nla_nest_start(nlmsg, NL80211_ATTR_VENDOR_DATA);
+	if (!nl_attr) {
+		wpa_printf(MSG_ERROR, "flush_queue_config: Failed to alloc nlattr");
+		ret = -ENOMEM;
+		goto fail;
+	}
+
+	/* Put the peer MAC address */
+	ret = nla_put(nlmsg, QCA_WLAN_VENDOR_ATTR_PEER_ADDR, MAC_ADDR_LEN, mac);
+	if (ret) {
+		wpa_printf(MSG_ERROR, "flush_queue_config: Error add hw addr attr %d", ret);
+		goto fail;
+	}
+
+	/* Put the flush_policy */
+	ret = nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_FLUSH_PENDING_POLICY,
+			  flush_policy);
+	if (ret) {
+		wpa_printf(MSG_ERROR,
+			   "flush_queue_config: Error add policy attr %d", ret);
+		goto fail;
+	}
+
+	if (tid_mask) {
+		/* Put the tid mask */
+		ret = nla_put_u32(nlmsg, QCA_WLAN_VENDOR_ATTR_TID_MASK,
+				  tid_mask);
+		if (ret) {
+			wpa_printf(MSG_ERROR, "flush_queue_config: Error add tid mask attr %d", ret);
+			goto fail;
+		}
+	} else {
+		/* Put the ac mask */
+		ret = nla_put_u8(nlmsg, QCA_WLAN_VENDOR_ATTR_AC, ac_mask);
+		if (ret) {
+			wpa_printf(MSG_ERROR, "flush_queue_config: Error add ac attr %d", ret);
+			goto fail;
+		}
+	}
+
+	nla_nest_end(nlmsg, nl_attr);
+	ret = send_nlmsg((struct nl_sock *)bss->drv->global->nl, nlmsg,
+			 NULL, NULL);
+	if (ret) {
+		wpa_printf(MSG_ERROR, "flush_queue_config: Error sending nlmsg %d", ret);
+		return ret;
+	}
+	return 0;
+fail:
+	if (nlmsg)
+		nlmsg_free(nlmsg);
+	return ret;
+}
+
+int wpa_driver_cmd_send_peer_flush_queue_config(struct i802_bss *bss, char *cmd)
+{
+	int ret;
+
+	if (os_strncasecmp(cmd, "set", 3) == 0) {
+		cmd = move_to_next_str(cmd);
+		ret = wpa_driver_form_flush_queue_config_msg(bss, cmd);
+		return ret;
+	}
+
+	wpa_printf(MSG_ERROR, "peer_flush_config: Unknown operation");
+	return -EINVAL;
+}
+
 int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 				  size_t buf_len )
 {
@@ -5671,6 +5824,13 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		/* Move cmd by string len and space */
 		cmd += 10;
 		return wpa_driver_cmd_send_mcc_quota(priv, cmd);
+	} else if (os_strncasecmp(cmd, "FLUSH_QUEUE_CONFIG", 18) == 0) {
+		/* DRIVER FLUSH_QUEUE_CONFIG set peer <mac addr> policy <val>
+		 * tid <tid mask> ac <ac mask>
+		 */
+		/* Move cmd by string len and space */
+		cmd += 19;
+		return wpa_driver_cmd_send_peer_flush_queue_config(priv, cmd);
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));
