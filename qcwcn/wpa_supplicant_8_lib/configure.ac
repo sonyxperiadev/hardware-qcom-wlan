@@ -42,13 +42,9 @@ if (test "$has_libnl_ver" -eq 0); then
         AC_MSG_ERROR(libnl and libnl-genl are required but were not found)
 fi
 
-if (test "$has_libnl_ver" -gt 1); then
-        AC_DEFINE([HAVE_LIBNL20], [1], [Define if you have libnl-2.0 or higher])
-fi
 
-if (test "$has_libnl_ver" -gt 2); then
-        AC_DEFINE([HAVE_LIBNL30], [1], [Define if you have libnl-3.0 or higher])
-fi
+AC_ARG_VAR(WPA_SUPPLICANT_DIR,[Path to Wpa-supplicant-dir ])
+AS_IF([test "${WPA_SUPPLICANT_DIR}" = ""],[AC_MSG_ERROR("Provide WPA_SUPPLICANT_DIR=path to wpa_supplicant dir")])
 
 AC_SUBST([LIBNL_CFLAGS])
 AC_SUBST([LIBNL_LIBS])

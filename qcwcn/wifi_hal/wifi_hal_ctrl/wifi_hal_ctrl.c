@@ -114,9 +114,7 @@ try_again:
     pwd_system = getpwnam("system");
     uid_system = pwd_system ? pwd_system->pw_uid : 0;
     if (!gid_wifi || !uid_system) {
-        close(ctrl->s);
-        unlink(ctrl->local.sun_path);
-        free(ctrl);
+        wifihal_ctrl_close(ctrl);
         return NULL;
     }
     chown(ctrl->local.sun_path, -1, gid_wifi);
@@ -124,7 +122,7 @@ try_again:
 
 
     if (*ctrl_path != '/') {
-            free(ctrl);
+            wifihal_ctrl_close(ctrl);
             return NULL;
            }
 #endif /* ANDROID */
@@ -133,15 +131,12 @@ try_again:
        res = strlcpy(ctrl->dest.sun_path, ctrl_path,
                      sizeof(ctrl->dest.sun_path));
        if (res >= sizeof(ctrl->dest.sun_path)) {
-           close(ctrl->s);
-           free(ctrl);
+           wifihal_ctrl_close(ctrl);
            return NULL;
        }
        if (connect(ctrl->s, (struct sockaddr *) &ctrl->dest,
             sizeof(ctrl->dest)) < 0) {
-        close(ctrl->s);
-        unlink(ctrl->local.sun_path);
-        free(ctrl);
+        wifihal_ctrl_close(ctrl);
         return NULL;
        }
        /*
