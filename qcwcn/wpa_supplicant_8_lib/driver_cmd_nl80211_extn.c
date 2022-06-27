@@ -74,10 +74,13 @@
 #define CB_SUFFIX "_cb"
 static wpa_driver_oem_cb_table_t oem_cb_array[MAX_OEM_LIBS + 1];
 
-void wpa_msg_handler(struct wpa_driver_nl80211_data *drv, char *msg, u32 subcmd) {
-    if (subcmd == QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT) {
-	wpa_msg(drv->ctx, MSG_INFO, "%s", msg);
-    }
+void wpa_msg_handler(struct wpa_driver_nl80211_data *drv,
+		     char *msg, u32 subcmd)
+{
+	if ((subcmd == QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT) ||
+	    (subcmd == QCA_NL80211_VENDOR_SUBCMD_OEM_DATA)) {
+		wpa_msg(drv->ctx, MSG_INFO, "%s", msg);
+	}
 }
 
 int wpa_driver_oem_initialize(wpa_driver_oem_cb_table_t **oem_cb_table)
