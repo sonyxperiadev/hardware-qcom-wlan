@@ -266,6 +266,10 @@ wifi_error wifi_virtual_interface_delete(wifi_handle handle, const char* ifname)
 wifi_error wifi_get_radar_history(wifi_interface_handle handle,
         radar_history_result *resultBuf, int resultBufSize, int *numResults);
 wifi_error wifi_disable_next_cac(wifi_interface_handle handle);
+
+wifi_error wifi_get_supported_radio_combinations_matrix(
+        wifi_handle handle, u32 max_size, u32 *size,
+        wifi_radio_combination_matrix *radio_combination_matrix);
 // some common macros
 
 #define min(x, y)       ((x) < (y) ? (x) : (y))
