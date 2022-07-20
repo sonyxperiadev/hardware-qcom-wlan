@@ -2632,10 +2632,6 @@ static int check_for_twt_cmd(char **cmd)
 static u64 get_u64_from_string(char *cmd_string, int *ret)
 {
 	u64 val = 0;
-	char *cmd = cmd_string;
-
-	while (*cmd != ' ')
-		cmd++;
 
 	*ret = 0;
 	errno = 0;
