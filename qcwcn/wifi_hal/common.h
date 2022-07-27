@@ -280,6 +280,7 @@ wifi_error wifi_get_supported_radio_combinations_matrix(
 #define get_requestid() ((arc4random()%REQUEST_ID_MAX) + 1)
 #define get_requestid_u8() ((arc4random()%REQUEST_ID_U8_MAX) + 1)
 #define WAIT_TIME_FOR_SET_REG_DOMAIN 50000
+#define ITER_COUNT_FOR_SET_REG_DOMAIN 10
 
 #ifndef UNUSED
 #define UNUSED(x)    (void)(x)
