@@ -156,8 +156,10 @@ wifi_error wifi_start_logging(wifi_interface_handle iface,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     ret = wifiLoggerCommand->put_u32(QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_RING_ID,
                                      ring_id);
@@ -290,8 +292,10 @@ wifi_error wifi_get_logger_supported_feature_set(wifi_interface_handle iface,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     ret = wifiLoggerCommand->put_u32(QCA_WLAN_VENDOR_ATTR_LOGGER_SUPPORTED,
                                      requestId);
@@ -361,12 +365,15 @@ wifi_error wifi_get_ring_data(wifi_interface_handle iface,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     if (wifiLoggerCommand->put_u32(
                 QCA_WLAN_VENDOR_ATTR_WIFI_LOGGER_RING_ID, ring_id))
     {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
     wifiLoggerCommand->attr_end(nlData);
@@ -484,8 +491,10 @@ wifi_error wifi_get_driver_version(wifi_interface_handle iface,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     ret = wifiLoggerCommand->put_u8(
                       QCA_WLAN_VENDOR_ATTR_WIFI_INFO_DRIVER_VERSION, requestId);
@@ -555,8 +564,10 @@ wifi_error wifi_get_firmware_memory_dump(wifi_interface_handle iface,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiLoggerCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     wifiLoggerCommand->attr_end(nlData);
 

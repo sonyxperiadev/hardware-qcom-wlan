@@ -25,6 +25,11 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "sync.h"
@@ -543,8 +548,10 @@ wifi_error wifi_get_nud_stats(wifi_interface_handle iface,
         goto cleanup;
     /*add the attributes*/
     nl_data = NUDCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nl_data)
+    if (!nl_data){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
     /**/
     NUDCommand->attr_end(nl_data);
 
@@ -593,13 +600,17 @@ wifi_error wifi_clear_nud_stats(wifi_interface_handle iface,
 
     /*add the attributes*/
     nl_data = NUDCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nl_data)
+    if (!nl_data){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
     if (mData.pkt_Type) {
        /*set the packet info attributes in nested*/
        nl_pktInfo = NUDCommand->attr_start(QCA_ATTR_NUD_STATS_SET_DATA_PKT_INFO);
-       if (!nl_pktInfo)
+       if (!nl_pktInfo){
+           ret = WIFI_ERROR_UNKNOWN;
            goto cleanup;
+       }
        else {
            ALOGV(" %s: pkt_type %d domain_name :%s"
                  " src_port %d dst_port :%d"

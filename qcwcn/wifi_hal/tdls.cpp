@@ -24,6 +24,11 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "sync.h"
@@ -374,8 +379,10 @@ wifi_error wifi_enable_tdls(wifi_interface_handle iface,
 
     /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nl_data)
+    if (!nl_data){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
     ALOGV("%s: MAC_ADDR: " MAC_ADDR_STR, __FUNCTION__, MAC_ADDR_ARRAY(addr));
     ret = pTdlsCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_TDLS_ENABLE_MAC_ADDR,
                                   (char *)addr, 6);
@@ -460,8 +467,10 @@ wifi_error wifi_disable_tdls(wifi_interface_handle iface, mac_addr addr)
 
     /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nl_data)
+    if (!nl_data){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
     ret = pTdlsCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_TDLS_DISABLE_MAC_ADDR,
                                   (char *)addr, 6);
     if (ret != WIFI_SUCCESS)
@@ -508,8 +517,10 @@ wifi_error wifi_get_tdls_status(wifi_interface_handle iface, mac_addr addr,
 
     /* Add the attributes */
     nl_data = pTdlsCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nl_data)
+    if (!nl_data){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
     ret = pTdlsCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_TDLS_GET_STATUS_MAC_ADDR,
                                   (char *)addr, 6);
     if (ret != WIFI_SUCCESS)
