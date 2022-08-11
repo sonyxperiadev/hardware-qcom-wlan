@@ -2240,6 +2240,13 @@ static wifi_error parse_tx_pkt_fate_stats(hal_info *info, u8 *buf, u16 size)
                                    info->pkt_fate_stats->n_tx_stats_collected];
 
     pkt_fate_stats->fate = (wifi_tx_packet_fate)log->status;
+
+    if (pkt_fate_stats->fate > TX_PKT_FATE_DRV_DROP_OTHER) {
+        ALOGE("Invalid Tx pkt fate status %d, set to drv_drop_other",
+              pkt_fate_stats->fate);
+        pkt_fate_stats->fate = TX_PKT_FATE_DRV_DROP_OTHER;
+    }
+
     if (log->type == TX_MGMT_PKT)
         pkt_fate_stats->frame_inf.payload_type = FRAME_TYPE_80211_MGMT;
     else

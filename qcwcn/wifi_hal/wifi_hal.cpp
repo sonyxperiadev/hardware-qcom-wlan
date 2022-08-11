@@ -903,7 +903,7 @@ wifi_error wifi_get_usable_channels(wifi_handle handle, u32 band_mask,
     /* Add the vendor specific attributes for the NL command. */
     nl_data = cmd->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nl_data) {
-         ALOGE("%s: failed attr_start for VENDOR_DATA due to error: (%d)",
+         ALOGE("%s: failed attr_start for VENDOR_DATA due to error",
                __FUNCTION__);
          ret = WIFI_ERROR_OUT_OF_MEMORY;
          goto cleanup;
