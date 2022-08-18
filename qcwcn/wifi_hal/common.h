@@ -213,6 +213,8 @@ typedef struct hal_info_s {
     bool apf_enabled;
     bool support_nan_ext_cmd;
     pkt_log_version  pkt_log_ver;
+    /* Interface combination matrix */
+    wifi_iface_concurrency_matrix iface_comb_matrix;
 } hal_info;
 
 typedef struct {
