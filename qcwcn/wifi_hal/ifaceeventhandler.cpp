@@ -67,6 +67,7 @@
 #include <errno.h>
 
 #include "ifaceeventhandler.h"
+#include "common.h"
 
 /* Used to handle NL command events from driver/firmware. */
 IfaceEventHandlerCommand *mwifiEventHandler = NULL;
@@ -601,6 +602,20 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
             {
                 wifi_parse_radio_combinations_matrix();
             }
+        case QCA_NL80211_VENDOR_SUBCMD_GET_SAR_CAPABILITY:
+            {
+                struct nlattr *tb_vendor[
+                        QCA_WLAN_VENDOR_ATTR_SAR_CAPABILITY_MAX + 1];
+                nla_parse(tb_vendor, QCA_WLAN_VENDOR_ATTR_SAR_CAPABILITY_MAX,
+                          (struct nlattr *)mVendorData,mDataLen, NULL);
+
+                if(tb_vendor[QCA_WLAN_VENDOR_ATTR_SAR_CAPABILITY_VERSION])
+                {
+                    mInfo->sar_version = (qca_wlan_vendor_sar_version) nla_get_u32(tb_vendor[
+                                               QCA_WLAN_VENDOR_ATTR_SAR_CAPABILITY_VERSION]);
+                }
+                ALOGV("%s: sar_version return %d", __func__, mInfo->sar_version);
+            }
             break;
         default :
             ALOGE("%s: Wrong Wi-Fi HAL event received %d", __func__, mSubcmd);
@@ -1125,3 +1140,34 @@ void WifihalGeneric::freeCachedRadarHistory() {
         mRadarResultParams.num_entries = 0;
     }
 }
+
+
+
+wifi_error WifihalGeneric::getSarVersion(wifi_interface_handle handle)
+{
+    wifi_error ret;
+    interface_info *ifaceInfo = getIfaceInfo(handle);
+
+
+    /* Create the NL message. */
+    ret = create();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Failed to create NL message,  Error:%d", __FUNCTION__, ret);
+        return ret;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = set_iface_id(ifaceInfo->name);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: Failed to set interface Id of message, Error:%d", __FUNCTION__, ret);
+        return ret;
+    }
+
+    ret = requestResponse();
+    if (ret != WIFI_SUCCESS)
+        ALOGE("%s: Failed to send request, Error:%d", __FUNCTION__, ret);
+
+    return ret;
+}
+
+

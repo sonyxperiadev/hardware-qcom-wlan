@@ -90,6 +90,7 @@
 #include "wifiloggercmd.h"
 #include "tcp_params_update.h"
 
+
 /*
  BUGBUG: normally, libnl allocates ports for all connections it makes; but
  being a static library, it doesn't really know how many other netlink
@@ -419,6 +420,29 @@ static wifi_error wifi_get_capabilities(wifi_interface_handle handle)
     delete wifihalGeneric;
     return ret;
 }
+
+static wifi_error wifi_get_sar_version(wifi_interface_handle handle)
+{
+    wifi_error ret;
+    wifi_handle wifiHandle = getWifiHandle(handle);
+
+    WifihalGeneric *sarVersion = new WifihalGeneric(
+                            wifiHandle,
+                            0,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_GET_SAR_CAPABILITY);
+    if (!sarVersion) {
+        ALOGE("%s: Failed to create object of WifihalGeneric class", __FUNCTION__);
+        return WIFI_ERROR_OUT_OF_MEMORY;
+    }
+
+
+    ret = sarVersion->getSarVersion(handle);
+
+    delete sarVersion;
+    return ret;
+}
+
 
 static wifi_error get_firmware_bus_max_size_supported(
                                                 wifi_interface_handle iface)
@@ -1408,6 +1432,13 @@ wifi_error wifi_initialize(wifi_handle *handle)
     if (ret != WIFI_SUCCESS) {
         ALOGE("Failed to get driver supported interface combinations");
         goto unload;
+    }
+
+    ret = wifi_get_sar_version(iface_handle);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("Failed to  get  SAR Version, Setting it to default.");
+        info->sar_version = QCA_WLAN_VENDOR_SAR_VERSION_1;
+        ret = WIFI_SUCCESS;
     }
 
 cld80211_cleanup:
