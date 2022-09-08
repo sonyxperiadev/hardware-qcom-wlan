@@ -213,6 +213,8 @@ typedef struct hal_info_s {
     bool apf_enabled;
     bool support_nan_ext_cmd;
     pkt_log_version  pkt_log_ver;
+    /* Interface combination matrix */
+    wifi_iface_concurrency_matrix iface_comb_matrix;
 } hal_info;
 
 typedef struct {
@@ -280,6 +282,7 @@ wifi_error wifi_get_supported_radio_combinations_matrix(
 #define get_requestid() ((arc4random()%REQUEST_ID_MAX) + 1)
 #define get_requestid_u8() ((arc4random()%REQUEST_ID_U8_MAX) + 1)
 #define WAIT_TIME_FOR_SET_REG_DOMAIN 50000
+#define ITER_COUNT_FOR_SET_REG_DOMAIN 10
 
 #ifndef UNUSED
 #define UNUSED(x)    (void)(x)

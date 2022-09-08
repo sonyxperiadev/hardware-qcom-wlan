@@ -120,18 +120,137 @@ int check_feature(enum qca_wlan_vendor_features feature, features_info *info)
             (info->flags[idx] & BIT(feature % 8));
 }
 
-/* Set the country code to driver. */
-wifi_error wifi_set_country_code(wifi_interface_handle iface,
-                                 const char* country_code)
+static wifi_error wifi_get_country_code(wifi_interface_handle iface,
+                                        char *country, int wiphy_index)
 {
     int requestId;
     wifi_error ret;
     WiFiConfigCommand *wifiConfigCommand;
     wifi_handle wifiHandle = getWifiHandle(iface);
+
+
+    /* No request id from caller, so generate one and pass it on to the driver.
+     * Generate it randomly.
+     */
+    requestId = get_requestid();
+
+    wifiConfigCommand = new WiFiConfigCommand(
+                            wifiHandle,
+                            requestId,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION);
+    if (wifiConfigCommand == NULL) {
+        ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ret = wifiConfigCommand->create_generic(NL80211_CMD_GET_REG);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: failed to create NL msg. Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    wifiConfigCommand->put_u32(NL80211_ATTR_WIPHY, wiphy_index);
+
+    ret = wifiConfigCommand->requestResponse();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: failed to request. Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    strlcpy(country, wifiConfigCommand->getCountryCode(), 3);
+    if (country[0] == '\0') {
+        ALOGE("%s: country code fetch failed", __FUNCTION__);
+        ret = (ret == WIFI_SUCCESS ? WIFI_ERROR_UNKNOWN : ret);
+    }
+
+cleanup:
+    delete wifiConfigCommand;
+    return ret;
+}
+
+static wifi_error wifi_get_wiphy_index(wifi_interface_handle iface,
+                                       int *wiphy_index)
+{
+    int requestId;
+    wifi_error ret;
+    WiFiConfigCommand *wifiConfigCommand;
+    interface_info *ifaceInfo = getIfaceInfo(iface);
+    wifi_handle wifiHandle = getWifiHandle(iface);
+
+
+    /* No request id from caller, so generate one and pass it on to the driver.
+     * Generate it randomly.
+     */
+    requestId = get_requestid();
+
+    wifiConfigCommand = new WiFiConfigCommand(
+                            wifiHandle,
+                            requestId,
+                            OUI_QCA,
+                            QCA_NL80211_VENDOR_SUBCMD_SET_WIFI_CONFIGURATION);
+    if (wifiConfigCommand == NULL) {
+        ALOGE("%s: Error wifiConfigCommand NULL", __FUNCTION__);
+        return WIFI_ERROR_UNKNOWN;
+    }
+
+    ret = wifiConfigCommand->create_generic(NL80211_CMD_GET_INTERFACE);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: failed to create NL msg. Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    /* Set the interface Id of the message. */
+    ret = wifiConfigCommand->set_iface_id(ifaceInfo->name);
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: failed to set iface id. Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    ret = wifiConfigCommand->requestResponse();
+    if (ret != WIFI_SUCCESS) {
+        ALOGE("%s: failed to request. Error:%d", __FUNCTION__, ret);
+        goto cleanup;
+    }
+
+    *wiphy_index = wifiConfigCommand->getWiphyIndex();
+    if (*wiphy_index < 0) {
+        ALOGE("%s: wiphy index fetch failed", __FUNCTION__);
+        ret = (ret == WIFI_SUCCESS ? WIFI_ERROR_UNKNOWN : ret);
+    }
+
+cleanup:
+    delete wifiConfigCommand;
+    return ret;
+}
+
+/* Set the country code to driver. */
+wifi_error wifi_set_country_code(wifi_interface_handle iface,
+                                 const char* new_country_code)
+{
+    int requestId, count, wiphy_index;
+    wifi_error ret;
+    WiFiConfigCommand *wifiConfigCommand;
+    wifi_handle wifiHandle = getWifiHandle(iface);
     hal_info *info = getHalInfo(wifiHandle);
+    char current_country_code[4];
+    bool check_update = false;
 
-    ALOGV("%s: %s", __FUNCTION__, country_code);
+    ALOGV("%s: new country code %s", __FUNCTION__, new_country_code);
 
+    ret = wifi_get_wiphy_index(iface, &wiphy_index);
+    if (ret != WIFI_SUCCESS)
+        goto set_country;
+
+    ret = wifi_get_country_code(iface, current_country_code, wiphy_index);
+    if (ret != WIFI_SUCCESS)
+        goto set_country;
+
+    ALOGV("%s: current country code %s", __FUNCTION__, current_country_code);
+    if (strncmp(current_country_code, new_country_code, 2) != 0)
+        check_update = true;
+
+set_country:
     /* No request id from caller, so generate one and pass it on to the driver.
      * Generate it randomly.
      */
@@ -154,7 +273,8 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
         goto cleanup;
     }
 
-    ret = wifiConfigCommand->put_string(NL80211_ATTR_REG_ALPHA2, country_code);
+    ret = wifiConfigCommand->put_string(NL80211_ATTR_REG_ALPHA2,
+                                        new_country_code);
     if (ret != WIFI_SUCCESS) {
         ALOGE("wifi_set_country_code: put country code failed. Error:%d", ret);
         goto cleanup;
@@ -179,7 +299,40 @@ wifi_error wifi_set_country_code(wifi_interface_handle iface,
         ALOGE("wifi_set_country_code(): requestEvent Error:%d", ret);
         goto cleanup;
     }
-    usleep(WAIT_TIME_FOR_SET_REG_DOMAIN);
+
+    if (!check_update) {
+        /* Wait for default time and return */
+        usleep(WAIT_TIME_FOR_SET_REG_DOMAIN);
+        goto cleanup;
+    }
+
+    count = 0;
+    while (count < ITER_COUNT_FOR_SET_REG_DOMAIN) {
+
+        /* Wait for longer duration for first iteration */
+        if (count == 0)
+            usleep(3 * WAIT_TIME_FOR_SET_REG_DOMAIN);
+        else
+            usleep(WAIT_TIME_FOR_SET_REG_DOMAIN);
+
+        if (wifi_get_country_code(iface, current_country_code, wiphy_index) !=
+            WIFI_SUCCESS) {
+            ALOGE("%s: updated country code fetch failed", __FUNCTION__);
+            break;
+        }
+
+        if (strncmp(current_country_code, new_country_code, 2) == 0) {
+            ALOGV("%s: country code updated", __FUNCTION__);
+            break;
+        }
+
+        ALOGV("%s: country code not updated. wait and check again",
+              __FUNCTION__);
+        count++;
+    }
+
+    if (count == ITER_COUNT_FOR_SET_REG_DOMAIN)
+        ALOGE("%s: country code update timeout", __FUNCTION__);
 
 cleanup:
     delete wifiConfigCommand;
@@ -650,6 +803,8 @@ WiFiConfigCommand::WiFiConfigCommand(wifi_handle handle,
     /* Initialize the member data variables here */
     mWaitforRsp = false;
     mRequestId = id;
+    mWiphyIndex = -1;
+    mCountryCode[0] = '\0';
 }
 
 WiFiConfigCommand::~WiFiConfigCommand()
@@ -780,6 +935,45 @@ out:
     return res;
 }
 
+int WiFiConfigCommand::getWiphyIndex()
+{
+    return mWiphyIndex;
+}
+
+const char * WiFiConfigCommand::getCountryCode()
+{
+    return mCountryCode;
+}
+
+wifi_error WiFiConfigCommand::requestResponse()
+{
+    return WifiCommand::requestResponse(mMsg);
+}
+
+int WiFiConfigCommand::handleResponse(WifiEvent &reply)
+{
+    struct nlattr **tb = reply.attributes();
+    struct genlmsghdr *gnlh = reply.header();
+
+    WifiVendorCommand::handleResponse(reply);
+
+    if (gnlh->cmd == NL80211_CMD_GET_REG) {
+        if (tb[NL80211_ATTR_REG_ALPHA2]) {
+            strlcpy(mCountryCode,
+                    (const char*) nla_data(tb[NL80211_ATTR_REG_ALPHA2]), 3);
+            ALOGV("%s: reported country code: %s", __FUNCTION__, mCountryCode);
+        }
+    }
+
+    if (gnlh->cmd == NL80211_CMD_NEW_INTERFACE) {
+        if (tb[NL80211_ATTR_WIPHY]) {
+            mWiphyIndex = nla_get_u32(tb[NL80211_ATTR_WIPHY]);
+            ALOGV("%s: reported wiphy index: %d", __FUNCTION__, mWiphyIndex);
+        }
+    }
+
+    return NL_SKIP;
+}
 
 
 static std::vector<std::string> added_ifaces;
