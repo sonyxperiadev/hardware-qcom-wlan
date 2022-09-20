@@ -167,6 +167,7 @@ public:
     virtual void set_radio_matrix_max_size(u32 max_size);
     virtual void set_radio_matrix_size(u32 *size);
     virtual void set_radio_matrix(wifi_radio_combination_matrix *radio_combination_matrix);
+    virtual wifi_error getSarVersion(wifi_interface_handle handle);
 };
 
 /**
