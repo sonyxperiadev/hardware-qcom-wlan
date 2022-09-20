@@ -12,6 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "sync.h"
@@ -246,8 +251,10 @@ wifi_error wifi_start_gscan(wifi_request_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     num_scan_buckets = (unsigned int)params.num_buckets > MAX_BUCKETS ?
                             MAX_BUCKETS : params.num_buckets;
@@ -276,6 +283,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
             QCA_WLAN_VENDOR_ATTR_GSCAN_SCAN_CMD_PARAMS_NUM_BUCKETS,
             num_scan_buckets))
     {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
 
@@ -320,6 +328,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_BUCKET_SPEC_STEP_COUNT,
                 bucketSpec.step_count))
         {
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
         }
 
@@ -345,6 +354,7 @@ wifi_error wifi_start_gscan(wifi_request_id id,
                     QCA_WLAN_VENDOR_ATTR_GSCAN_CHANNEL_SPEC_PASSIVE,
                     channel_spec.passive) )
             {
+                ret = WIFI_ERROR_UNKNOWN;
                 goto cleanup;
             }
 
@@ -455,8 +465,10 @@ wifi_error wifi_stop_gscan(wifi_request_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     ret = gScanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
@@ -537,8 +549,10 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     numAp = (unsigned int)params.num_bssid > MAX_HOTLIST_APS ?
         MAX_HOTLIST_APS : params.num_bssid;
@@ -552,6 +566,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
             QCA_WLAN_VENDOR_ATTR_GSCAN_BSSID_HOTLIST_PARAMS_NUM_AP,
             numAp))
     {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
 
@@ -561,15 +576,19 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
     nlApThresholdParamList =
         gScanCommand->attr_start(
                                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM);
-    if (!nlApThresholdParamList)
+    if (!nlApThresholdParamList){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     /* Add nested NL attributes for AP Threshold Param. */
     for (i = 0; i < numAp; i++) {
         ap_threshold_param apThreshold = params.ap[i];
         struct nlattr *nlApThresholdParam = gScanCommand->attr_start(i);
-        if (!nlApThresholdParam)
+        if (!nlApThresholdParam){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
         if (gScanCommand->put_addr(
                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_BSSID,
                 apThreshold.bssid) ||
@@ -580,6 +599,7 @@ wifi_error wifi_set_bssid_hotlist(wifi_request_id id,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_RSSI_HIGH,
                 apThreshold.high))
         {
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
         }
         ALOGV("%s: Index:%d BssId: %hhx:%hhx:%hhx:%hhx:%hhx:%hhx "
@@ -697,8 +717,10 @@ wifi_error wifi_reset_bssid_hotlist(wifi_request_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     ret = gScanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID, id);
@@ -777,8 +799,10 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     numAp = (unsigned int)params.num_bssid > MAX_SIGNIFICANT_CHANGE_APS ?
         MAX_SIGNIFICANT_CHANGE_APS : params.num_bssid;
@@ -799,6 +823,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
             QCA_WLAN_VENDOR_ATTR_GSCAN_SIGNIFICANT_CHANGE_PARAMS_NUM_AP,
             numAp))
     {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
 
@@ -811,15 +836,18 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
     nlApThresholdParamList =
         gScanCommand->attr_start(
                                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM);
-    if (!nlApThresholdParamList)
+    if (!nlApThresholdParamList){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
-
+    }
     /* Add nested NL attributes for AP Threshold Param list. */
     for (i = 0; i < numAp; i++) {
         ap_threshold_param apThreshold = params.ap[i];
         struct nlattr *nlApThresholdParam = gScanCommand->attr_start(i);
-        if (!nlApThresholdParam)
+        if (!nlApThresholdParam){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
         if ( gScanCommand->put_addr(
                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_BSSID,
                 apThreshold.bssid) ||
@@ -830,6 +858,7 @@ wifi_error wifi_set_significant_change_handler(wifi_request_id id,
                 QCA_WLAN_VENDOR_ATTR_GSCAN_AP_THRESHOLD_PARAM_RSSI_HIGH,
                 apThreshold.high))
         {
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
         }
         ALOGV("%s: ap[%d].bssid:%hhx:%hhx:%hhx:%hhx:%hhx:%hhx "
@@ -951,8 +980,10 @@ wifi_error wifi_reset_significant_change_handler(wifi_request_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     ret = gScanCommand->put_u32(
                     QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
@@ -1046,8 +1077,10 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     if (gScanCommand->put_u32(
          QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID,
@@ -1059,6 +1092,7 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
          QCA_WLAN_VENDOR_ATTR_GSCAN_GET_CACHED_SCAN_RESULTS_CONFIG_PARAM_MAX,
             max))
     {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
 
@@ -1074,6 +1108,7 @@ wifi_error wifi_get_cached_gscan_results(wifi_interface_handle iface,
          */
         if (retRequestRsp != -ETIMEDOUT) {
             /* Proceed to cleanup & return no results */
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
         }
     }
@@ -1129,8 +1164,10 @@ wifi_error wifi_set_scanning_mac_oui(wifi_interface_handle handle, oui scan_oui)
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = vCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     ALOGV("%s: MAC_OUI - %02x:%02x:%02x", __FUNCTION__,
           scan_oui[0], scan_oui[1], scan_oui[2]);
@@ -1209,7 +1246,7 @@ wifi_error GScanCommand::requestResponse()
 int GScanCommand::handleResponse(WifiEvent &reply)
 {
     int i = 0;
-    wifi_error ret = WIFI_SUCCESS;
+    wifi_error ret = WIFI_ERROR_UNKNOWN;
     u32 val;
 
     WifiVendorCommand::handleResponse(reply);
@@ -1717,6 +1754,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to add attribute NL80211_ATTR_VENDOR_DATA. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -1752,6 +1790,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
             QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_NUM_NETWORKS,
             num_networks))
     {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to add vendor atributes. Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
@@ -1761,6 +1800,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         gScanCommand->attr_start(
                 QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORKS_LIST);
     if (!nlPnoParamList) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to add attr. PNO_SET_LIST_PARAM_EPNO_NETWORKS_LIST. "
             "Error:%d", __FUNCTION__, ret);
         goto cleanup;
@@ -1771,6 +1811,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
         wifi_epno_network pnoNetwork = epno_params->networks[i];
         struct nlattr *nlPnoNetwork = gScanCommand->attr_start(i);
         if (!nlPnoNetwork) {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s: Failed attr_start for nlPnoNetwork. Error:%d",
                 __FUNCTION__, ret);
             goto cleanup;
@@ -1785,6 +1826,7 @@ wifi_error wifi_set_epno_list(wifi_request_id id,
                 QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_EPNO_NETWORK_AUTH_BIT,
                 pnoNetwork.auth_bit_field))
         {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s: Failed to add PNO_SET_LIST_PARAM_EPNO_NETWORK_*. "
                 "Error:%d", __FUNCTION__, ret);
             goto cleanup;
@@ -1886,6 +1928,7 @@ wifi_error wifi_reset_epno_list(wifi_request_id id, wifi_interface_handle iface)
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to add attribute NL80211_ATTR_VENDOR_DATA. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -1898,6 +1941,7 @@ wifi_error wifi_reset_epno_list(wifi_request_id id, wifi_interface_handle iface)
             QCA_WLAN_VENDOR_ATTR_PNO_SET_LIST_PARAM_NUM_NETWORKS,
             EPNO_NO_NETWORKS))
     {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to add vendor atributes Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
@@ -1974,6 +2018,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to add attribute NL80211_ATTR_VENDOR_DATA. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -1986,6 +2031,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
             QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_LIST_PARAM_NUM,
             num))
     {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to add vendor atributes. Error:%d", __FUNCTION__, ret);
         goto cleanup;
     }
@@ -1995,6 +2041,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
         gScanCommand->attr_start(
             QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_LIST_PARAM_NETWORK_ARRAY);
     if (!nlPasspointNetworksParamList) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed attr_start for PASSPOINT_LIST_PARAM_NETWORK_ARRAY. "
             "Error:%d", __FUNCTION__, ret);
         goto cleanup;
@@ -2005,6 +2052,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
         wifi_passpoint_network passpointNetwork = networks[i];
         struct nlattr *nlPasspointNetworkParam = gScanCommand->attr_start(i);
         if (!nlPasspointNetworkParam) {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s: Failed attr_start for nlPasspointNetworkParam. "
                 "Error:%d", __FUNCTION__, ret);
             goto cleanup;
@@ -2023,6 +2071,7 @@ wifi_error wifi_set_passpoint_list(wifi_request_id id,
             QCA_WLAN_VENDOR_ATTR_PNO_PASSPOINT_NETWORK_PARAM_ROAM_PLMN,
                 (char*)passpointNetwork.plmn, 3 * sizeof(u8)))
         {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s: Failed to add PNO_PASSPOINT_NETWORK_PARAM_ROAM_* attr. "
                 "Error:%d", __FUNCTION__, ret);
             goto cleanup;
@@ -2141,6 +2190,7 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
     /* Add the vendor specific attributes for the NL command. */
     nlData = gScanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to add attribute NL80211_ATTR_VENDOR_DATA. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -2149,6 +2199,7 @@ wifi_error wifi_reset_passpoint_list(wifi_request_id id,
     ret = gScanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_GSCAN_SUBCMD_CONFIG_PARAM_REQUEST_ID, id);
     if (ret != WIFI_SUCCESS) {
+        ret = WIFI_ERROR_OUT_OF_MEMORY;
         ALOGE("%s: Failed to add vendor data attributes. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -2242,7 +2293,7 @@ wifi_error GScanCommand::copyCachedScanResults(
                                       int *numResults,
                                       wifi_cached_scan_results *cached_results)
 {
-    wifi_error ret = WIFI_SUCCESS;
+    wifi_error ret = WIFI_ERROR_UNKNOWN;
     int i;
     wifi_cached_scan_results *cachedResultRsp;
 
@@ -2270,6 +2321,7 @@ wifi_error GScanCommand::copyCachedScanResults(
             memcpy(cached_results[i].results,
                 cachedResultRsp->results,
                 cached_results[i].num_results * sizeof(wifi_scan_result));
+            ret = WIFI_SUCCESS;
         }
     } else {
         ALOGE("%s: mGetCachedResultsRspParams is NULL", __FUNCTION__);

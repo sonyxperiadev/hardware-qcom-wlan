@@ -1243,8 +1243,10 @@ wifi_error nan_data_request_initiator(transaction_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     if (nanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
@@ -1262,6 +1264,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
         nanCommand->put_string(
             QCA_WLAN_VENDOR_ATTR_NDP_IFACE_STR,
             msg->ndp_iface)) {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
 
@@ -1271,8 +1274,10 @@ wifi_error nan_data_request_initiator(transaction_id id,
                 msg->channel_request_type) ||
             nanCommand->put_u32(
                 QCA_WLAN_VENDOR_ATTR_NDP_CHANNEL,
-                msg->channel))
+                msg->channel)){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
     }
 
     if (msg->app_info.ndp_app_info_len != 0) {
@@ -1280,6 +1285,7 @@ wifi_error nan_data_request_initiator(transaction_id id,
                 QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
                 (char *)msg->app_info.ndp_app_info,
                 msg->app_info.ndp_app_info_len)) {
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
         }
     }
@@ -1287,31 +1293,39 @@ wifi_error nan_data_request_initiator(transaction_id id,
     if (msg->ndp_cfg.qos_cfg == NAN_DP_CONFIG_QOS) {
         nlCfgQos =
             nanCommand->attr_start(QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_QOS);
-        if (!nlCfgQos)
+        if (!nlCfgQos){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
         /* TBD Qos Info */
         nanCommand->attr_end(nlCfgQos);
     }
     if (msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) {
         if (nanCommand->put_u32(QCA_WLAN_VENDOR_ATTR_NDP_CSID,
-                msg->cipher_type))
+                msg->cipher_type)){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
     }
     if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK) {
         if (msg->key_info.body.pmk_info.pmk_len != NAN_PMK_INFO_LEN) {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s: Invalid pmk len:%d", __FUNCTION__,
                   msg->key_info.body.pmk_info.pmk_len);
             goto cleanup;
         }
         if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
             (char *)msg->key_info.body.pmk_info.pmk,
-            msg->key_info.body.pmk_info.pmk_len))
+            msg->key_info.body.pmk_info.pmk_len)){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
     } else if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE) {
         if (msg->key_info.body.passphrase_info.passphrase_len <
             NAN_SECURITY_MIN_PASSPHRASE_LEN ||
             msg->key_info.body.passphrase_info.passphrase_len >
             NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s: Invalid passphrase len:%d", __FUNCTION__,
                   msg->key_info.body.passphrase_info.passphrase_len);
             goto cleanup;
@@ -1334,21 +1348,27 @@ wifi_error nan_data_request_initiator(transaction_id id,
             msg->key_info.body.pmk_info.pmk_len = NAN_PMK_INFO_LEN;
             if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
                 (char *)msg->key_info.body.pmk_info.pmk,
-                msg->key_info.body.pmk_info.pmk_len))
+                msg->key_info.body.pmk_info.pmk_len)){
                 if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
                     (char *)msg->key_info.body.passphrase_info.passphrase,
-                    msg->key_info.body.passphrase_info.passphrase_len))
+                    msg->key_info.body.passphrase_info.passphrase_len)){
+                    ret = WIFI_ERROR_UNKNOWN;
                     goto cleanup;
+                }
+            }
         } else if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
                    (char *)msg->key_info.body.passphrase_info.passphrase,
                    msg->key_info.body.passphrase_info.passphrase_len)) {
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
         }
     }
     if (msg->service_name_len) {
         if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_NAME,
-            (char *)msg->service_name, msg->service_name_len))
+            (char *)msg->service_name, msg->service_name_len)){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
     }
     nanCommand->attr_end(nlData);
 
@@ -1396,8 +1416,10 @@ wifi_error nan_data_indication_response(transaction_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     if (nanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
@@ -1414,6 +1436,7 @@ wifi_error nan_data_indication_response(transaction_id id,
         nanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_NDP_RESPONSE_CODE,
             msg->rsp_code)) {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
     if (msg->app_info.ndp_app_info_len != 0) {
@@ -1421,38 +1444,47 @@ wifi_error nan_data_indication_response(transaction_id id,
                 QCA_WLAN_VENDOR_ATTR_NDP_APP_INFO,
                 (char *)msg->app_info.ndp_app_info,
                 msg->app_info.ndp_app_info_len)) {
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
         }
     }
     if (msg->ndp_cfg.qos_cfg == NAN_DP_CONFIG_QOS) {
         nlCfgQos =
             nanCommand->attr_start(QCA_WLAN_VENDOR_ATTR_NDP_CONFIG_QOS);
-        if (!nlCfgQos)
+        if (!nlCfgQos){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
 
         /* TBD Qos Info */
         nanCommand->attr_end(nlCfgQos);
     }
     if (msg->cipher_type != NAN_CIPHER_SUITE_SHARED_KEY_NONE) {
         if (nanCommand->put_u32(QCA_WLAN_VENDOR_ATTR_NDP_CSID,
-                msg->cipher_type))
+                msg->cipher_type)){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
     }
     if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PMK) {
         if (msg->key_info.body.pmk_info.pmk_len != NAN_PMK_INFO_LEN) {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s: Invalid pmk len:%d", __FUNCTION__,
                   msg->key_info.body.pmk_info.pmk_len);
             goto cleanup;
         }
         if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PMK,
             (char *)msg->key_info.body.pmk_info.pmk,
-            msg->key_info.body.pmk_info.pmk_len))
+            msg->key_info.body.pmk_info.pmk_len)){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
     } else if (msg->key_info.key_type == NAN_SECURITY_KEY_INPUT_PASSPHRASE) {
         if (msg->key_info.body.passphrase_info.passphrase_len <
             NAN_SECURITY_MIN_PASSPHRASE_LEN ||
             msg->key_info.body.passphrase_info.passphrase_len >
             NAN_SECURITY_MAX_PASSPHRASE_LEN) {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s: Invalid passphrase len:%d", __FUNCTION__,
                   msg->key_info.body.passphrase_info.passphrase_len);
             goto cleanup;
@@ -1479,19 +1511,24 @@ wifi_error nan_data_indication_response(transaction_id id,
                 msg->key_info.body.pmk_info.pmk_len))
                 if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
                     (char *)msg->key_info.body.passphrase_info.passphrase,
-                    msg->key_info.body.passphrase_info.passphrase_len))
+                    msg->key_info.body.passphrase_info.passphrase_len)){
+                    ret = WIFI_ERROR_UNKNOWN;
                     goto cleanup;
+                }
         } else if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_PASSPHRASE,
                    (char *)msg->key_info.body.passphrase_info.passphrase,
                    msg->key_info.body.passphrase_info.passphrase_len)) {
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
         }
     }
 
     if (msg->service_name_len) {
         if (nanCommand->put_bytes(QCA_WLAN_VENDOR_ATTR_NDP_SERVICE_NAME,
-            (char *)msg->service_name, msg->service_name_len))
+            (char *)msg->service_name, msg->service_name_len)){
+            ret = WIFI_ERROR_UNKNOWN;
             goto cleanup;
+        }
     }
     nanCommand->attr_end(nlData);
 
@@ -1525,8 +1562,10 @@ wifi_error nan_data_end(transaction_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = nanCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     if (nanCommand->put_u32(
             QCA_WLAN_VENDOR_ATTR_NDP_SUBCMD,
@@ -1538,6 +1577,7 @@ wifi_error nan_data_end(transaction_id id,
             QCA_WLAN_VENDOR_ATTR_NDP_INSTANCE_ID_ARRAY,
             (char *)msg->ndp_instance_id,
             msg->num_ndp_instances * sizeof(u32))) {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
     nanCommand->attr_end(nlData);
