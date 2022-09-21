@@ -3533,6 +3533,7 @@ public:
 
                 wifi_iface_combination *comb_br = &matrix->iface_combinations[k-1];
                 k = 0;
+                num_bridge = 0;
 
                 for (j = 0; j < comb->num_iface_limits; j++) {
                     limit = &comb->iface_limits[j];
