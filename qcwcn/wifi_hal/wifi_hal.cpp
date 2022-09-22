@@ -3532,10 +3532,9 @@ public:
                 }
 
                 wifi_iface_combination *comb_br = &matrix->iface_combinations[k-1];
-                k = 0;
                 num_bridge = 0;
 
-                for (j = 0; j < comb->num_iface_limits; j++) {
+                for (j = 0, k = 0; (j < comb->num_iface_limits) && (k < MAX_IFACE_LIMITS); j++, k++) {
                     limit = &comb->iface_limits[j];
                     /* count the possible number of bridge interface based on max_limit/2
                      * Also maintain remaining interfaces as AP */
@@ -3561,7 +3560,6 @@ public:
                         comb_br->iface_limits[k].iface_mask = limit->iface_mask;
                         comb_br->iface_limits[k].max_limit = limit->max_limit;
                     }
-                    k++;
                 }
                 // Reduce max ifaces which are converted to bridge iface.
                 comb_br->max_ifaces = comb->max_ifaces - num_bridge;
