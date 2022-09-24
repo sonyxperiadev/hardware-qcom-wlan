@@ -1,5 +1,5 @@
 /*
- * Driver interaction with extended Linux CFG8021
+ * Driver interaction with extended Linux CFG80211
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -70,6 +70,7 @@
 #include "android_drv.h"
 #endif
 #include "driver_cmd_nl80211_extn.h"
+#include "driver_cmd_nl80211_common.h"
 
 #define WPA_PS_ENABLED		0
 #define WPA_PS_DISABLED		1
@@ -431,9 +432,8 @@ static void wpa_driver_notify_country_change(void *ctx, char *cmd)
 static struct remote_sta_info g_sta_info = {0};
 static struct bss_info g_bss_info = {0};
 
-static struct nl_msg *prepare_nlmsg(struct wpa_driver_nl80211_data *drv,
-				    char *ifname, int cmdid, int subcmd,
-				    int flag)
+struct nl_msg *prepare_nlmsg(struct wpa_driver_nl80211_data *drv,
+		             char *ifname, int cmdid, int subcmd, int flag)
 {
 	int res;
 	struct nl_msg *nlmsg = nlmsg_alloc();
@@ -479,8 +479,8 @@ cleanup:
 	return NULL;
 }
 
-static struct nl_msg *prepare_vendor_nlmsg(struct wpa_driver_nl80211_data *drv,
-					   char *ifname, int subcmd)
+struct nl_msg *prepare_vendor_nlmsg(struct wpa_driver_nl80211_data *drv,
+		                    char *ifname, int subcmd)
 {
 	return prepare_nlmsg(drv, ifname, NL80211_CMD_VENDOR, subcmd, 0);
 }
@@ -799,6 +799,10 @@ static int handle_response(struct resp_info *info, struct nlattr *vendata,
 		os_memset(info->reply_buf, 0, info->reply_buf_len);
 		parse_get_feature_info(info, vendata, datalen);
 		break;
+	case QCA_NL80211_VENDOR_SUBCMD_SR:
+		os_memset(info->reply_buf, 0, info->reply_buf_len);
+		sr_response_handler(info, vendata, datalen);
+		break;
 	default:
 		wpa_printf(MSG_ERROR,"Unsupported response type: %d", info->subcmd);
 		break;
@@ -806,7 +810,7 @@ static int handle_response(struct resp_info *info, struct nlattr *vendata,
 	return 0;
 }
 
-static int response_handler(struct nl_msg *msg, void *arg)
+int response_handler(struct nl_msg *msg, void *arg)
 {
 	struct genlmsghdr *mHeader;
 	struct nlattr *mAttributes[NL80211_ATTR_MAX_INTERNAL + 1];
@@ -836,7 +840,7 @@ static int response_handler(struct nl_msg *msg, void *arg)
 	return status;
 }
 
-static int ack_handler(struct nl_msg *msg, void *arg)
+int ack_handler(struct nl_msg *msg, void *arg)
 {
 	int *err = (int *)arg;
 
@@ -907,6 +911,9 @@ int wpa_driver_nl80211_driver_event(struct wpa_driver_nl80211_data *drv,
 						   status);
 			}
 			break;
+		case QCA_NL80211_VENDOR_SUBCMD_SR:
+			ret = wpa_driver_sr_event(drv, vendor_id, subcmd, data, len);
+			break;
 		default:
 			break;
 	}
@@ -941,7 +948,7 @@ int wpa_driver_nl80211_diag_msg_event(struct nl_msg *msg, void *ctx)
 	return ret;
 }
 
-static int finish_handler(struct nl_msg *msg, void *arg)
+int finish_handler(struct nl_msg *msg, void *arg)
 {
 	int *ret = (int *)arg;
 
@@ -950,8 +957,8 @@ static int finish_handler(struct nl_msg *msg, void *arg)
 }
 
 
-static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
-						 void *arg)
+int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
+		  void *arg)
 {
 	int *ret = (int *)arg;
 
@@ -962,13 +969,13 @@ static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
 }
 
 
-static int no_seq_check(struct nl_msg *msg, void *arg)
+int no_seq_check(struct nl_msg *msg, void *arg)
 {
 	return NL_OK;
 }
 
-static int send_nlmsg(struct nl_sock *cmd_sock, struct nl_msg *nlmsg,
-		      nl_recvmsg_msg_cb_t customer_cb, void *arg)
+int send_nlmsg(struct nl_sock *cmd_sock, struct nl_msg *nlmsg,
+	       nl_recvmsg_msg_cb_t customer_cb, void *arg)
 {
 	int err = 0;
 	struct nl_cb *cb = nl_cb_alloc(NL_CB_DEFAULT);
@@ -1155,7 +1162,7 @@ static int populate_nlmsg(struct nl_msg *nlmsg, char *cmd,
 	return 0;
 }
 
-static char *skip_white_space(char *cmd)
+char *skip_white_space(char *cmd)
 {
 	char *pos = cmd;
 
@@ -5899,6 +5906,9 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		/* Move cmd by string len and space */
 		cmd += 19;
 		return wpa_driver_cmd_send_peer_flush_queue_config(priv, cmd);
+	} else if (os_strncasecmp(cmd, "SPATIAL_REUSE ", 14) == 0) {
+		cmd += 14;
+		return wpa_driver_sr_cmd(priv, cmd, buf, buf_len);
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));
