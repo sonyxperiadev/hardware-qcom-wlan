@@ -28,6 +28,7 @@
  * Changes from Qualcomm Innovation Center are provided under the following license:
  *
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted (subject to the limitations in the
@@ -126,6 +127,7 @@ wifi_error wifi_extended_dtim_config_set(wifi_request_id id,
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("wifi_extended_dtim_config_set: failed attr_start for "
             "VENDOR_DATA. Error:%d", ret);
         goto cleanup;
@@ -427,6 +429,7 @@ wifi_error wifi_set_qpower(wifi_interface_handle iface,
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("wifi_set_qpower: failed attr_start for "
             "VENDOR_DATA. Error:%d", ret);
         goto cleanup;
@@ -434,6 +437,7 @@ wifi_error wifi_set_qpower(wifi_interface_handle iface,
 
     if (wifiConfigCommand->put_u8(
         QCA_WLAN_VENDOR_ATTR_CONFIG_QPOWER, powersave)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("wifi_set_qpower(): failed to put vendor data. "
             "Error:%d", ret);
         goto cleanup;
@@ -495,6 +499,7 @@ wifi_error wifi_set_beacon_wifi_iface_stats_averaging_factor(
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("wifi_set_beacon_wifi_iface_stats_averaging_factor: failed "
             "attr_start for VENDOR_DATA. Error:%d", ret);
         goto cleanup;
@@ -502,6 +507,7 @@ wifi_error wifi_set_beacon_wifi_iface_stats_averaging_factor(
 
     if (wifiConfigCommand->put_u32(
         QCA_WLAN_VENDOR_ATTR_CONFIG_STATS_AVG_FACTOR, factor)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("wifi_set_beacon_wifi_iface_stats_averaging_factor(): failed to "
             "put vendor data. Error:%d", ret);
         goto cleanup;
@@ -561,6 +567,7 @@ wifi_error wifi_set_guard_time(wifi_request_id id,
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("wifi_set_guard_time: failed attr_start for VENDOR_DATA. "
             "Error:%d", ret);
         goto cleanup;
@@ -568,6 +575,7 @@ wifi_error wifi_set_guard_time(wifi_request_id id,
 
     if (wifiConfigCommand->put_u32(
         QCA_WLAN_VENDOR_ATTR_CONFIG_GUARD_TIME, guard_time)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("wifi_set_guard_time: failed to add vendor data.");
         goto cleanup;
     }
@@ -659,6 +667,7 @@ wifi_error wifi_select_SARv01_tx_power_scenario(wifi_interface_handle handle,
     if (wifiConfigCommand->put_u32(
                       QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SAR_ENABLE,
                       bdf_file)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("failed to put SAR_ENABLE");
         goto cleanup;
     }
@@ -885,6 +894,7 @@ wifi_error wifi_reset_tx_power_scenario(wifi_interface_handle handle)
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("wifi_reset_tx_power_scenario: failed attr_start for VENDOR_DATA. "
             "Error:%d", ret);
         goto cleanup;
@@ -892,6 +902,7 @@ wifi_error wifi_reset_tx_power_scenario(wifi_interface_handle handle)
 
     if (wifiConfigCommand->put_u32(QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SAR_ENABLE,
                                QCA_WLAN_VENDOR_ATTR_SAR_LIMITS_SELECT_NONE)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("failed to put SAR_ENABLE or NUM_SPECS");
         goto cleanup;
     }
@@ -944,12 +955,14 @@ wifi_error wifi_set_thermal_mitigation_mode(wifi_handle handle,
     /* Set the interface Id of the message. */
     if (wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX,
                                    info->interfaces[0]->id)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to put iface id", __FUNCTION__);
-         goto cleanup;
+        goto cleanup;
     }
 
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed in attr_start for VENDOR_DATA, Error:%d",
               __FUNCTION__, ret);
         goto cleanup;
@@ -957,6 +970,7 @@ wifi_error wifi_set_thermal_mitigation_mode(wifi_handle handle,
 
     if (wifiConfigCommand->put_u32(QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_VALUE,
                              QCA_WLAN_VENDOR_ATTR_THERMAL_CMD_TYPE_SET_LEVEL)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("Failed to put THERMAL_LEVEL command type");
         goto cleanup;
     }
@@ -989,6 +1003,7 @@ wifi_error wifi_set_thermal_mitigation_mode(wifi_handle handle,
     if (wifiConfigCommand->put_u32(
                              QCA_WLAN_VENDOR_ATTR_THERMAL_LEVEL,
                              qca_vendor_thermal_level)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("Failed to put thermal level");
         goto cleanup;
     }
@@ -996,6 +1011,7 @@ wifi_error wifi_set_thermal_mitigation_mode(wifi_handle handle,
     if (wifiConfigCommand->put_u32(
                              QCA_WLAN_VENDOR_ATTR_THERMAL_COMPLETION_WINDOW,
                              completion_window)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("Failed to put thermal completion window");
         goto cleanup;
     }
@@ -1325,6 +1341,7 @@ wifi_error wifi_virtual_interface_create(wifi_handle handle,
     if (iface_type == WIFI_INTERFACE_TYPE_STA) {
          int sock = socket(AF_INET, SOCK_DGRAM, 0);
          if(sock < 0) {
+             ret = WIFI_ERROR_UNKNOWN;
              ALOGE("%s :socket error, Failed to bring up iface \n", __func__);
              goto done;
         }
@@ -1332,11 +1349,13 @@ wifi_error wifi_virtual_interface_create(wifi_handle handle,
         memset(&ifr, 0, sizeof(ifr));
         strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
         if (ioctl(sock, SIOCGIFFLAGS, &ifr) != 0) {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s :Could not read interface %s flags \n", __func__, ifname);
             goto done;
         }
         ifr.ifr_flags |= IFF_UP;
         if (ioctl(sock, SIOCSIFFLAGS, &ifr) != 0) {
+            ret = WIFI_ERROR_UNKNOWN;
             ALOGE("%s :Could not bring iface %s up \n", __func__, ifname);
         }
     }
@@ -1448,6 +1467,7 @@ wifi_error wifi_set_latency_mode(wifi_interface_handle iface,
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: failed attr_start for VENDOR_DATA. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -1455,6 +1475,7 @@ wifi_error wifi_set_latency_mode(wifi_interface_handle iface,
 
     if (wifiConfigCommand->put_u16(
         QCA_WLAN_VENDOR_ATTR_CONFIG_LATENCY_LEVEL, level)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: failed to put vendor data. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -1521,6 +1542,7 @@ wifi_error wifi_multi_sta_set_primary_connection(wifi_handle handle,
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: failed attr_start for VENDOR_DATA. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -1528,6 +1550,7 @@ wifi_error wifi_multi_sta_set_primary_connection(wifi_handle handle,
 
     if (wifiConfigCommand->put_u8(
         QCA_WLAN_VENDOR_ATTR_CONFIG_CONCURRENT_STA_PRIMARY, 1)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: failed to put vendor data. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -1606,13 +1629,15 @@ wifi_error wifi_multi_sta_set_use_case(wifi_handle handle,
     /* Set the interface Id of the message. */
     if (wifiConfigCommand->put_u32(NL80211_ATTR_IFINDEX,
                                    info->interfaces[0]->id)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: Failed to put iface id", __FUNCTION__);
-         goto cleanup;
+        goto cleanup;
     }
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = wifiConfigCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: failed attr_start for VENDOR_DATA. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;
@@ -1620,6 +1645,7 @@ wifi_error wifi_multi_sta_set_use_case(wifi_handle handle,
 
     if (wifiConfigCommand->put_u8(
         QCA_WLAN_VENDOR_ATTR_CONCURRENT_STA_POLICY_CONFIG, use_case)) {
+        ret = WIFI_ERROR_UNKNOWN;
         ALOGE("%s: failed to put use_case. Error:%d",
             __FUNCTION__, ret);
         goto cleanup;

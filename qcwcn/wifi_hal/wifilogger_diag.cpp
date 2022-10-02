@@ -739,7 +739,7 @@ static wifi_error process_roam_event(hal_info *info, u32 id,
             wlan_roam_candidate_found_payload_type *pRoamCandidateFound;
             roam_candidate_found_vendor_data_t roamCandidateFoundVendata;
             memset(&roamCandidateFoundVendata, 0,
-			sizeof(roamCandidateFoundVendata));
+                                sizeof(roamCandidateFoundVendata));
             pConnectEvent->event = WIFI_EVENT_ROAM_CANDIDATE_FOUND;
             pRoamCandidateFound = (wlan_roam_candidate_found_payload_type *)buf;
             pTlv = &pConnectEvent->tlvs[0];

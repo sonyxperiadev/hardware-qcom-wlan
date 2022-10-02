@@ -12,6 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include <errno.h>
@@ -103,8 +108,10 @@ wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
 
     /* Add the vendor specific attributes for the NL command. */
     nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nlData)
+    if (!nlData){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
 
     ret = roamCommand->put_u32(QCA_WLAN_VENDOR_ATTR_ROAMING_SUBCMD,
                           QCA_WLAN_VENDOR_ROAMING_SUBCMD_SET_BLACKLIST_BSSID);
@@ -188,6 +195,7 @@ wifi_error wifi_set_ssid_white_list(wifi_request_id id, wifi_interface_handle if
     /* Add the vendor specific attributes for the NL command. */
     nlData = roamCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
     if (!nlData) {
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
     }
 

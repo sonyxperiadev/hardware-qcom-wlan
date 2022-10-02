@@ -12,6 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 #include "sync.h"
@@ -457,7 +462,7 @@ static wifi_error get_wifi_peer_info(wifi_peer_info *stats,
     int rem;
     wifi_rate_stat * pRateStats;
     struct nlattr *rateInfo;
-    wifi_error ret = WIFI_SUCCESS;
+    wifi_error ret = WIFI_ERROR_UNKNOWN;
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_PEER_INFO_TYPE])
     {
@@ -527,7 +532,7 @@ wifi_error LLStatsCommand::get_wifi_iface_stats(wifi_iface_stat *stats,
     struct nlattr *wmmInfo;
     wifi_wmm_ac_stat *pWmmStats;
     int i=0, rem;
-    wifi_error ret = WIFI_SUCCESS;
+    wifi_error ret = WIFI_ERROR_UNKNOWN;
 
     if (!tb_vendor[QCA_WLAN_VENDOR_ATTR_LL_STATS_IFACE_BEACON_RX])
     {
@@ -869,7 +874,7 @@ wifi_error LLStatsCommand::requestResponse()
 
 wifi_error LLStatsCommand::notifyResponse()
 {
-    wifi_error ret = WIFI_SUCCESS;
+    wifi_error ret = WIFI_ERROR_UNKNOWN;
 
     /* Indicate stats to framework only if both radio and iface stats
      * are present */
@@ -882,6 +887,7 @@ wifi_error LLStatsCommand::notifyResponse()
         mHandler.on_link_stats_results(mRequestId,
                                        mResultsParams.iface_stat, mNumRadios,
                                        mResultsParams.radio_stat);
+        ret = WIFI_SUCCESS;
     } else {
         ret = WIFI_ERROR_INVALID_ARGS;
     }
@@ -1318,8 +1324,10 @@ wifi_error wifi_set_link_stats(wifi_interface_handle iface,
 
     /*add the attributes*/
     nl_data = LLCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nl_data)
+    if (!nl_data){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
     /**/
     ret = LLCommand->put_u32(QCA_WLAN_VENDOR_ATTR_LL_STATS_SET_CONFIG_MPDU_SIZE_THRESHOLD,
                                   params.mpdu_size_threshold);
@@ -1379,8 +1387,10 @@ wifi_error wifi_get_link_stats(wifi_request_id id,
         goto cleanup;
     /*add the attributes*/
     nl_data = LLCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nl_data)
+    if (!nl_data){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
     ret = LLCommand->put_u32(QCA_WLAN_VENDOR_ATTR_LL_STATS_GET_CONFIG_REQ_ID,
                                   id);
     if (ret != WIFI_SUCCESS)
@@ -1446,8 +1456,10 @@ wifi_error wifi_clear_link_stats(wifi_interface_handle iface,
         goto cleanup;
     /*add the attributes*/
     nl_data = LLCommand->attr_start(NL80211_ATTR_VENDOR_DATA);
-    if (!nl_data)
+    if (!nl_data){
+        ret = WIFI_ERROR_UNKNOWN;
         goto cleanup;
+    }
     /**/
     ret = LLCommand->put_u32(QCA_WLAN_VENDOR_ATTR_LL_STATS_CLR_CONFIG_REQ_MASK,
                                   stats_clear_req_mask);
