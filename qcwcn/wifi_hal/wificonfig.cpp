@@ -848,10 +848,11 @@ wifi_error wifi_select_tx_power_scenario(wifi_interface_handle handle,
         return WIFI_ERROR_UNKNOWN;
     }
     ALOGV("wifi_select_tx_power_scenario: sarVer%u", (u32)info->sar_version);
-    if(info->sar_version == QCA_WLAN_VENDOR_SAR_VERSION_1)
-      return wifi_select_SARv01_tx_power_scenario(handle,scenario);
-    else if(info->sar_version == QCA_WLAN_VENDOR_SAR_VERSION_2)
-      return wifi_select_SARv02_tx_power_scenario(handle,scenario);
+    if  (info->sar_version == QCA_WLAN_VENDOR_SAR_VERSION_1)
+        return wifi_select_SARv01_tx_power_scenario(handle,scenario);
+    else if(info->sar_version == QCA_WLAN_VENDOR_SAR_VERSION_2 ||
+              info->sar_version == QCA_WLAN_VENDOR_SAR_VERSION_3)
+        return wifi_select_SARv02_tx_power_scenario(handle,scenario);
     else {
       ALOGE("wifi_select_tx_power_scenario %u invalid or not supported", (u32)info->sar_version);
       return WIFI_ERROR_UNKNOWN;
