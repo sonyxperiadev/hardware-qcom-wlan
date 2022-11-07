@@ -143,14 +143,17 @@ static wifi_error wifi_configure_nd_offload(wifi_interface_handle iface,
 wifi_error wifi_get_wake_reason_stats(wifi_interface_handle iface,
                              WLAN_DRIVER_WAKE_REASON_CNT *wifi_wake_reason_cnt);
 static int wifi_is_nan_ext_cmd_supported(wifi_interface_handle handle);
-wifi_error wifi_get_supported_iface_combination(wifi_interface_handle iface_handle);
 
 wifi_error
     wifi_init_tcp_param_change_event_handler(wifi_interface_handle iface);
 
+#ifndef TARGET_SUPPORTS_WEARABLES
+wifi_error wifi_get_supported_iface_combination(wifi_interface_handle iface_handle);
+
 wifi_error wifi_get_supported_iface_concurrency_matrix(
         wifi_handle handle,
         wifi_iface_concurrency_matrix *iface_concurrency_matrix);
+#endif /* TARGET_SUPPORTS_WEARABLES */
 
 /* Initialize/Cleanup */
 
@@ -1096,8 +1099,10 @@ wifi_error init_wifi_vendor_hal_func_table(wifi_hal_fn *fn) {
     fn->wifi_get_usable_channels = wifi_get_usable_channels;
     fn->wifi_get_supported_radio_combinations_matrix =
                                 wifi_get_supported_radio_combinations_matrix;
+#ifndef TARGET_SUPPORTS_WEARABLES
     fn->wifi_get_supported_iface_concurrency_matrix =
                                 wifi_get_supported_iface_concurrency_matrix;
+#endif /* TARGET_SUPPORTS_WEARABLES */
 
     return WIFI_SUCCESS;
 }
@@ -1429,11 +1434,13 @@ wifi_error wifi_initialize(wifi_handle *handle)
     ALOGV("support_nan_ext_cmd is %d",
           info->support_nan_ext_cmd);
 
+#ifndef TARGET_SUPPORTS_WEARABLES
     ret = wifi_get_supported_iface_combination(iface_handle);
     if (ret != WIFI_SUCCESS) {
         ALOGE("Failed to get driver supported interface combinations");
         goto unload;
     }
+#endif /* TARGET_SUPPORTS_WEARABLES */
 
     ret = wifi_get_sar_version(iface_handle);
     if (ret != WIFI_SUCCESS) {
@@ -3397,6 +3404,7 @@ static int wifi_is_nan_ext_cmd_supported(wifi_interface_handle iface_handle)
     }
 }
 
+#ifndef TARGET_SUPPORTS_WEARABLES
 char *get_iface_mask_str(u32 mask, char *buf, size_t buflen) {
     char * pos, *end;
     int res;
@@ -3718,6 +3726,7 @@ wifi_error wifi_get_supported_iface_combination(wifi_interface_handle iface_hand
 
     return ret;
 }
+#endif /* TARGET_SUPPORTS_WEARABLES */
 
 wifi_error wifi_get_radar_history(wifi_interface_handle handle,
        radar_history_result *resultBuf, int resultBufSize, int *numResults)
@@ -3890,6 +3899,7 @@ cleanup:
     return ret;
 }
 
+#ifndef TARGET_SUPPORTS_WEARABLES
 wifi_error wifi_get_supported_iface_concurrency_matrix(
         wifi_handle handle, wifi_iface_concurrency_matrix *iface_comb_matrix)
 {
@@ -3924,3 +3934,4 @@ wifi_error wifi_get_supported_iface_concurrency_matrix(
     }
     return WIFI_SUCCESS;
 }
+#endif /* TARGET_SUPPORTS_WEARABLES */
