@@ -602,6 +602,7 @@ int WifihalGeneric::handleResponse(WifiEvent &reply)
             {
                 wifi_parse_radio_combinations_matrix();
             }
+	    break;
         case QCA_NL80211_VENDOR_SUBCMD_GET_SAR_CAPABILITY:
             {
                 struct nlattr *tb_vendor[
@@ -765,14 +766,6 @@ wifi_error WifihalGeneric::wifi_parse_radio_combinations_matrix() {
                                                 { .type = NLA_NESTED},
         };
 
-    static struct nla_policy
-        policy_cfg[QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_MAX + 1] = {
-            [QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_BAND] =
-                                                { .type = NLA_U8},
-            [QCA_WLAN_VENDOR_ATTR_SUPPORTED_RADIO_CFG_ANTENNA] =
-                                                { .type = NLA_U8},
-        };
-
     if (nla_parse(tbVendor, QCA_WLAN_VENDOR_ATTR_RADIO_MATRIX_MAX,
                 (struct nlattr *)mVendorData,mDataLen, NULL)) {
         ALOGE("%s: nla_parse ATTR_RADIO_MATRIX fail", __FUNCTION__);
@@ -831,7 +824,7 @@ wifi_error WifihalGeneric::wifi_parse_radio_combinations_matrix() {
                 }
             }
             if (mRadio_matrix_max_size < result_size + size_needed) {
-                ALOGI("%s: Max size reached, max size %u, needed %lu",
+                ALOGI("%s: Max size reached, max size %u, needed %u",
                         __FUNCTION__, mRadio_matrix_max_size,
                         result_size + size_needed);
                 max_size_exceeded = true;

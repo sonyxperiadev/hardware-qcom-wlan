@@ -1761,6 +1761,12 @@ static int wpa_driver_ioctl(struct i802_bss *bss, char *cmd,
 	android_wifi_priv_cmd priv_cmd;
 	memset(&ifr, 0, sizeof(ifr));
 	memset(&priv_cmd, 0, sizeof(priv_cmd));
+
+	if (strlen(cmd) + 1 > buf_len) {
+		wpa_printf(MSG_ERROR, "%s: cmd length is invalid\n",
+			   __func__);
+		return -EINVAL;
+	}
 	os_memcpy(buf, cmd, strlen(cmd) + 1);
 	os_strlcpy(ifr.ifr_name, bss->ifname, IFNAMSIZ);
 	priv_cmd.buf = buf;
@@ -2754,7 +2760,7 @@ void print_setup_cmd_values(struct twt_setup_parameters *twt_setup_params)
 		   twt_setup_params->min_wake_duration);
 	wpa_printf(MSG_DEBUG, "TWT: max wake duration: %d ",
 		   twt_setup_params->max_wake_duration);
-	wpa_printf(MSG_DEBUG, "TWT: wake tsf: 0x%lx ",
+	wpa_printf(MSG_DEBUG, "TWT: wake tsf: 0x%llx ",
 		   twt_setup_params->wake_tsf);
 	wpa_printf(MSG_DEBUG, "TWT: announce timeout(in us): %u",
 		   twt_setup_params->announce_timeout_us);
@@ -5855,6 +5861,12 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));
+
+		if (strlen(cmd) + 1 > buf_len) {
+			wpa_printf(MSG_ERROR, "%s: cmd length is invalid\n",
+				   __func__);
+			return -EINVAL;
+		}
 		os_memcpy(buf, cmd, strlen(cmd) + 1);
 		os_strlcpy(ifr.ifr_name, bss->ifname, IFNAMSIZ);
 

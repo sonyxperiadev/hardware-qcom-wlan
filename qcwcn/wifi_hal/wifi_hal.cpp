@@ -3434,7 +3434,7 @@ char *get_iface_mask_str(u32 mask, char *buf, size_t buflen) {
         goto error;
 
     pos += res;
-    res = snprintf(pos, end - pos, "]\0");
+    res = snprintf(pos, end - pos, "]");
     if (res < 0 || (res >= end - pos))
         goto error;
 
@@ -3442,7 +3442,7 @@ char *get_iface_mask_str(u32 mask, char *buf, size_t buflen) {
 
 error:
     ALOGE("snprintf() error res=%d, write length=%d", res, end - pos);
-    return "";
+    return NULL;
 }
 
 static void dump_wifi_iface_combination(wifi_iface_concurrency_matrix *matrix) {
@@ -3461,7 +3461,7 @@ static void dump_wifi_iface_combination(wifi_iface_concurrency_matrix *matrix) {
         ALOGV("comb%d : max_ifaces: %u iface_limit: %u", i+1, comb->max_ifaces, comb->num_iface_limits);
         for (j = 0; j < comb->num_iface_limits; j++) {
             limit = &comb->iface_limits[j];
-            ALOGV("    max=%u, iface:%s", limit->max_limit, get_iface_mask_str(limit->iface_mask, buf, 30));
+            ALOGV("    max=%u, iface:%s", limit->max_limit, get_iface_mask_str(limit->iface_mask, buf, 30) ? buf : "");
         }
     }
 }
@@ -3590,7 +3590,7 @@ public:
                 struct nlattr *tb_comb[NUM_NL80211_IFACE_COMB];
                 struct nlattr *tb_limit[NUM_NL80211_IFACE_LIMIT];
                 struct nlattr *nl_limit, *nl_mode;
-                int err, rem_limit, rem_mode, size_needed, j = 0;
+                int err, rem_limit, rem_mode, j = 0;
                 static struct nla_policy
                 iface_combination_policy[NUM_NL80211_IFACE_COMB] = {
                     [NL80211_IFACE_COMB_LIMITS] = { .type = NLA_NESTED },
@@ -3660,7 +3660,7 @@ public:
                             iface_limits[j].max_limit--;
                             break;
                         default:
-                            ALOGI("Ignore unsupported iface type: %lu", ift);
+                            ALOGI("Ignore unsupported iface type: %d", ift);
                             break;
                         }
                     }
@@ -3895,10 +3895,8 @@ wifi_error wifi_get_supported_iface_concurrency_matrix(
 {
     wifi_error ret = WIFI_ERROR_UNKNOWN;
     hal_info *info = (hal_info *) handle;
-    wifi_interface_handle iface_handle;
     wifi_iface_combination *comb;
     wifi_iface_limit *limit;
-    int index;
 
     if (info == NULL) {
         ALOGE("Wifi not initialized yet.");
