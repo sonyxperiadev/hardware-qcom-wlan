@@ -334,11 +334,9 @@ wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ap_results(
             tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD]);
 
         ALOGV("gscan_parse_hotlist_ap_results: ts %" PRId64 " SSID  %s "
-              "BSSID: %02x:%02x:%02x:%02x:%02x:%02x channel %d rssi %d "
+              "BSSID: " MACSTR " channel %d rssi %d "
               "rtt %" PRId64" rtt_sd %" PRId64,
-              results[i].ts, results[i].ssid,
-              results[i].bssid[0], results[i].bssid[1], results[i].bssid[2],
-              results[i].bssid[3], results[i].bssid[4], results[i].bssid[5],
+              results[i].ts, results[i].ssid, MAC2STR(results[i].bssid),
               results[i].channel, results[i].rssi, results[i].rtt,
               results[i].rtt_sd);
         /* Increment loop index for next record */
@@ -436,10 +434,8 @@ static wifi_error gscan_get_significant_change_results(u32 num_results,
         QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SIGNIFICANT_CHANGE_RESULT_RSSI_LIST]
             ), results[i]->num_rssi * sizeof(wifi_rssi));
 
-        ALOGV("significant_change_result:%d, BSSID:"
-            "%02x:%02x:%02x:%02x:%02x:%02x channel:%d  num_rssi:%d ",
-            i, results[i]->bssid[0], results[i]->bssid[1], results[i]->bssid[2],
-            results[i]->bssid[3], results[i]->bssid[4], results[i]->bssid[5],
+        ALOGV("significant_change_result:%d, BSSID:" MACSTR " channel:%d  num_rssi:%d ",
+            i, MAC2STR(results[i]->bssid),
             results[i]->channel, results[i]->num_rssi);
 
         rem_size = sizeof(rssi_buf);
@@ -577,11 +573,10 @@ wifi_error GScanCommandEventHandler::gscan_parse_hotlist_ssid_results(
             tb2[QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_RTT_SD]);
 
         ALOGV("gscan_parse_hotlist_ssid_results: ts %" PRId64 " SSID  %s "
-              "BSSID: %02x:%02x:%02x:%02x:%02x:%02x channel %d rssi %d "
+              "BSSID: " MACSTR " channel %d rssi %d "
               "rtt %" PRId64 " rtt_sd %" PRId64,
               results[i].ts, results[i].ssid,
-              results[i].bssid[0], results[i].bssid[1], results[i].bssid[2],
-              results[i].bssid[3], results[i].bssid[4], results[i].bssid[5],
+              MAC2STR(results[i].bssid),
               results[i].channel, results[i].rssi, results[i].rtt,
               results[i].rtt_sd);
         /* Increment loop index for next record */
@@ -731,16 +726,11 @@ wifi_error GScanCommandEventHandler::gscan_parse_passpoint_network_result(
           mPasspointNetworkFoundResult->ie_length);
 
       ALOGV("%s: ts: %" PRId64 " SSID: %s "
-            "BSSID: %02x:%02x:%02x:%02x:%02x:%02x  channel: %d  rssi: %d"
+            "BSSID: " MACSTR "  channel: %d  rssi: %d"
             " rtt: % " PRId64 " rtt_sd  %" PRId64 " ie_length  %u ",
             __FUNCTION__, mPasspointNetworkFoundResult->ts,
             mPasspointNetworkFoundResult->ssid,
-            mPasspointNetworkFoundResult->bssid[0],
-            mPasspointNetworkFoundResult->bssid[1],
-            mPasspointNetworkFoundResult->bssid[2],
-            mPasspointNetworkFoundResult->bssid[3],
-            mPasspointNetworkFoundResult->bssid[4],
-            mPasspointNetworkFoundResult->bssid[5],
+            MAC2STR(mPasspointNetworkFoundResult->bssid),
             mPasspointNetworkFoundResult->channel,
             mPasspointNetworkFoundResult->rssi,
             mPasspointNetworkFoundResult->rtt,
@@ -931,11 +921,10 @@ wifi_error GScanCommandEventHandler::gscan_parse_pno_network_results(
             QCA_WLAN_VENDOR_ATTR_GSCAN_RESULTS_SCAN_RESULT_CAPABILITY]);
 
         ALOGV("gscan_parse_pno_network_results: ts %" PRId64 " SSID  %s "
-              "BSSID: %02x:%02x:%02x:%02x:%02x:%02x channel %d rssi %d "
+              "BSSID: " MACSTR " channel %d rssi %d "
               "rtt %" PRId64 " rtt_sd %" PRId64,
               results[i].ts, results[i].ssid,
-              results[i].bssid[0], results[i].bssid[1], results[i].bssid[2],
-              results[i].bssid[3], results[i].bssid[4], results[i].bssid[5],
+              MAC2STR(results[i].bssid),
               results[i].channel, results[i].rssi, results[i].rtt,
               results[i].rtt_sd);
         /* Increment loop index for next record */
@@ -1196,10 +1185,8 @@ int GScanCommandEventHandler::handleEvent(WifiEvent &event)
 #ifdef QC_HAL_DEBUG
             ALOGD("handleEvent:FULL_SCAN_RESULTS: ts  %" PRId64, result->ts);
             ALOGD("handleEvent:FULL_SCAN_RESULTS: SSID  %s ", result->ssid) ;
-            ALOGD("handleEvent:FULL_SCAN_RESULTS: "
-                "BSSID: %02x:%02x:%02x:%02x:%02x:%02x \n",
-                result->bssid[0], result->bssid[1], result->bssid[2],
-                result->bssid[3], result->bssid[4], result->bssid[5]);
+            ALOGD("handleEvent:FULL_SCAN_RESULTS: BSSID: " MACSTR " \n",
+                MAC2STR(result->bssid));
             ALOGD("handleEvent:FULL_SCAN_RESULTS: channel %d ",
                 result->channel);
             ALOGD("handleEvent:FULL_SCAN_RESULTS: rssi  %d ", result->rssi);
