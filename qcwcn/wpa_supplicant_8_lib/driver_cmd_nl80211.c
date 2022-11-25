@@ -852,7 +852,7 @@ int wpa_driver_nl80211_oem_event(struct wpa_driver_nl80211_data *drv,
 					   u32 vendor_id, u32 subcmd,
 					   u8 *data, size_t len)
 {
-	int ret = -1, lib_n;
+	int ret = WPA_DRIVER_OEM_STATUS_ENOSUPP, lib_n;
 	if (wpa_driver_oem_initialize(&oem_cb_table) != WPA_DRIVER_OEM_STATUS_FAILURE &&
 	    oem_cb_table) {
 		for (lib_n = 0;
