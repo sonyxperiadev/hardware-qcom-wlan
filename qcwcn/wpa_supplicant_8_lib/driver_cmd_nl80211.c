@@ -233,6 +233,8 @@ static int wpa_driver_twt_async_resp_event(struct wpa_driver_nl80211_data *drv,
 					   u32 vendor_id, u32 subcmd, u8 *data, size_t len);
 static int wpa_driver_elna_resp_handler(struct resp_info *info, struct nlattr *vendata,
 		                        int datalen);
+static int wpa_driver_tsf_cmd_resp_handler(struct resp_info *info,
+		                           struct nlattr *vendata, int datalen);
 
 /* ============ nl80211 driver extensions ===========  */
 enum csi_state {
@@ -812,6 +814,10 @@ static int handle_response(struct resp_info *info, struct nlattr *vendata,
 		os_memset(info->reply_buf, 0, info->reply_buf_len);
 		if (info->sub_attr == QCA_WLAN_VENDOR_ATTR_CONFIG_ELNA_BYPASS)
 			wpa_driver_elna_resp_handler(info, vendata, datalen);
+		break;
+	case QCA_NL80211_VENDOR_SUBCMD_TSF:
+		os_memset(info->reply_buf, 0, info->reply_buf_len);
+		wpa_driver_tsf_cmd_resp_handler(info, vendata, datalen);
 		break;
 	default:
 		wpa_printf(MSG_ERROR,"Unsupported response type: %d", info->subcmd);
@@ -5612,6 +5618,143 @@ int wpa_driver_cmd_send_peer_flush_queue_config(struct i802_bss *bss, char *cmd)
 	return -EINVAL;
 }
 
+static int wpa_driver_check_for_tsf_cmd(char *cmd, enum qca_tsf_cmd *tsf_cmd, u32 *interval)
+{
+	int ret;
+	if (os_strlen(cmd) == 7 &&
+	    os_strncasecmp(cmd, "TSF_GET", 7) == 0) {
+		*tsf_cmd = QCA_TSF_GET;
+		cmd += 7;
+	} else if (os_strncasecmp(cmd, "TSF_SYNC_START", 14) == 0) {
+		cmd += 14;
+		if (*cmd != ' ' && *cmd != '\0')
+			return -EINVAL;
+
+		*tsf_cmd = QCA_TSF_SYNC_START;
+		cmd = skip_white_space(cmd);
+		if (*cmd != '\0') {
+			*interval = get_u32_from_string(cmd, &ret);
+			if (ret < 0) {
+				wpa_printf(MSG_ERROR, "Invalid TSF sync interval");
+				return -EINVAL;
+			}
+		}
+	} else if (os_strlen(cmd) == 13 &&
+		   os_strncasecmp(cmd, "TSF_SYNC_STOP", 13) == 0) {
+		*tsf_cmd = QCA_TSF_SYNC_STOP;
+		cmd += 13;
+	} else
+		return -EINVAL;
+
+	return 0;
+}
+
+static int wpa_driver_tsf_cmd_resp_handler(struct resp_info *info,
+		                           struct nlattr *vendata, int datalen)
+{
+	int ret;
+	struct wpa_driver_nl80211_data *drv;
+	struct nlattr *tsf_attr[QCA_WLAN_VENDOR_ATTR_TSF_MAX + 1];
+	u64 tsf_value = 0, host_time = 0;
+
+	if (!info || !info->drv || !vendata || !datalen) {
+		wpa_printf(MSG_ERROR, "%s:Invalid arguments", __func__);
+		return NL_SKIP;
+	}
+	drv = info->drv;
+	if (nla_parse(tsf_attr, QCA_WLAN_VENDOR_ATTR_TSF_MAX, vendata, datalen, NULL)) {
+		wpa_printf(MSG_ERROR, "TSF response:nla_parse fail");
+		return NL_SKIP;
+	}
+	if (tsf_attr[QCA_WLAN_VENDOR_ATTR_TSF_TIMER_VALUE])
+		tsf_value = nla_get_u64(tsf_attr[QCA_WLAN_VENDOR_ATTR_TSF_TIMER_VALUE]);
+	else {
+		wpa_printf(MSG_ERROR, "TSF response:tsf_value missing");
+		return NL_SKIP;
+	}
+	if (tsf_attr[QCA_WLAN_VENDOR_ATTR_TSF_SOC_TIMER_VALUE])
+		host_time = nla_get_u64(tsf_attr[QCA_WLAN_VENDOR_ATTR_TSF_SOC_TIMER_VALUE]);
+	else {
+		wpa_printf(MSG_ERROR, "TSF response:host_time missing");
+		return NL_SKIP;
+	}
+	ret = os_snprintf(info->reply_buf, info->reply_buf_len,
+			  "tsf_value:%llu host_time:%llu", tsf_value, host_time);
+	if (os_snprintf_error(info->reply_buf_len, ret)) {
+		wpa_printf(MSG_ERROR, "%s:Fail to print buffer", __func__);
+		return -ENOMEM;
+	}
+	wpa_msg(drv->ctx, MSG_INFO, "%s", info->reply_buf);
+	return 0;
+}
+
+static int wpa_driver_tsf_cmd(struct i802_bss *bss, char *cmd, char *buf, size_t buf_len)
+{
+	struct wpa_driver_nl80211_data *drv;
+	struct nl_msg *tsf_nlmsg;
+	struct nlattr *tsf_attr;
+	struct resp_info info;
+	enum qca_tsf_cmd tsf_cmd;
+	int ret;
+	u32 interval = 0;
+
+	if (!bss || !bss->drv || !buf || !buf_len || !cmd) {
+		wpa_printf(MSG_ERROR, "%s:Invalid arguments", __func__);
+		return -EINVAL;
+	}
+	cmd = skip_white_space(cmd);
+	ret = wpa_driver_check_for_tsf_cmd(cmd, &tsf_cmd, &interval);
+	if (ret == -EINVAL) {
+		wpa_printf(MSG_ERROR, "Invalid TSF command:%s", cmd);
+		return ret;
+	}
+	drv = bss->drv;
+	os_memset(&info, 0, sizeof(struct resp_info));
+	os_memset(buf, 0, buf_len);
+	info.reply_buf = buf;
+	info.reply_buf_len = buf_len;
+	info.drv = drv;
+	info.subcmd = QCA_NL80211_VENDOR_SUBCMD_TSF;
+	tsf_nlmsg = prepare_vendor_nlmsg(drv, bss->ifname, QCA_NL80211_VENDOR_SUBCMD_TSF);
+	if (!tsf_nlmsg) {
+		wpa_printf(MSG_ERROR, "Fail to allocate nlmsg for TSF cmd");
+		return -ENOMEM;
+	}
+
+	tsf_attr = nla_nest_start(tsf_nlmsg, NL80211_ATTR_VENDOR_DATA);
+	if (!tsf_attr) {
+		ret = -ENOMEM;
+		wpa_printf(MSG_ERROR, "Fail to create TSF cmd nl attribute");
+		goto nlmsg_fail;
+	}
+	if (nla_put_u32(tsf_nlmsg, QCA_WLAN_VENDOR_ATTR_TSF_CMD, tsf_cmd)) {
+		ret = -ENOMEM;
+		wpa_printf(MSG_ERROR, "Fail to put TSF cmd:%d", tsf_cmd);
+		goto nlmsg_fail;
+	}
+	if (interval > 0) {
+		if (nla_put_u32(tsf_nlmsg, QCA_WLAN_VENDOR_ATTR_TSF_SYNC_INTERVAL, interval)) {
+			ret = -ENOMEM;
+			wpa_printf(MSG_ERROR, "Fail to put TSF sync interval");
+			goto nlmsg_fail;
+		}
+	}
+	nla_nest_end(tsf_nlmsg, tsf_attr);
+	if (tsf_cmd == QCA_TSF_GET)
+		ret = send_nlmsg((struct nl_sock *)drv->global->nl, tsf_nlmsg,
+				 response_handler, &info);
+	else
+		ret = send_nlmsg((struct nl_sock *)drv->global->nl, tsf_nlmsg, NULL, NULL);
+	if (ret) {
+		wpa_printf(MSG_ERROR, "Fail to send TSF cmd(%d) nlmsg, error:%d", tsf_cmd, ret);
+		return -EINVAL;
+	}
+	return 0;
+nlmsg_fail:
+	nlmsg_free(tsf_nlmsg);
+	return ret;
+}
+
 static int wpa_driver_elna_resp_handler(struct resp_info *info, struct nlattr *vendata, int datalen)
 {
 	int ret;
@@ -6122,6 +6265,14 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 	} else if (os_strncasecmp(cmd, "GET_ELNABYPASS_MODE ", 20) == 0) {
 		cmd += 20;
 		return wpa_driver_get_elnabypass_cmd(priv, cmd, buf, buf_len);
+	} else if (os_strncasecmp(cmd, "TSF_CONFIG ", 11) == 0) {
+		/* DRIVER TSF_CONFIG TSF_SYNC_START (DEFAULT SYNC INTERVAL)
+		 * DRIVER TSF_CONFIG TSF_SYNC_START <SYNC INTERVAL>
+		 * DRIVER TSF_CONFIG TSF_SYNC_STOP
+		 * DRIVER TSF_CONFIG TSF_GET
+		 */
+		cmd += 11;
+		return wpa_driver_tsf_cmd(priv, cmd, buf, buf_len);
 	} else { /* Use private command */
 		memset(&ifr, 0, sizeof(ifr));
 		memset(&priv_cmd, 0, sizeof(priv_cmd));

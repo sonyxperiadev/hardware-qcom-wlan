@@ -162,7 +162,7 @@ enum get_info_cmd {
 struct resp_info {
 	u32 subcmd;
 	char *reply_buf;
-	int reply_buf_len;
+	size_t reply_buf_len;
 	enum get_info_cmd cmd_type;
 	uint8_t mac_addr[MAC_ADDR_LEN];
 	u32 freq;
