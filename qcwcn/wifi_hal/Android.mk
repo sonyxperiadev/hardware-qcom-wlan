@@ -113,6 +113,10 @@ endif
 LOCAL_HEADER_LIBRARIES := libcutils_headers libutils_headers libwifi-hal-ctrl_headers libcld80211_headers
 LOCAL_SANITIZE := cfi signed-integer-overflow unsigned-integer-overflow
 
+ifeq ($(TARGET_SUPPORTS_WEARABLES), true)
+LOCAL_CFLAGS += -DTARGET_SUPPORTS_WEARABLES
+endif
+
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -192,4 +196,9 @@ endif
 
 LOCAL_HEADER_LIBRARIES := libcutils_headers libutils_headers libwifi-hal-ctrl_headers libcld80211_headers
 LOCAL_SANITIZE := cfi integer_overflow
+
+ifeq ($(TARGET_SUPPORTS_WEARABLES), true)
+LOCAL_CFLAGS += -DTARGET_SUPPORTS_WEARABLES
+endif
+
 include $(BUILD_SHARED_LIBRARY)
