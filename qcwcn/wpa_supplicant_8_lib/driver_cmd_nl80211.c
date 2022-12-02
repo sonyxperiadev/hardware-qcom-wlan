@@ -3024,7 +3024,6 @@ int process_twt_setup_cmd_string(char *cmd,
 					get_u32_from_string(cmd, &ret);
 		if (ret < 0)
 			return ret;
-		cmd = move_to_next_str(cmd);
 	}
 
 	print_setup_cmd_values(twt_setup_params);
@@ -5246,7 +5245,6 @@ static int wpa_driver_form_clear_mcc_quota_msg(struct i802_bss *bss,
 			return -EINVAL;
 		}
 		wpa_printf(MSG_INFO, "mcc_quota: ifindex %u", if_index);
-		cmd += strlen(iface) + 1;
 	}
 
 	nlmsg = prepare_vendor_nlmsg(drv, bss->ifname,
