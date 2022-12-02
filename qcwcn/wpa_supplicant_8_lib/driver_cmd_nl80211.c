@@ -164,6 +164,9 @@
 #define AP_AC_VALUE_STR_LEN             strlen(AP_AC_VALUE_STR)
 #define MAC_ADDR_STR_LEN             	strlen(MAC_ADDRESS_STR)
 
+// Module defined MAC ADDR macros to print full mac address.
+// This is in order to remove dependency from MAC2STR definitions
+// in common.h from wpa_supplicant.
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 
@@ -5660,7 +5663,7 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf,
 		ret = linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname, macaddr);
 		if (!ret)
 			ret = os_snprintf(buf, buf_len,
-					  "Macaddr = " MACSTR "\n", MAC2STR(macaddr));
+					  "Macaddr = " MAC_ADDR_STR "\n", MAC_ADDR_ARRAY(macaddr));
 	} else if (os_strncasecmp(cmd, "SET_CONGESTION_REPORT ", 22) == 0) {
 		return wpa_driver_cmd_set_congestion_report(priv, cmd + 22);
 	} else if (os_strncasecmp(cmd, "SET_TXPOWER ", 12) == 0) {
