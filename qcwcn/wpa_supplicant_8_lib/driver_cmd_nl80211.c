@@ -1218,7 +1218,6 @@ static void parse_ext_ie(const u8 *ie, int ie_len)
 	}
 
 	ext_id = *ie++;
-	ie_len--;
 
 	switch (ext_id) {
 	case WLAN_EID_EXT_HE_CAPABILITIES:
