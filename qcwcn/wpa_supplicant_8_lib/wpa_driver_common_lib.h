@@ -168,6 +168,7 @@ struct resp_info {
 	u32 freq;
 	uint8_t country[COUNTRY_LEN];
 	int cmd_oper;
+	u8 sub_attr;
 	struct wpa_driver_nl80211_data *drv;
 };
 
