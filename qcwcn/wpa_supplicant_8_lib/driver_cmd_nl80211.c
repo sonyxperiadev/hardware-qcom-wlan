@@ -4859,7 +4859,6 @@ static int wpa_driver_twt_cmd_handler(struct wpa_driver_nl80211_data *drv,
 
 	ret = pack_nlmsg_twt_params(twt_nl_msg, param, twt_oper);
 	if (ret) {
-		nlmsg_free(twt_nl_msg);
 		goto err_msg;
 	}
 
@@ -4873,6 +4872,7 @@ static int wpa_driver_twt_cmd_handler(struct wpa_driver_nl80211_data *drv,
 		if (*status != 0) {
 			wpa_printf(MSG_ERROR, "Failed to send nlmsg - err %d", *status);
 			ret = -EINVAL;
+			goto err_msg;
 		}
 		break;
 	case QCA_WLAN_TWT_CLEAR_STATS:
@@ -4881,6 +4881,7 @@ static int wpa_driver_twt_cmd_handler(struct wpa_driver_nl80211_data *drv,
 		if (*status != 0) {
 			wpa_printf(MSG_ERROR, "Failed to send nlmsg - err %d", *status);
 			ret = -EINVAL;
+			goto err_msg;
 		}
 		break;
 	case QCA_WLAN_TWT_SET:
@@ -4892,12 +4893,14 @@ static int wpa_driver_twt_cmd_handler(struct wpa_driver_nl80211_data *drv,
 		if(check_wifi_twt_async_feature(drv, ifname) == 0) {
 			wpa_printf(MSG_ERROR, "Asynchronous TWT Feature is missing");
 			ret = -EINVAL;
+			goto err_msg;
 		} else {
 			*status = send_nlmsg((struct nl_sock *)drv->global->nl,
 					     twt_nl_msg, NULL, NULL);
 			if (*status != 0) {
 				wpa_printf(MSG_ERROR, "Failed to send nlmsg - err %d", *status);
 				ret = -EINVAL;
+				goto err_msg;
 			}
 		}
 		break;
@@ -4906,9 +4909,11 @@ static int wpa_driver_twt_cmd_handler(struct wpa_driver_nl80211_data *drv,
 		ret = -EINVAL;
 		goto err_msg;
 	}
+	return ret;
 
 err_msg:
 	wpa_printf(MSG_ERROR, "sent nlmsg - status %d", *status);
+	nlmsg_free(twt_nl_msg);
 	return ret;
 }
 
