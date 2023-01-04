@@ -80,10 +80,7 @@ wifi_error wifi_set_bssid_blacklist(wifi_request_id id,
     }
 
     for (i = 0; i < params.num_bssid; i++) {
-        ALOGV("BSSID: %d : %02x:%02x:%02x:%02x:%02x:%02x", i,
-                params.bssids[i][0], params.bssids[i][1],
-                params.bssids[i][2], params.bssids[i][3],
-                params.bssids[i][4], params.bssids[i][5]);
+        ALOGV("BSSID: %d : " MACSTR, i, MAC2STR(params.bssids[i]));
     }
 
     roamCommand =

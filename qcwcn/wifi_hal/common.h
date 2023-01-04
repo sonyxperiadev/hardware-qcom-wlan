@@ -91,6 +91,14 @@
 
 #define WIFI_HAL_CTRL_IFACE     "/dev/socket/wifihal/wifihal_ctrlsock"
 
+#ifdef CONFIG_MAC_PRIVACY_LOGGING
+#define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[5]
+#define MACSTR "%02x:%02x:%02x:**:**:%02x"
+#else
+#define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
+#define MACSTR "%02x:%02x:%02x:%02x:%02x:%02x"
+#endif
+
 #define MAC_ADDR_ARRAY(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MAC_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
 #ifndef BIT
